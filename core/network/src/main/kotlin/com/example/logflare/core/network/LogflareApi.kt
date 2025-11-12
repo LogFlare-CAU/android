@@ -5,6 +5,8 @@ import com.example.logflare.core.model.ProjectCreateParams
 import com.example.logflare.core.model.ProjectSequenceResponse
 import com.example.logflare.core.model.StringResponse
 import com.example.logflare.core.model.UserAuthParams
+import com.example.logflare.core.model.ErrorParams
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -41,6 +43,13 @@ interface LogflareApi {
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0
     ): ErrorSequenceResponse
+
+    @POST("/log/error")
+    suspend fun postError(
+        @Header("ProjectKey") projectKey: String,
+        @Header("Project") projectName: String,
+        @Body body: ErrorParams
+    ): Response<Unit>
 
     @POST("/user/device")
     suspend fun postDevice(

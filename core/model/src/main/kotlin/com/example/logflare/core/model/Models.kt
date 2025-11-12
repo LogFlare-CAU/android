@@ -71,3 +71,10 @@ data class DeviceRegisterParams(
     val platform: String = "android",
     val metadata: Map<String, String>? = null
 )
+
+@Serializable
+data class ErrorParams(
+    val errortype: String? = null,
+    val level: String,
+    val message: String
+)
