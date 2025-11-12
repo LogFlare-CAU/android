@@ -41,4 +41,10 @@ interface LogflareApi {
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0
     ): ErrorSequenceResponse
+
+    @POST("/user/device")
+    suspend fun postDevice(
+        @Header("Authorization") bearer: String,
+        @Body body: com.example.logflare.core.model.DeviceRegisterParams
+    ) : StringResponse
 }

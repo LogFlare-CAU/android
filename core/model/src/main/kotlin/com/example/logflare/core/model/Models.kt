@@ -64,3 +64,10 @@ data class ErrorSequenceResponse(
     val error_code: Int? = null,
     val data: List<ErrorlogDTO>? = null
 )
+
+@Serializable
+data class DeviceRegisterParams(
+    val token: String,
+    val platform: String = "android",
+    val metadata: Map<String, String>? = null
+)
