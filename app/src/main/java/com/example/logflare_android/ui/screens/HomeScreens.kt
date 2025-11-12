@@ -16,6 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -92,17 +94,61 @@ fun HomeScaffold() {
 }
 @Composable fun LogListScreen(
     vm: com.example.logflare_android.viewmodel.LogViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    selectVm: com.example.logflare_android.viewmodel.SelectionViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    selectVm: com.example.logflare_android.viewmodel.SelectionViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    projectsVm: com.example.logflare_android.viewmodel.ProjectsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
-    val state by vm.ui.collectAsState()
+    val logsState by vm.ui.collectAsState()
     val projectId by selectVm.projectId.collectAsState()
+    val projectsState by projectsVm.ui.collectAsState()
+
+    // Load projects and ensure a selection exists
+    LaunchedEffect(Unit) { projectsVm.refresh() }
+    LaunchedEffect(projectsState.items) {
+        if (projectId == null && projectsState.items.isNotEmpty()) {
+            selectVm.selectProject(projectsState.items.first().id)
+        }
+    }
+    // Refresh logs when selection changes
     LaunchedEffect(projectId) { projectId?.let { vm.refresh(it) } }
-    when {
-        projectId == null -> Text("Select a project first")
-        state.loading -> Text("Loading…")
-        state.error != null -> Text("Error: ${state.error}")
-        else -> LazyColumn(contentPadding = PaddingValues()) {
-            items(state.items) { e ->
+
+    // Tabs for projects
+    if (projectsState.loading) {
+        Text("Loading projects…")
+        return
+    }
+    if (projectsState.error != null) {
+        Text("Projects error: ${projectsState.error}")
+        return
+    }
+
+    val projects = projectsState.items
+    if (projects.isEmpty()) {
+        Text("프로젝트가 없습니다. 먼저 프로젝트를 생성하세요.")
+        return
+    }
+
+    val selectedIndex = projects.indexOfFirst { it.id == projectId }
+        .let { if (it >= 0) it else 0 }
+
+    LazyColumn(contentPadding = PaddingValues()) {
+        // Tabs row as first item
+        item {
+            TabRow(selectedTabIndex = selectedIndex) {
+                projects.forEachIndexed { idx, proj ->
+                    Tab(
+                        selected = idx == selectedIndex,
+                        onClick = { selectVm.selectProject(proj.id) },
+                        text = { Text(proj.name) }
+                    )
+                }
+            }
+        }
+        // Logs content
+        when {
+            projectId == null -> item { Text("프로젝트를 선택하세요") }
+            logsState.loading -> item { Text("Loading…") }
+            logsState.error != null -> item { Text("Error: ${logsState.error}") }
+            else -> items(logsState.items) { e ->
                 Text("[${e.level}] ${e.errortype ?: "Error"}: ${e.message}", modifier = Modifier.padding(12.dp))
             }
         }
