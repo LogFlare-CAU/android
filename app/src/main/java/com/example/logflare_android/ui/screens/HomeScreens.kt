@@ -27,11 +27,13 @@ import com.example.logflare_android.ui.navigation.Route
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 
 @Composable
 fun HomeScaffold() {
     val navController = rememberNavController()
-    val items = listOf(Route.Projects, Route.Logs, Route.Settings)
+    val items = listOf(Route.Home, Route.Projects, Route.Logs, Route.Settings)
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -61,7 +63,8 @@ fun HomeScaffold() {
             }
         }
     ) { padding ->
-        NavHost(navController, startDestination = Route.Projects.path, modifier = Modifier.padding(padding)) {
+        NavHost(navController, startDestination = Route.Home.path, modifier = Modifier.padding(padding)) {
+            composable(Route.Home.path) { HomeScreen(onProjectSelected = { navController.navigate(Route.Logs.path) }) }
             composable(Route.Projects.path) { ProjectListScreen(onProjectSelected = { navController.navigate(Route.Logs.path) }) }
             composable(Route.Logs.path) { LogListScreen() }
             composable(Route.Settings.path) { SettingsScreen() }
@@ -88,6 +91,47 @@ fun HomeScaffold() {
                     }
                     .padding(12.dp)
                 )
+            }
+        }
+    }
+}
+@Composable fun HomeScreen(
+    onProjectSelected: (Int) -> Unit,
+    projectsVm: com.example.logflare_android.viewmodel.ProjectsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    logVm: com.example.logflare_android.viewmodel.LogViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+) {
+    val projectsState by projectsVm.ui.collectAsState()
+    val logsState by logVm.ui.collectAsState()
+    LaunchedEffect(Unit) { projectsVm.refresh() }
+
+    // when projects load, refresh logs for the first project to populate 'recent logs'
+    LaunchedEffect(projectsState.items) {
+        projectsState.items.firstOrNull()?.let { p -> logVm.refresh(p.id) }
+    }
+
+    androidx.compose.foundation.layout.Column(modifier = Modifier.padding(12.dp)) {
+        Text("{Username} | {관리자}  ○ 서버연결상태", modifier = Modifier.padding(bottom = 8.dp))
+        Text("최근 로그 리스트", modifier = Modifier.padding(vertical = 8.dp))
+        if (logsState.loading) Text("Loading…") else LazyColumn(modifier = Modifier.padding(bottom = 12.dp)) {
+            items(logsState.items.take(5)) { e ->
+                Text("[${e.level}] ${e.errortype ?: "Error"}: ${e.message}", modifier = Modifier.padding(8.dp))
+            }
+        }
+
+        Text("Project", modifier = Modifier.padding(vertical = 8.dp))
+        when {
+            projectsState.loading -> Text("Loading projects…")
+            projectsState.error != null -> Text("Error: ${projectsState.error}")
+            else -> LazyColumn {
+                items(projectsState.items.take(5)) { p ->
+                    androidx.compose.material3.Card(modifier = Modifier
+                        .padding(vertical = 6.dp)
+                        .clickable { onProjectSelected(p.id) }) {
+                        androidx.compose.foundation.layout.Column(modifier = Modifier.padding(12.dp)) {
+                                Text(p.name)
+                            }
+                    }
+                }
             }
         }
     }
