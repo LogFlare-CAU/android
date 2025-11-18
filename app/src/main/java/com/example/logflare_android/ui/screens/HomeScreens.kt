@@ -1,20 +1,16 @@
 package com.example.logflare_android.ui.screens
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -49,10 +45,9 @@ fun HomeScaffold() {
                                 restoreState = true
                             }
                         },
-                        icon = { 
+                        icon = {
                             when (route) {
                                 Route.Projects -> Icon(Icons.Default.List, contentDescription = null)
-                                Route.Logs -> Icon(Icons.Default.List, contentDescription = null)
                                 Route.Settings -> Icon(Icons.Default.Settings, contentDescription = null)
                                 else -> Icon(Icons.Default.List, contentDescription = null)
                             }
@@ -72,25 +67,25 @@ fun HomeScaffold() {
     }
 }
 
-@Composable fun ProjectListScreen(
-    onProjectSelected: (Int) -> Unit,
-    vm: com.example.logflare_android.viewmodel.ProjectsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+@Composable
+fun ProjectTabsScreen(
+    projectsVm: com.example.logflare_android.viewmodel.ProjectsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     selectVm: com.example.logflare_android.viewmodel.SelectionViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
-    val state by vm.ui.collectAsState()
-    LaunchedEffect(Unit) { vm.refresh() }
+    val projectsState by projectsVm.ui.collectAsState()
+    val selectedProjectId by selectVm.projectId.collectAsState()
+
+    LaunchedEffect(Unit) { projectsVm.refresh() }
+
     when {
-        state.loading -> Text("Loading…")
-        state.error != null -> Text("Error: ${state.error}")
-        else -> LazyColumn(contentPadding = PaddingValues()) {
-            items(state.items) { p ->
-                Text(p.name, modifier = Modifier
-                    .clickable {
-                        selectVm.selectProject(p.id)
-                        onProjectSelected(p.id)
-                    }
-                    .padding(12.dp)
-                )
+        projectsState.loading -> Text("Loading projects…")
+        projectsState.error != null -> Text("Projects error: ${projectsState.error}")
+        projectsState.items.isEmpty() -> Text("프로젝트가 없습니다. 먼저 프로젝트를 생성하세요.")
+        else -> {
+            val projects = projectsState.items
+            val selectedIndex = projects.indexOfFirst { it.id == selectedProjectId }.let { if (it >= 0) it else 0 }
+            if (selectedProjectId == null && projects.isNotEmpty()) {
+                LaunchedEffect(projects) { selectVm.selectProject(projects.first().id) }
             }
         }
     }
@@ -195,7 +190,9 @@ fun HomeScaffold() {
             else -> items(logsState.items) { e ->
                 Text("[${e.level}] ${e.errortype ?: "Error"}: ${e.message}", modifier = Modifier.padding(12.dp))
             }
+            Text("프로젝트 탭 전환만 구현됨. 로그 목록은 별도 기능에서 제공합니다.", modifier = androidx.compose.ui.Modifier.padding(12.dp))
         }
     }
 }
+
 @Composable fun SettingsScreen() { Text("Settings") }
