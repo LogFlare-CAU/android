@@ -12,7 +12,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,11 +23,13 @@ import com.example.logflare_android.ui.navigation.Route
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 
 @Composable
 fun HomeScaffold() {
     val navController = rememberNavController()
-    val items = listOf(Route.Projects, Route.Settings)
+    val items = listOf(Route.Home, Route.Projects, Route.Logs, Route.Settings)
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -55,8 +58,10 @@ fun HomeScaffold() {
             }
         }
     ) { padding ->
-        NavHost(navController, startDestination = Route.Projects.path, modifier = Modifier.then(Modifier)) {
-            composable(Route.Projects.path) { ProjectTabsScreen() }
+        NavHost(navController, startDestination = Route.Home.path, modifier = Modifier.padding(padding)) {
+            composable(Route.Home.path) { HomeScreen(onProjectSelected = { navController.navigate(Route.Logs.path) }) }
+            composable(Route.Projects.path) { ProjectListScreen(onProjectSelected = { navController.navigate(Route.Logs.path) }) }
+            composable(Route.Logs.path) { LogListScreen() }
             composable(Route.Settings.path) { SettingsScreen() }
         }
     }
@@ -82,6 +87,91 @@ fun ProjectTabsScreen(
             if (selectedProjectId == null && projects.isNotEmpty()) {
                 LaunchedEffect(projects) { selectVm.selectProject(projects.first().id) }
             }
+        }
+    }
+}
+@Composable fun HomeScreen(
+    onProjectSelected: (Int) -> Unit,
+    projectsVm: com.example.logflare_android.viewmodel.ProjectsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    logVm: com.example.logflare_android.viewmodel.LogViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+) {
+    val projectsState by projectsVm.ui.collectAsState()
+    val logsState by logVm.ui.collectAsState()
+    LaunchedEffect(Unit) { projectsVm.refresh() }
+
+    // when projects load, refresh logs for the first project to populate 'recent logs'
+    LaunchedEffect(projectsState.items) {
+        projectsState.items.firstOrNull()?.let { p -> logVm.refresh(p.id) }
+    }
+
+    androidx.compose.foundation.layout.Column(modifier = Modifier.padding(12.dp)) {
+        Text("{Username} | {관리자}  ○ 서버연결상태", modifier = Modifier.padding(bottom = 8.dp))
+        Text("최근 로그 리스트", modifier = Modifier.padding(vertical = 8.dp))
+        if (logsState.loading) Text("Loading…") else LazyColumn(modifier = Modifier.padding(bottom = 12.dp)) {
+            items(logsState.items.take(5)) { e ->
+                Text("[${e.level}] ${e.errortype ?: "Error"}: ${e.message}", modifier = Modifier.padding(8.dp))
+            }
+        }
+
+        Text("Project", modifier = Modifier.padding(vertical = 8.dp))
+        when {
+            projectsState.loading -> Text("Loading projects…")
+            projectsState.error != null -> Text("Error: ${projectsState.error}")
+            else -> LazyColumn {
+                items(projectsState.items.take(5)) { p ->
+                    androidx.compose.material3.Card(modifier = Modifier
+                        .padding(vertical = 6.dp)
+                        .clickable { onProjectSelected(p.id) }) {
+                        androidx.compose.foundation.layout.Column(modifier = Modifier.padding(12.dp)) {
+                                Text(p.name)
+                            }
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable fun LogListScreen(
+    vm: com.example.logflare_android.viewmodel.LogViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    selectVm: com.example.logflare_android.viewmodel.SelectionViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    projectsVm: com.example.logflare_android.viewmodel.ProjectsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+) {
+    val logsState by vm.ui.collectAsState()
+    val projectId by selectVm.projectId.collectAsState()
+    val projectsState by projectsVm.ui.collectAsState()
+
+    // Load projects and ensure a selection exists
+    LaunchedEffect(Unit) { projectsVm.refresh() }
+    LaunchedEffect(projectsState.items) {
+        if (projectId == null && projectsState.items.isNotEmpty()) {
+            selectVm.selectProject(projectsState.items.first().id)
+        }
+    }
+    // Refresh logs when selection changes
+    LaunchedEffect(projectId) { projectId?.let { vm.refresh(it) } }
+
+    // Tabs for projects
+    if (projectsState.loading) {
+        Text("Loading projects…")
+        return
+    }
+    if (projectsState.error != null) {
+        Text("Projects error: ${projectsState.error}")
+        return
+    }
+
+    val projects = projectsState.items
+    if (projects.isEmpty()) {
+        Text("프로젝트가 없습니다. 먼저 프로젝트를 생성하세요.")
+        return
+    }
+
+    val selectedIndex = projects.indexOfFirst { it.id == projectId }
+        .let { if (it >= 0) it else 0 }
+
+    LazyColumn(contentPadding = PaddingValues()) {
+        // Tabs row as first item
+        item {
             TabRow(selectedTabIndex = selectedIndex) {
                 projects.forEachIndexed { idx, proj ->
                     Tab(
@@ -90,6 +180,15 @@ fun ProjectTabsScreen(
                         text = { Text(proj.name) }
                     )
                 }
+            }
+        }
+        // Logs content
+        when {
+            projectId == null -> item { Text("프로젝트를 선택하세요") }
+            logsState.loading -> item { Text("Loading…") }
+            logsState.error != null -> item { Text("Error: ${logsState.error}") }
+            else -> items(logsState.items) { e ->
+                Text("[${e.level}] ${e.errortype ?: "Error"}: ${e.message}", modifier = Modifier.padding(12.dp))
             }
             Text("프로젝트 탭 전환만 구현됨. 로그 목록은 별도 기능에서 제공합니다.", modifier = androidx.compose.ui.Modifier.padding(12.dp))
         }
