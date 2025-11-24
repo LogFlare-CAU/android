@@ -70,6 +70,7 @@ dependencies {
 
     implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging.ktx)

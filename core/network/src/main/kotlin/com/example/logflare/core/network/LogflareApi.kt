@@ -1,6 +1,9 @@
 package com.example.logflare.core.network
 
 import com.example.logflare.core.model.ErrorSequenceResponse
+import com.example.logflare.core.model.FcmConfigResponse
+import com.example.logflare.core.model.FcmTokenParams
+import com.example.logflare.core.model.FcmTokenResponse
 import com.example.logflare.core.model.ProjectCreateParams
 import com.example.logflare.core.model.ProjectSequenceResponse
 import com.example.logflare.core.model.StringResponse
@@ -51,9 +54,14 @@ interface LogflareApi {
         @Body body: ErrorParams
     ): Response<Unit>
 
-    @POST("/user/device")
-    suspend fun postDevice(
+    @GET("/fcm/data")
+    suspend fun getFcmConfig(
+        @Header("Authorization") bearer: String
+    ): FcmConfigResponse
+
+    @POST("/fcm/token")
+    suspend fun registerFcmToken(
         @Header("Authorization") bearer: String,
-        @Body body: com.example.logflare.core.model.DeviceRegisterParams
-    ) : StringResponse
+        @Body body: FcmTokenParams
+    ): FcmTokenResponse
 }

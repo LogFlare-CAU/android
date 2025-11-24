@@ -7,7 +7,6 @@ import com.example.logflare.core.model.StringResponse
 import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare_android.data.AuthRepository
 import com.example.logflare_android.data.ServerConfigRepository
-import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.launch
@@ -48,22 +47,9 @@ class AuthViewModel @Inject constructor(
                 if (res.success && !token.isNullOrBlank()) {
                     val bearer = "Bearer $token"
                     authRepository.setToken(bearer)
-                    // Try to obtain current FCM token and register device
-                    try {
-                        FirebaseMessaging.getInstance().token
-                            .addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    val fcm = task.result
-                                    if (!fcm.isNullOrBlank()) {
-                                        // fire-and-forget
-                                        viewModelScope.launch {
-                                            deviceRepository.registerDevice(fcm)
-                                        }
-                                    }
-                                }
-                            }
-                    } catch (_: Exception) {
-                        // ignore
+                    // fire-and-forget: fetch FCM config and register token via repository
+                    viewModelScope.launch {
+                        deviceRepository.syncConfigAndRegister()
                     }
                     onSuccess()
                 }
