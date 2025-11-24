@@ -1,7 +1,8 @@
 package com.example.logflare.core.network.di
 
-import com.example.logflare.core.network.BuildConfig
 import com.example.logflare.core.network.LogflareApi
+import com.example.logflare.core.network.host.BaseUrlProvider
+import com.example.logflare.core.network.host.HostSelectionInterceptor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,13 +28,14 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttp(): OkHttpClient =
+    fun provideOkHttp(baseUrlProvider: BaseUrlProvider): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
                     level = HttpLoggingInterceptor.Level.BODY
                 }
             )
+            .addInterceptor(HostSelectionInterceptor(baseUrlProvider))
             .build()
 
     @Provides
@@ -43,7 +45,8 @@ object NetworkModule {
         json: Json
     ): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BuildConfig.BASE_URL)
+            // Retrofit requires a non-empty baseUrl; will be overridden by HostSelectionInterceptor if user sets one.
+            .baseUrl("http://localhost/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
