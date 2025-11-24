@@ -45,8 +45,9 @@ object NetworkModule {
         json: Json
     ): Retrofit =
         Retrofit.Builder()
-            // Retrofit requires a non-empty baseUrl; will be overridden by HostSelectionInterceptor if user sets one.
-            .baseUrl("http://localhost/")
+            // Retrofit requires a non-empty baseUrl; overridden via HostSelectionInterceptor when user selects server.
+            // Use emulator host mapping (10.0.2.2) as safer default than localhost for dev.
+            .baseUrl("http://10.0.2.2/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
