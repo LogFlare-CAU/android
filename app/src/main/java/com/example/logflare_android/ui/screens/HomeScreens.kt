@@ -12,6 +12,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -60,7 +66,7 @@ fun HomeScaffold() {
     ) { padding ->
         NavHost(navController, startDestination = Route.Home.path, modifier = Modifier.padding(padding)) {
             composable(Route.Home.path) { HomeScreen(onProjectSelected = { navController.navigate(Route.Logs.path) }) }
-            composable(Route.Projects.path) { ProjectListScreen(onProjectSelected = { navController.navigate(Route.Logs.path) }) }
+            composable(Route.Projects.path) { ProjectTabsScreen() }
             composable(Route.Logs.path) { LogListScreen() }
             composable(Route.Settings.path) { SettingsScreen() }
         }
@@ -190,7 +196,13 @@ fun ProjectTabsScreen(
             else -> items(logsState.items) { e ->
                 Text("[${e.level}] ${e.errortype ?: "Error"}: ${e.message}", modifier = Modifier.padding(12.dp))
             }
-            Text("프로젝트 탭 전환만 구현됨. 로그 목록은 별도 기능에서 제공합니다.", modifier = androidx.compose.ui.Modifier.padding(12.dp))
+        }
+        // Informational footer
+        item {
+            Text(
+                "프로젝트 탭 전환만 구현됨. 로그 목록은 별도 기능에서 제공합니다.",
+                modifier = androidx.compose.ui.Modifier.padding(12.dp)
+            )
         }
     }
 }
