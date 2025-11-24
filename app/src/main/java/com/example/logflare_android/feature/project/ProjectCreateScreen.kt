@@ -1,48 +1,66 @@
 package com.example.logflare_android.feature.project
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.*
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.intl.Locale
-import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.launch
 
-/**
- * Project creation UI shell matching provided wireframe (no real functionality yet).
- * Sections:
- *  - Header (title)
- *  - Project Name input
- *  - Project Token placeholder (read-only)
- *  - Alert Level stub
- *  - Exclusion Keywords input placeholder
- *  - Permissions list (static placeholders)
- *  - Bottom action bar (Done button)
- */
+private val AccentGreen = Color(0xFF61B175)
+private val DisabledGray = Color(0xFFC2C2C2)
+private val BorderGray = Color(0xFFBDBDBD)
+private val CardGray = Color(0xFFF5F5F5)
+private val ErrorRed = Color(0xFFE53935)
+
 @Composable
 fun ProjectCreateScreen(
     onCreated: () -> Unit = {},
@@ -53,155 +71,205 @@ fun ProjectCreateScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // state handled by ViewModel
-    // Static placeholder permissions & roles
-    val permissionRows = remember {
-        listOf(
-            PermissionDisplay("{{username}}", "Super Admin", Color(0xFF2FA14F)),
-            PermissionDisplay("{{username}}", "Admin", Color(0xFF2FA14F)),
-            PermissionDisplay("{{username}}", "Admin", Color(0xFF2FA14F)),
-            PermissionDisplay("{{username}}", "Member", Color(0xFF616161)),
-            PermissionDisplay("{{username}}", "Member", Color(0xFF616161))
-        )
+    LaunchedEffect(ui.snackbar) {
+        ui.snackbar?.let {
+            snackbarHostState.showSnackbar(it)
+            vm.clearSnackbar()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 96.dp) // leave space for bottom bar
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 140.dp),
+            contentPadding = PaddingValues(vertical = 12.dp)
         ) {
-            item { ScreenHeader(title = "Create Project") }
-            if (ui.error != null) {
-                item {
+            item { ScreenHeader("Create Project") }
+
+            item {
+                if (ui.error != null) {
                     Text(
                         text = ui.error ?: "",
-                        color = Color.Red,
+                        color = ErrorRed,
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
             }
-            item { SectionLabel(text = "Project Name") }
-            item { NameInputField(value = ui.name, onChange = { vm.onNameChanged(it) }, isError = !ui.nameValid && ui.name.isNotEmpty(), errorText = if (!ui.nameValid && ui.name.isNotEmpty()) "Invalid name" else null) }
-            item { SectionLabel(text = "Project Token") }
-            item { TokenPlaceholder(token = ui.token, onCopy = {
-                ui.token?.let { t ->
-                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(t))
-                    scope.launch { snackbarHostState.showSnackbar("Token copied") }
-                }
-            }) }
-            item { SectionLabel(text = "Alert Level") }
+
             item {
-                AlertLevelSelector(
-                    selected = ui.alertLevels,
-                    onToggle = { level -> vm.toggleAlertLevel(level) }
+                ProjectNameSection(
+                    name = ui.name,
+                    isValid = ui.nameValid,
+                    loading = ui.loading,
+                    saved = ui.saved,
+                    onChange = vm::onNameChanged,
+                    onSave = { if (ui.saved) vm.editProject() else vm.saveProject() }
                 )
             }
-            item { SectionLabel(text = "Exclusion Keywords") }
+
             item {
-                ExclusionKeywordField(value = ui.keywordInput, onChange = { vm.onKeywordInputChanged(it) }, onAdd = { vm.addKeyword() }, keywordError = ui.keywordError)
+                TokenSection(
+                    token = ui.token,
+                    onCopy = {
+                        ui.token?.let { token ->
+                            clipboard.setText(AnnotatedString(token))
+                            scope.launch { snackbarHostState.showSnackbar("Token copied") }
+                        }
+                    }
+                )
             }
-            item { KeywordChips(keywords = ui.keywords, onRemove = vm::removeKeyword) }
-            item { SectionLabel(text = "Permissions") }
-            item { PermissionsList(permissions = permissionRows) }
-        }
-        // Snackbar host + show VM snackbars
-        Box(modifier = Modifier.fillMaxSize()) {
-            LaunchedEffect(ui.snackbar) {
-                val msg = ui.snackbar
-                if (msg != null) {
-                    snackbarHostState.showSnackbar(msg)
-                    vm.clearSnackbar()
-                }
+
+            item {
+                KeywordSection(
+                    value = ui.keywordInput,
+                    error = ui.keywordError,
+                    onValueChange = vm::onKeywordInputChanged,
+                    onSave = vm::addKeyword
+                )
             }
-            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.TopCenter))
+
+            item {
+                KeywordList(keywords = ui.keywords, onRemove = vm::removeKeyword)
+            }
+
+            item {
+                LogLevelSection(
+                    selected = ui.alertLevels,
+                    onToggle = vm::toggleAlertLevel
+                )
+            }
+
+            item {
+                PermissionsSection()
+            }
         }
 
-        BottomActionBar(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            onSave = { if (!ui.saved) vm.saveProject() else vm.editProject() },
-            onDone = {
-                onCreated()
-            },
-            saveEnabled = ui.nameValid && !ui.loading,
-            doneEnabled = ui.token != null
-        )
+        Column(modifier = Modifier.align(Alignment.BottomCenter)) {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 72.dp)
+            )
+
+            BottomActionBar(
+                onDone = onCreated,
+                enabled = ui.token != null
+            )
+        }
     }
 }
-
-// --- Composables ---
 
 @Composable
 private fun ScreenHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-        modifier = Modifier.padding(top = 32.dp, start = 16.dp, end = 16.dp)
-    )
-}
-
-@Composable
-private fun NameInputField(
-    value: String,
+private fun ProjectNameSection(
+    name: String,
+    isValid: Boolean,
+    loading: Boolean,
+    saved: Boolean,
     onChange: (String) -> Unit,
-    isError: Boolean = false,
-    errorText: String? = null
+    onSave: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onChange,
-            placeholder = { Text("Enter a project name", color = Color(0xFF616161)) },
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .fillMaxWidth(),
-            isError = isError
-        )
-        if (isError && errorText != null) {
+    val showError = !isValid && name.isNotEmpty()
+    val buttonEnabled = isValid && !loading
+    val buttonLabel = if (saved) "Edit" else "Save"
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(text = "Project Name", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = onChange,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                singleLine = true,
+                placeholder = { Text("Project name") },
+                shape = RoundedCornerShape(8.dp),
+                isError = showError,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentGreen,
+                    unfocusedBorderColor = BorderGray,
+                    errorBorderColor = ErrorRed
+                )
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Button(
+                onClick = onSave,
+                enabled = buttonEnabled,
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (buttonEnabled) AccentGreen else DisabledGray,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier
+                    .height(50.dp)
+                    .width(72.dp)
+            ) {
+                Text(buttonLabel)
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        if (showError) {
             Text(
-                text = errorText,
-                color = Color.Red,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 16.dp)
+                text = "Use English, Korean, and symbols only",
+                color = ErrorRed,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
 }
 
 @Composable
-private fun TokenPlaceholder(token: String?, onCopy: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .fillMaxWidth(),
-        color = Color(0xFFF5F5F5),
-        border = null
-    ) {
-        Row(modifier = Modifier
-            .height(50.dp)
-            .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+private fun TokenSection(token: String?, onCopy: () -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(text = "Project Token", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = CardGray,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = token != null) { onCopy() }
+                .padding(end = 0.dp)
         ) {
-            Text(
-                text = token ?: "Token will be generated automatically",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF616161),
-                modifier = Modifier.weight(1f)
-            )
-            if (token != null) {
-                TextButton(onClick = onCopy) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .height(50.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = token ?: "Token will be generated when you save",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (token != null) Color(0xFF4C4C4C) else Color(0xFF9E9E9E)
+                )
+                Button(
+                    onClick = onCopy,
+                    enabled = token != null,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF7B7B7B),
+                        contentColor = Color.White,
+                        disabledContainerColor = DisabledGray,
+                        disabledContentColor = Color.White
+                    ),
+                    modifier = Modifier.height(40.dp)
+                ) {
                     Text("Copy")
                 }
             }
@@ -209,173 +277,237 @@ private fun TokenPlaceholder(token: String?, onCopy: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AlertLevelStub() {
-    // Simple stub card with a placeholder label
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .width(140.dp),
-        color = Color.White,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Log Level",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF616161)
-            )
-            Box(
+private fun KeywordSection(
+    value: String,
+    error: String?,
+    onValueChange: (String) -> Unit,
+    onSave: () -> Unit
+) {
+    val canSave = value.isNotBlank()
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(text = "Exclusion Keywords", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
                 modifier = Modifier
-                    .size(20.dp)
-                    .background(Color(0xFFE0E0E0), RoundedCornerShape(4.dp))
-            )
-        }
-    }
-}
-
-@Composable
-private fun AlertLevelSelector(selected: Set<String>, onToggle: (String) -> Unit) {
-    val levels = listOf("trace", "debug", "info", "warn", "error", "fatal")
-    Column(modifier = Modifier
-        .padding(horizontal = 16.dp, vertical = 8.dp)
-        .fillMaxWidth()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            levels.forEach { level ->
-                FilterChip(
-                    selected = selected.contains(level),
-                    onClick = { onToggle(level) },
-                    label = { Text(level) }
+                    .weight(1f)
+                    .height(56.dp),
+                placeholder = { Text("Enter keyword") },
+                singleLine = true,
+                shape = RoundedCornerShape(8.dp),
+                isError = error != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentGreen,
+                    unfocusedBorderColor = BorderGray,
+                    errorBorderColor = ErrorRed
                 )
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Button(
+                onClick = onSave,
+                enabled = canSave,
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (canSave) AccentGreen else DisabledGray,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier
+                    .height(50.dp)
+                    .width(72.dp)
+            ) {
+                Text("Save")
             }
         }
-    }
-}
-
-@Composable
-private fun ExclusionKeywordField(value: String, onChange: (String) -> Unit, onAdd: () -> Unit, keywordError: String?) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onChange,
-            placeholder = { Text("Enter a Keyword", color = Color(0xFF616161)) },
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .fillMaxWidth()
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = error ?: "Use English Only",
+            color = if (error != null) ErrorRed else Color(0xFF6D6D6D),
+            style = MaterialTheme.typography.bodySmall
         )
-        Row(modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) {
-            Button(onClick = onAdd) { Text("Add") }
-            if (keywordError != null) {
-                Spacer(Modifier.width(8.dp))
-                Text(text = keywordError, color = Color.Red)
-            }
-        }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun KeywordChips(keywords: List<String>, onRemove: (String) -> Unit) {
-    if (keywords.isEmpty()) return
-    Row(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        keywords.forEach { k ->
-            Surface(shape = RoundedCornerShape(50), color = Color(0xFFE0E0E0)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(k, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                    TextButton(onClick = { onRemove(k) }) { Text("x") }
+private fun KeywordList(keywords: List<String>, onRemove: (String) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(text = "Keywords", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium))
+        Spacer(modifier = Modifier.height(8.dp))
+        if (keywords.isEmpty()) {
+            Text(text = "No keywords added", color = Color(0xFF8A8A8A))
+        } else {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                keywords.forEach { keyword ->
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFFF0F0F0)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(keyword, color = Color(0xFF101010))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(onClick = { onRemove(keyword) }) {
+                                Text("🗑")
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-private data class PermissionDisplay(val username: String, val role: String, val roleColor: Color)
-
 @Composable
-private fun PermissionsList(permissions: List<PermissionDisplay>) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFEEEEEE),
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            permissions.forEach { p -> PermissionRow(p) }
-        }
-    }
-}
+private fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit) {
+    val options = listOf("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL")
+    var expanded by remember { mutableStateOf(false) }
 
-@Composable
-private fun PermissionRow(p: PermissionDisplay) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Left placeholder toggle pill
-        Box(
-            modifier = Modifier
-                .height(20.dp)
-                .width(36.dp)
-                .background(Color(0xFF62B175), RoundedCornerShape(50))
-        )
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = p.username,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF1A1A1A)
+                text = "Log Level",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                color = AccentGreen
             )
-            Spacer(Modifier.width(8.dp))
-            Surface(
+            Spacer(modifier = Modifier.weight(1f))
+            Button(
+                onClick = { expanded = true },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(8.dp),
-                color = p.roleColor
+                modifier = Modifier.height(44.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
             ) {
                 Text(
-                    text = p.role,
-                    color = Color(0xFFF9F9F9),
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    text = if (selected.isEmpty()) "Select" else selected.joinToString(", "),
+                    color = Color(0xFF333333)
+                )
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { level ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = selected.contains(level),
+                                onCheckedChange = null,
+                                colors = CheckboxDefaults.colors(checkedColor = AccentGreen)
+                            )
+                            Text(level)
+                        }
+                    },
+                    onClick = {
+                        onToggle(level)
+                    }
                 )
             }
         }
     }
 }
 
+private data class PermissionToggleState(
+    val username: String,
+    val role: String,
+    val roleColor: Color,
+    val activeColor: Color,
+    val inactiveColor: Color,
+    val active: Boolean
+)
+
 @Composable
-private fun BottomActionBar(
-    modifier: Modifier = Modifier,
-    onSave: () -> Unit,
-    onDone: () -> Unit,
-    saveEnabled: Boolean,
-    doneEnabled: Boolean
-) {
-    Surface(
-        color = Color.White,
-        shadowElevation = 6.dp,
-        modifier = modifier
-            .fillMaxWidth()
-    ) {
-        Row(modifier = Modifier
+private fun PermissionsSection() {
+    val permissions = remember {
+        mutableStateListOf(
+            PermissionToggleState("{{username}}", "Super Admin", Color(0xFF1A1A1A), Color(0xFF2FA14F), Color(0xFFCCCCCC), true),
+            PermissionToggleState("{{username}}", "Admin", Color(0xFF1A1A1A), Color(0xFF2FA14F), Color(0xFFCCCCCC), true),
+            PermissionToggleState("{{username}}", "Member", Color(0xFF1A1A1A), Color(0xFF616161), Color(0xFFC2C2C2), false)
+        )
+    }
+
+    Column(
+        modifier = Modifier
             .padding(16.dp)
-            .fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onSave, enabled = saveEnabled) {
-                Text("Save")
+            .background(Color(0xFFEDEDED), RoundedCornerShape(12.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(text = "Permissions", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+        permissions.forEachIndexed { index, state ->
+            PermissionRow(
+                state = state,
+                onToggle = { checked ->
+                    permissions[index] = state.copy(active = checked)
+                }
+            )
+        }
+        Text(text = "TODO: Replace with API driven permissions", color = Color(0xFF6F6F6F), style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun PermissionRow(state: PermissionToggleState, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(text = state.username, color = state.roleColor, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Surface(
+                color = state.activeColor,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = state.role,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
-            Button(onClick = onDone, enabled = doneEnabled, modifier = Modifier.weight(1f)) {
+        }
+        Switch(
+            checked = state.active,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(checkedTrackColor = AccentGreen)
+        )
+    }
+}
+
+@Composable
+private fun BottomActionBar(onDone: () -> Unit, enabled: Boolean) {
+    Surface(shadowElevation = 8.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = onDone,
+                enabled = enabled,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (enabled) AccentGreen else DisabledGray,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
                 Text("Done")
             }
         }
     }
 }
+
