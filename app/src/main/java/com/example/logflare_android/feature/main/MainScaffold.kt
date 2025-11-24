@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -24,13 +24,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.example.logflare_android.feature.log.LogListScreen
+import com.example.logflare_android.feature.home.HomeScreen
+import com.example.logflare_android.feature.mypage.MyPageScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.settings.SettingsScreen
 import com.example.logflare_android.ui.navigation.Route
 
 /**
  * Main app scaffold with bottom navigation.
- * Contains the MainGraph with Projects, Logs, and Settings tabs.
+ * Contains the MainGraph with Home, Logs, Projects, and MyPage tabs.
  */
 @Composable
 fun MainScaffold(
@@ -57,21 +59,10 @@ private fun BottomNavigationBar(navController: NavHostController) {
     val currentDestination = navBackStackEntry?.destination
     
     val items = listOf(
-        BottomNavItem(
-            route = Route.Projects,
-            icon = Icons.Default.Home,
-            label = "Projects"
-        ),
-        BottomNavItem(
-            route = Route.Logs,
-            icon = Icons.Default.List,
-            label = "Logs"
-        ),
-        BottomNavItem(
-            route = Route.Settings,
-            icon = Icons.Default.Settings,
-            label = "Settings"
-        )
+        BottomNavItem(route = Route.Home, icon = Icons.Default.Home, label = "Home"),
+        BottomNavItem(route = Route.Logs, icon = Icons.Default.List, label = "Logs"),
+        BottomNavItem(route = Route.Projects, icon = Icons.Default.List, label = "Projects"),
+        BottomNavItem(route = Route.MyPage, icon = Icons.Default.Person, label = "MyPage")
     )
     
     NavigationBar {
@@ -111,41 +102,26 @@ private fun MainNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Route.Projects.path,
+        startDestination = Route.Home.path,
         modifier = modifier
     ) {
-        // Projects tab - shows project list
+        composable(Route.Home.path) {
+            HomeScreen(onProjectSelected = { pid ->
+                navController.navigate(Route.LogDetail.createRoute(pid))
+            })
+        }
+        composable(Route.Logs.path) { LogListScreen(projectId = null) }
         composable(Route.Projects.path) {
-            ProjectListScreen(
-                onProjectClick = { projectId ->
-                    navController.navigate(Route.LogDetail.createRoute(projectId))
-                }
-            )
+            ProjectListScreen(onProjectClick = { projectId ->
+                navController.navigate(Route.LogDetail.createRoute(projectId))
+            })
         }
-        
-        // Logs tab - shows all logs (or recent logs)
-        composable(Route.Logs.path) {
-            LogListScreen(projectId = null) // null = show all projects or recent
-        }
-        
-        // Settings tab
-        composable(Route.Settings.path) {
-            SettingsScreen(
-                onLogout = onLogout
-            )
-        }
-        
-        // Detail screen: Logs for a specific project
+        composable(Route.MyPage.path) { MyPageScreen(onLogout = onLogout) }
         composable(
             route = Route.LogDetail.path,
-            arguments = listOf(
-                navArgument("projectId") { type = NavType.IntType }
-            )
+            arguments = listOf(navArgument("projectId") { type = NavType.IntType })
         ) { backStackEntry ->
-            val projectId = backStackEntry.arguments?.getInt("projectId")
-            if (projectId != null) {
-                LogListScreen(projectId = projectId)
-            }
+            backStackEntry.arguments?.getInt("projectId")?.let { LogListScreen(projectId = it) }
         }
     }
 }
