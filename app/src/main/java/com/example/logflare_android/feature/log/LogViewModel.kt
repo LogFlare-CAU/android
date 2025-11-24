@@ -33,11 +33,11 @@ class LogViewModel @Inject constructor(
     
     private var allLogs: List<ErrorlogDTO> = emptyList()
 
-    fun refresh(projectId: Int) {
+    fun refresh(projectId: Int, limit: Int = 50) {
         _ui.value = LogsUiState(loading = true)
         viewModelScope.launch {
-            repo.getErrors(projectId)
-                .onSuccess { list -> 
+            repo.getErrors(projectId, limit = limit)
+                .onSuccess { list ->
                     allLogs = list
                     _ui.value = LogsUiState(items = list)
                 }

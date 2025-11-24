@@ -12,6 +12,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -135,7 +137,14 @@ private fun MainNavHost(
                 }
             )
         }
-        composable(Route.Logs.path) { LogListScreen(projectId = null) }
+        composable(Route.Logs.path) {
+            // Provide first project ID so logs fetch occurs when opening Logs tab
+            val projectsVm: com.example.logflare_android.feature.project.ProjectsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+            val projectsState by projectsVm.ui.collectAsState()
+            LaunchedEffect(Unit) { projectsVm.refresh() }
+            val firstProjectId = projectsState.items.firstOrNull()?.id
+            LogListScreen(projectId = firstProjectId)
+        }
         composable(Route.Projects.path) {
             ProjectListScreen(onProjectClick = { projectId ->
                 navController.navigate(Route.LogDetail.createRoute(projectId))
