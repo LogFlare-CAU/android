@@ -24,8 +24,30 @@ class ServerConfigRepository @Inject constructor(
     val serverUrl: Flow<String?> = context.configDataStore.data.map { it[KEY_SERVER_URL] }
 
     suspend fun setServerUrl(url: String) {
+        val normalized = normalize(url)
         context.configDataStore.edit { prefs ->
-            prefs[KEY_SERVER_URL] = url
+            prefs[KEY_SERVER_URL] = normalized
+        }
+    }
+
+    private fun normalize(raw: String): String {
+        var working = raw.trim()
+        if (working.isEmpty()) return working
+        // Add scheme if missing
+        if (!working.startsWith("http://") && !working.startsWith("https://")) {
+            working = "http://$working"
+        }
+        return try {
+            val uri = java.net.URI(working)
+            val host = uri.host ?: return working
+            val needsPort = uri.port == -1 && (host == "localhost" || host == "10.0.2.2")
+            val portPart = if (needsPort) ":8000" else if (uri.port != -1) ":${uri.port}" else ""
+            val path = uri.rawPath ?: ""
+            val rebuilt = "${uri.scheme}://$host$portPart$path" + if (working.endsWith("/") || path.endsWith("/")) "" else "/"
+            rebuilt
+        } catch (e: Exception) {
+            // Fallback: ensure trailing slash
+            if (!working.endsWith("/")) working + "/" else working
         }
     }
 }
