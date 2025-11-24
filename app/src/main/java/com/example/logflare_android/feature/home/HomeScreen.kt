@@ -49,7 +49,8 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) { projectsVm.refresh() }
     LaunchedEffect(projectsState.items) {
-        projectsState.items.firstOrNull()?.let { p -> logsVm.refresh(p.id) }
+        // Fetch only a small recent subset of logs (limit=5) for Home dashboard context
+        projectsState.items.firstOrNull()?.let { p -> logsVm.refresh(p.id, limit = 5) }
     }
 
     Column(modifier = Modifier
@@ -116,11 +117,7 @@ fun HomeScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
             ) {
                 items(logsState.items.take(5)) { e ->
-                    // Simplified fallback without escaped quotes which caused prior parse issues
-                    Text(
-                        text = "[${e.level}] ${e.errortype ?: "Error"}: ${e.message}",
-                        modifier = Modifier.padding(4.dp)
-                    )
+                    LogRowItem(e)
                 }
             }
         }
@@ -185,6 +182,43 @@ private fun EmptyStateCard(text: String, modifier: Modifier = Modifier) {
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF616161)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LogRowItem(log: com.example.logflare.core.model.ErrorlogDTO) {
+    // Color badge based on level
+    val badgeColor = when (log.level.uppercase()) {
+        "ERROR", "FATAL" -> Color(0xFFD32F2F)
+        "WARN", "WARNING" -> Color(0xFFFFA000)
+        "INFO" -> Color(0xFF1976D2)
+        "DEBUG" -> Color(0xFF388E3C)
+        else -> Color(0xFF616161)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            color = badgeColor,
+            shape = RoundedCornerShape(4.dp),
+            modifier = Modifier.size(12.dp)
+        ) {}
+        Spacer(Modifier.size(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "${log.errortype ?: "Error"}: ${log.message}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF212121)
+            )
+            Text(
+                text = log.level.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = badgeColor
             )
         }
     }
