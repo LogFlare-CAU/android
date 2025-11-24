@@ -62,15 +62,21 @@ class ProjectCreateViewModel @Inject constructor(
         _ui.value = _ui.value.copy(alertLevels = set)
     }
 
+    fun setAlertLevel(level: String) {
+        _ui.value = _ui.value.copy(alertLevels = setOf(level))
+    }
+
     fun saveProject() {
         // create project via repo
         val name = _ui.value.name.trim()
         if (!_ui.value.nameValid) return
+        val alreadySaved = _ui.value.saved
         _ui.value = _ui.value.copy(loading = true, error = null)
         viewModelScope.launch {
             repo.create(name)
                 .onSuccess { token ->
-                    _ui.value = _ui.value.copy(loading = false, token = token, saved = true, snackbar = "Project created")
+                    val message = if (alreadySaved) "Project name updated successfully" else "Project created"
+                    _ui.value = _ui.value.copy(loading = false, token = token, saved = true, snackbar = message)
                 }
                 .onFailure { e ->
                     _ui.value = _ui.value.copy(loading = false, error = e.message ?: "Unknown error")
