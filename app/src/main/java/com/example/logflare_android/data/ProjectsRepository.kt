@@ -24,4 +24,16 @@ class ProjectsRepository @Inject constructor(
             throw IllegalStateException("Unauthorized")
         } else throw e
     }
+
+    suspend fun create(name: String): Result<String> = runCatching {
+        val token = auth.token.first() ?: throw IllegalStateException("No token")
+        val res = api.createProject(token, com.example.logflare.core.model.ProjectCreateParams(name = name))
+        if (!res.success) throw IllegalStateException("createProject failed: ${'$'}{res.message}")
+        res.data ?: throw IllegalStateException("Empty token returned")
+    }.recoverCatching { e ->
+        if (e is HttpException && e.code() == 401) {
+            auth.clearToken()
+            throw IllegalStateException("Unauthorized")
+        } else throw e
+    }
 }
