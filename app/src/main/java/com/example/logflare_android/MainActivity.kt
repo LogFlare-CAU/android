@@ -13,8 +13,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.ui.screens.AuthScreen
-import com.example.logflare_android.ui.screens.HomeScaffold
+import com.example.logflare_android.feature.auth.LoginScreen
+import com.example.logflare_android.feature.main.MainScaffold
 import com.example.logflare_android.ui.theme.LogflareandroidTheme
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.navigation.compose.rememberNavController
@@ -62,16 +62,16 @@ fun App(vm: AppViewModel = hiltViewModel()) {
     val navController = rememberNavController()
     val backEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backEntry?.destination?.route
-    val start = if (token.isNullOrBlank()) Route.Auth.path else Route.Home.path
+    val start = if (token.isNullOrBlank()) Route.Auth.path else Route.Main.path
 
     LaunchedEffect(token) {
         if (token.isNullOrBlank() && currentRoute != Route.Auth.path) {
             navController.navigate(Route.Auth.path) {
-                popUpTo(Route.Home.path) { inclusive = true }
+                popUpTo(Route.Main.path) { inclusive = true }
                 launchSingleTop = true
             }
         } else if (!token.isNullOrBlank() && currentRoute == Route.Auth.path) {
-            navController.navigate(Route.Home.path) {
+            navController.navigate(Route.Main.path) {
                 popUpTo(Route.Auth.path) { inclusive = true }
                 launchSingleTop = true
             }
@@ -79,13 +79,21 @@ fun App(vm: AppViewModel = hiltViewModel()) {
     }
     NavHost(navController = navController, startDestination = start) {
         composable(Route.Auth.path) {
-            AuthScreen(onAuthed = {
-                navController.navigate(Route.Home.path) {
+            LoginScreen(onLoginSuccess = {
+                navController.navigate(Route.Main.path) {
                     popUpTo(Route.Auth.path) { inclusive = true }
                 }
             })
         }
-        composable(Route.Home.path) { HomeScaffold() }
+        composable(Route.Main.path) { 
+            MainScaffold(
+                onLogout = {
+                    navController.navigate(Route.Auth.path) {
+                        popUpTo(Route.Main.path) { inclusive = true }
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -93,6 +101,6 @@ fun App(vm: AppViewModel = hiltViewModel()) {
 @Composable
 fun GreetingPreview() {
     LogflareandroidTheme {
-        HomeScaffold()
+        MainScaffold(onLogout = {})
     }
 }
