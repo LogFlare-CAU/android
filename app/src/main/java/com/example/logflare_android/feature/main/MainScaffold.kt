@@ -27,6 +27,7 @@ import com.example.logflare_android.feature.log.LogListScreen
 import com.example.logflare_android.feature.home.HomeScreen
 import com.example.logflare_android.feature.mypage.MyPageScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
+import com.example.logflare_android.feature.project.ProjectCreateScreen
 import com.example.logflare_android.feature.settings.SettingsScreen
 import com.example.logflare_android.ui.navigation.Route
 
@@ -74,12 +75,23 @@ private fun BottomNavigationBar(navController: NavHostController) {
             NavigationBarItem(
                 selected = selected,
                 onClick = {
-                    navController.navigate(item.route.path) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                    // Special-case Home: clear its saved state so transient screens (eg. Create) don't persist when returning
+                    if (item.route == Route.Home) {
+                        navController.navigate(item.route.path) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                // remove inclusive to clear any nested destinations under startDestination
+                                inclusive = true
+                            }
+                            launchSingleTop = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
+                    } else {
+                        navController.navigate(item.route.path) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
                 icon = {
@@ -106,15 +118,32 @@ private fun MainNavHost(
         modifier = modifier
     ) {
         composable(Route.Home.path) {
-            HomeScreen(onProjectSelected = { pid ->
-                navController.navigate(Route.LogDetail.createRoute(pid))
-            })
+            HomeScreen(
+                onProjectSelected = { pid ->
+                    navController.navigate(Route.LogDetail.createRoute(pid))
+                },
+                onViewMoreLogs = {
+                    // navigate to Logs tab
+                    navController.navigate(Route.Logs.path) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onCreateProject = {
+                    navController.navigate(Route.ProjectCreate.path)
+                }
+            )
         }
         composable(Route.Logs.path) { LogListScreen(projectId = null) }
         composable(Route.Projects.path) {
             ProjectListScreen(onProjectClick = { projectId ->
                 navController.navigate(Route.LogDetail.createRoute(projectId))
             })
+        }
+        composable(Route.ProjectCreate.path) {
+            // Simple project creation screen; on success navigate back to Projects
+            ProjectCreateScreen(onCreated = { navController.navigate(Route.Projects.path) })
         }
         composable(Route.MyPage.path) { MyPageScreen(onLogout = onLogout) }
         composable(
