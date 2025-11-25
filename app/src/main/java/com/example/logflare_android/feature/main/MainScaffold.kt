@@ -3,7 +3,7 @@ package com.example.logflare_android.feature.main
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -12,8 +12,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -30,7 +28,8 @@ import com.example.logflare_android.feature.home.HomeScreen
 import com.example.logflare_android.feature.mypage.MyPageScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.project.ProjectCreateScreen
-import com.example.logflare_android.feature.settings.SettingsScreen
+import com.example.logflare_android.feature.projectdetail.ProjectDetailScreen
+import com.example.logflare_android.feature.projectdetail.ProjectSettingsScreen
 import com.example.logflare_android.ui.navigation.Route
 
 /**
@@ -63,8 +62,8 @@ private fun BottomNavigationBar(navController: NavHostController) {
     
     val items = listOf(
         BottomNavItem(route = Route.Home, icon = Icons.Default.Home, label = "Home"),
-        BottomNavItem(route = Route.Logs, icon = Icons.Default.List, label = "Logs"),
-        BottomNavItem(route = Route.Projects, icon = Icons.Default.List, label = "Projects"),
+    BottomNavItem(route = Route.Logs, icon = Icons.AutoMirrored.Filled.List, label = "Logs"),
+    BottomNavItem(route = Route.Projects, icon = Icons.AutoMirrored.Filled.List, label = "Projects"),
         BottomNavItem(route = Route.MyPage, icon = Icons.Default.Person, label = "MyPage")
     )
     
@@ -122,7 +121,7 @@ private fun MainNavHost(
         composable(Route.Home.path) {
             HomeScreen(
                 onProjectSelected = { pid ->
-                    navController.navigate(Route.LogDetail.createRoute(pid))
+                    navController.navigate(Route.ProjectDetail.createRoute(pid))
                 },
                 onViewMoreLogs = {
                     // navigate to Logs tab
@@ -138,16 +137,11 @@ private fun MainNavHost(
             )
         }
         composable(Route.Logs.path) {
-            // Provide first project ID so logs fetch occurs when opening Logs tab
-            val projectsVm: com.example.logflare_android.feature.project.ProjectsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
-            val projectsState by projectsVm.ui.collectAsState()
-            LaunchedEffect(Unit) { projectsVm.refresh() }
-            val firstProjectId = projectsState.items.firstOrNull()?.id
-            LogListScreen(projectId = firstProjectId)
+            LogListScreen(projectId = null)
         }
         composable(Route.Projects.path) {
             ProjectListScreen(onProjectClick = { projectId ->
-                navController.navigate(Route.LogDetail.createRoute(projectId))
+                navController.navigate(Route.ProjectDetail.createRoute(projectId))
             })
         }
         composable(Route.ProjectCreate.path) {
@@ -156,10 +150,25 @@ private fun MainNavHost(
         }
         composable(Route.MyPage.path) { MyPageScreen(onLogout = onLogout) }
         composable(
-            route = Route.LogDetail.path,
+            route = Route.ProjectDetail.path,
+            arguments = listOf(navArgument("projectId") { type = NavType.IntType })
+        ) {
+            ProjectDetailScreen(
+                onBack = { navController.popBackStack() },
+                onOpenProjectSettings = { projectId ->
+                    navController.navigate(Route.ProjectSettings.createRoute(projectId))
+                }
+            )
+        }
+        composable(
+            route = Route.ProjectSettings.path,
             arguments = listOf(navArgument("projectId") { type = NavType.IntType })
         ) { backStackEntry ->
-            backStackEntry.arguments?.getInt("projectId")?.let { LogListScreen(projectId = it) }
+            val projectId = backStackEntry.arguments?.getInt("projectId") ?: return@composable
+            ProjectSettingsScreen(
+                projectId = projectId,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
