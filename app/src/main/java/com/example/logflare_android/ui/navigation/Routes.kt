@@ -24,6 +24,10 @@ sealed class Route(val path: String) {
         fun createRoute(projectId: Int) = "project/$projectId"
     }
 
+    data object ProjectSettings : Route("project/{projectId}/settings") {
+        fun createRoute(projectId: Int) = "project/$projectId/settings"
+    }
+
     data object LogDetail : Route("log/{projectId}") {
         fun createRoute(projectId: Int) = "log/$projectId"
     }
