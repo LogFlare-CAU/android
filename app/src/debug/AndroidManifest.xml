@@ -4,6 +4,7 @@
 
     <!-- Debug-only manifest overlay to permit cleartext traffic to local dev host (10.0.2.2)
          This avoids changing production behavior while letting the emulator call http://10.0.2.2:8000 -->
+    <!-- 근데 이거 굳이 필요 없는 듯 합니다.  -->
     <application
         tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig"
         android:usesCleartextTraffic="true"
