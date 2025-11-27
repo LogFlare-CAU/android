@@ -6,6 +6,7 @@ import com.example.logflare.core.network.LogflareApi
 import com.example.logflare.core.model.StringResponse
 import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare_android.data.AuthRepository
+import com.example.logflare_android.data.DeviceRepository
 import com.example.logflare_android.data.ServerConfigRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 class AuthViewModel @Inject constructor(
     private val api: LogflareApi,
     private val authRepository: AuthRepository,
-    private val deviceRepository: com.example.logflare_android.data.DeviceRepository,
+    private val deviceRepository: DeviceRepository,
     private val serverConfigRepository: ServerConfigRepository
 ) : ViewModel() {
 
