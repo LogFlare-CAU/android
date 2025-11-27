@@ -13,12 +13,14 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -74,6 +76,14 @@ class DeviceRepository @Inject constructor(
         }
     }
 
+    suspend fun getFcmTokenOrNull(): String? {
+        return runCatching {
+            FirebaseMessaging.getInstance().token.await()
+        }.onFailure { error ->
+            Log.w(TAG, "Failed to get FCM token", error)
+        }.getOrNull()
+    }
+
     private suspend fun fetchRemoteConfig(bearer: String): FcmConfig? {
         return runCatching {
             api.getFcmConfig(bearer)
@@ -109,16 +119,55 @@ class DeviceRepository @Inject constructor(
         }.isSuccess
     }
 
-    private suspend fun registerCurrentToken(bearer: String) {
-        val token = runCatching { FirebaseMessaging.getInstance().token.await() }
-            .onFailure { error -> Log.w(TAG, "Fetching Firebase token failed", error) }
-            .getOrNull()
+    /**
+     * Ensures Firebase is initialized by attempting to load cached config and initialize.
+     * Used in LogflareMessagingService when a message is received but FirebaseApp is missing.
+     */
+    fun ensureFirebaseInitializedFromCacheAsync() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val initialized = try {
+                FirebaseApp.getInstance()
+                true
+            } catch (e: Exception) {
+                false
+            }
+            if (initialized) {
+                return@launch
+            }
+            Log.w(TAG, "FirebaseApp missing. Trying to reinitialize from cached config...")
+            try {
+                val config = loadPersistedConfig()
+                if (config == null) {
+                    Log.w(TAG, "No persisted FCM config; cannot reinitialize Firebase")
+                    return@launch
+                }
 
-        if (token.isNullOrBlank()) {
-            Log.w(TAG, "Firebase returned empty token")
-            return
+                val initOk = initializeFirebase(config)
+                if (!initOk) {
+                    Log.w(TAG, "Failed to initialize Firebase from cached config")
+                    return@launch
+                }
+
+                Log.i(TAG, "Firebase reinitialized in MessagingService")
+                val newToken = getFcmTokenOrNull()
+                if (!newToken.isNullOrBlank()) {
+                    registerDevice(newToken)
+                    Log.i(TAG, "Re-registered FCM token: $newToken")
+                } else {
+                    Log.w(TAG, "Could not get new FCM token after reinit")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error while reinitializing Firebase from cache", e)
+            }
         }
+    }
 
+    private suspend fun registerCurrentToken(bearer: String) {
+        val token = getFcmTokenOrNull()
+            ?: run {
+                Log.w(TAG, "No FCM token available to register")
+                return
+            }
         runCatching {
             api.registerFcmToken(bearer, FcmTokenParams(token))
         }.onFailure { error ->
