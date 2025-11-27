@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <!-- Permit cleartext for localhost and emulator host (10.0.2.2) in debug builds -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain>localhost</domain>
-    </domain-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain>10.0.2.2</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
+<!--    마찬가지로 여기도 입니다.-->
+<!--    <domain-config cleartextTrafficPermitted="true">-->
+<!--        <domain>localhost</domain>-->
+<!--    </domain-config>-->
+<!--    <domain-config cleartextTrafficPermitted="true">-->
+<!--        <domain>10.0.2.2</domain>-->
+<!--    </domain-config>-->
     <!-- Debug overrides keep system and user CAs trusted -->
     <debug-overrides>
         <trust-anchors>
