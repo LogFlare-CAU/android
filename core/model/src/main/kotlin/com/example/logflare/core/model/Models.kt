@@ -133,7 +133,6 @@ data class FcmTokenResponse(
 @Serializable
 data class FcmTokenDTO(
     val idx: Int,
-    @SerialName("fcm_token") val fcmToken: String,
     @SerialName("user_idx") val userIdx: Int,
     @SerialName("last_delivery") val lastDelivery: String? = null
 )

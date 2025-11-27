@@ -22,6 +22,11 @@ interface LogflareApi {
     @POST("/user/auth")
     suspend fun authenticate(@Body body: UserAuthParams): StringResponse
 
+    @GET("/fcm/data")
+    suspend fun getFirebaseConfig(
+        @Header("Authorization") bearer: String
+    ): FcmConfigResponse
+
     @GET("/project/")
     suspend fun listProjects(
         @Header("Authorization") bearer: String
