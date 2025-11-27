@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <!-- Allow cleartext for the emulator host used to reach the host machine -->
-    <base-config cleartextTrafficPermitted="false" />
-    <domain-config cleartextTrafficPermitted="true">
-        <domain>10.0.2.2</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
+<!--    저희는 HTTP 던 HTTPS 던 어차피 사용자들이 직접 설정하는 거기 때문에 의미 없을 듯 합니다. -->
+<!--    <domain-config cleartextTrafficPermitted="true">-->
+<!--        <domain>10.0.2.2</domain>-->
+<!--    </domain-config>-->
 </network-security-config>
