@@ -24,7 +24,7 @@ class AuthLoginUseCase @Inject constructor(
         password: String
     ): Boolean {
         val result = runCatching {
-            api.authenticate(UserAuthParams(username, password))
+            api.authenticate(UserAuthParams(username, password, true))
         }.getOrElse {
             // 네트워크/서버 에러
             return false
