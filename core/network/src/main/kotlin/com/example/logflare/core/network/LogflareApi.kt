@@ -59,11 +59,6 @@ interface LogflareApi {
         @Body body: ErrorParams
     ): Response<Unit>
 
-    @GET("/fcm/data")
-    suspend fun getFcmConfig(
-        @Header("Authorization") bearer: String
-    ): FcmConfigResponse
-
     @POST("/fcm/token")
     suspend fun registerFcmToken(
         @Header("Authorization") bearer: String,

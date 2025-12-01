@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.logflare.core.model.FcmConfig
+import com.example.logflare.core.model.FcmConfigResponse
 import com.example.logflare.core.model.FcmTokenParams
 import com.example.logflare.core.network.LogflareApi
 import com.google.firebase.FirebaseApp
@@ -85,8 +86,8 @@ class DeviceRepository @Inject constructor(
     }
 
     private suspend fun fetchRemoteConfig(bearer: String): FcmConfig? {
-        return runCatching {
-            api.getFcmConfig(bearer)
+        return runCatching<FcmConfigResponse> {
+            api.getFirebaseConfig(bearer)
         }.onFailure { error ->
             Log.w(TAG, "Fetching FCM config failed", error)
         }.getOrNull()?.takeIf { it.success }?.data

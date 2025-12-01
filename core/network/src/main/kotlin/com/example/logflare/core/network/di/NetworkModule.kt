@@ -1,5 +1,6 @@
 package com.example.logflare.core.network.di
 
+import com.example.logflare.core.network.BuildConfig
 import com.example.logflare.core.network.LogflareApi
 import com.example.logflare.core.network.host.BaseUrlProvider
 import com.example.logflare.core.network.host.HostSelectionInterceptor
@@ -32,7 +33,11 @@ object NetworkModule {
         OkHttpClient.Builder()
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
+                    level = if (BuildConfig.DEBUG) {
+                        HttpLoggingInterceptor.Level.BODY
+                    } else {
+                        HttpLoggingInterceptor.Level.NONE
+                    }
                 }
             )
             .addInterceptor(HostSelectionInterceptor(baseUrlProvider))
