@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "auth")
@@ -28,6 +29,8 @@ class AuthRepository @Inject constructor(
             prefs[KEY_TOKEN] = jwt
         }
     }
+
+    suspend fun getToken(): String? = context.dataStore.data.first()[KEY_TOKEN]
 
     suspend fun clearToken() {
         context.dataStore.edit { prefs ->
