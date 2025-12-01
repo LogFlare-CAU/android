@@ -1,0 +1,35 @@
+name: "Feature request"
+description: Suggest an idea or enhancement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly describe the feature
+      placeholder: As a user, I want...
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Bullet list of criteria
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+  - type: textarea
+    id: details
+    attributes:
+      label: Details / Notes
+      description: Any additional context, links, screenshots
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - auth
+        - projects
+        - logs
+        - fcm
+        - infra/ci

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Debug-only manifest overlay to permit cleartext traffic to local dev host (10.0.2.2)
+         This avoids changing production behavior while letting the emulator call http://10.0.2.2:8000 -->
+    <!-- 근데 이거 굳이 필요 없는 듯 합니다.  -->
+    <application
+        tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config" />
+
+</manifest>
