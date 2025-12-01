@@ -1,0 +1,36 @@
+# Android/Gradle
+.gradle/
+build/
+**/build/
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Local configuration
+local.properties
+
+# Keystores (never commit)
+*.jks
+*.keystore
+*.pem
+*.p12
+
+# Firebase/Google services (treat as secret unless explicitly intended to commit)
+app/google-services.json
+
+# Fastlane/outputs
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Misc
+captures/
+output.json
+*.log
+.DS_Store
+docs/*
