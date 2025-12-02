@@ -271,12 +271,12 @@ private fun ProjectLogCard(log: ProjectDetailLog) {
 @Composable
 private fun LevelBadge(level: ProjectLogLevel) {
     val badgeColor = when (level) {
-        ProjectLogLevel.FATAL -> FatalRed
+        ProjectLogLevel.CIRITCAL -> FatalRed
         ProjectLogLevel.ERROR -> Color(0xFFD84534)
-        ProjectLogLevel.WARN -> Color(0xFFFFB74D)
+        ProjectLogLevel.WARNING -> Color(0xFFFFB74D)
         ProjectLogLevel.INFO -> Color(0xFF1976D2)
         ProjectLogLevel.DEBUG -> Color(0xFF388E3C)
-        ProjectLogLevel.TRACE -> Color(0xFF455A64)
+//        ProjectLogLevel.TRACE -> Color(0xFF455A64)
     }
     Surface(
         color = badgeColor,

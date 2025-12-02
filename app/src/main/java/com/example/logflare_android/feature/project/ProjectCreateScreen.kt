@@ -142,7 +142,7 @@ fun ProjectCreateScreen(
             }
 
             item {
-                PermissionsSection()
+                PermissionsSection(ui.permissions, onToggle = vm::onPermissionToggle)
             }
         }
 
@@ -218,7 +218,7 @@ private fun ProjectNameSection(
                 ),
                 modifier = Modifier
                     .height(50.dp)
-                    .width(72.dp)
+                    .width(88.dp)
             ) {
                 Text(buttonLabel)
             }
@@ -317,7 +317,7 @@ private fun KeywordSection(
                 ),
                 modifier = Modifier
                     .height(50.dp)
-                    .width(72.dp)
+                    .width(88.dp)
             ) {
                 Text("Save")
             }
@@ -369,7 +369,7 @@ private fun KeywordList(keywords: List<String>, onRemove: (String) -> Unit) {
 
 @Composable
 private fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit) {
-    val options = listOf("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL")
+    val options = listOf("DEBUG", "INFO", "WARNING", "ERROR", "FATAL")
     var expanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -415,7 +415,7 @@ private fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit) {
     }
 }
 
-private data class PermissionToggleState(
+data class PermissionToggleState(
     val username: String,
     val role: String,
     val roleColor: Color,
@@ -425,15 +425,7 @@ private data class PermissionToggleState(
 )
 
 @Composable
-private fun PermissionsSection() {
-    val permissions = remember {
-        mutableStateListOf(
-            PermissionToggleState("{{username}}", "Super Admin", Color(0xFF1A1A1A), Color(0xFF2FA14F), Color(0xFFCCCCCC), true),
-            PermissionToggleState("{{username}}", "Admin", Color(0xFF1A1A1A), Color(0xFF2FA14F), Color(0xFFCCCCCC), true),
-            PermissionToggleState("{{username}}", "Member", Color(0xFF1A1A1A), Color(0xFF616161), Color(0xFFC2C2C2), false)
-        )
-    }
-
+private fun PermissionsSection(permissions: List<PermissionToggleState>, onToggle: (index: Int, checked: Boolean) -> Unit) {
     Column(
         modifier = Modifier
             .padding(16.dp)
@@ -446,7 +438,7 @@ private fun PermissionsSection() {
             PermissionRow(
                 state = state,
                 onToggle = { checked ->
-                    permissions[index] = state.copy(active = checked)
+                    onToggle(index, checked)
                 }
             )
         }

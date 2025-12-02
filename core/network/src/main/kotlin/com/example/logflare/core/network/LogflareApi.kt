@@ -9,6 +9,9 @@ import com.example.logflare.core.model.ProjectSequenceResponse
 import com.example.logflare.core.model.StringResponse
 import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare.core.model.ErrorParams
+import com.example.logflare.core.model.StringSequenceResponse
+import com.example.logflare.core.model.UserResponse
+import com.example.logflare.core.model.UserSequenceResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -19,8 +22,14 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface LogflareApi {
+    @GET("/user/")
+    suspend fun getAllUsers(@Header("Authorization") token: String): UserSequenceResponse
+
     @POST("/user/auth")
     suspend fun authenticate(@Body body: UserAuthParams): StringResponse
+
+    @GET("/user/me")
+    suspend fun getme(@Header("Authorization") token: String): UserResponse
 
     @GET("/fcm/data")
     suspend fun getFirebaseConfig(
@@ -59,9 +68,24 @@ interface LogflareApi {
         @Body body: ErrorParams
     ): Response<Unit>
 
+    @GET("/log/{projectid}/{logfileid}")
+    suspend fun getProjectLogFile(
+        @Header("Authorization") bearer: String,
+        @Path("projectid") projectId: Int,
+        @Path("logfileid") logfileid: Int,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): StringSequenceResponse
+
+    @GET("/fcm/data")
+    suspend fun getFcmConfig(
+        @Header("Authorization") bearer: String
+    ): FcmConfigResponse
+
     @POST("/fcm/token")
     suspend fun registerFcmToken(
         @Header("Authorization") bearer: String,
         @Body body: FcmTokenParams
     ): FcmTokenResponse
+
 }

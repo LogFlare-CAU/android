@@ -11,11 +11,42 @@ data class UserAuthParams(
 )
 
 @Serializable
+data class UserResponse(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: UserDTO? = null
+)
+
+@Serializable
+data class UserSequenceResponse(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: List<UserDTO>? = null
+)
+
+@Serializable
+data class UserDTO(
+    val idx: Int,
+    val username: String,
+    val permission: Int,
+)
+
+@Serializable
 data class StringResponse(
     val success: Boolean,
     val message: String,
     val error_code: Int? = null,
     val data: String? = null
+)
+
+@Serializable
+data class StringSequenceResponse(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: List<String>? = null
 )
 
 @Serializable
