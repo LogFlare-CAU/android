@@ -47,6 +47,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.model.ErrorlogDTO
 import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 private val StatusBarGray = Color(0xFFF5F5F5)
@@ -149,7 +152,7 @@ private fun FakeStatusBar() {
             .padding(vertical = 4.dp)
     ) {
         Text(
-            text = "12:30",
+            text = LocalTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("HH:mm")),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier
                 .padding(horizontal = 16.dp)
