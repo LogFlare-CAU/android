@@ -30,7 +30,10 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun getToken(): String? = context.dataStore.data.first()[KEY_TOKEN]
+    suspend fun getToken(): String {
+        val token: String = context.dataStore.data.first()[KEY_TOKEN]?: throw IllegalStateException("No token found")
+        return token
+    }
 
     suspend fun clearToken() {
         context.dataStore.edit { prefs ->
