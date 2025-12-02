@@ -1,7 +1,10 @@
 package com.example.logflare_android.feature.project
 
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.logflare.core.network.LogflareApi
+import com.example.logflare_android.data.AuthRepository
 import com.example.logflare_android.data.ProjectsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -20,15 +23,22 @@ data class ProjectCreateUiState(
     val keywordError: String? = null,
     val alertLevels: Set<String> = emptySet(),
     val saved: Boolean = false,
-    val snackbar: String? = null
+    val snackbar: String? = null,
+    val permissions: List<PermissionToggleState> = emptyList(),
 )
 
 @HiltViewModel
 class ProjectCreateViewModel @Inject constructor(
-    private val repo: ProjectsRepository
+    private val repo: ProjectsRepository,
+    private val authRepo: AuthRepository,
+    private val api: LogflareApi
 ) : ViewModel() {
     private val _ui = MutableStateFlow(ProjectCreateUiState())
     val ui: StateFlow<ProjectCreateUiState> = _ui
+
+    init {
+        initPermissions()
+    }
 
     private val nameRegex = Regex("^[\\p{IsHangul}\\p{IsLatin}\\p{N}\\p{P}\\p{Zs}]+$")
     private val keywordRegex = Regex("^[A-Za-z0-9 ]+$")
@@ -91,5 +101,40 @@ class ProjectCreateViewModel @Inject constructor(
 
     fun clearSnackbar() {
         _ui.value = _ui.value.copy(snackbar = null)
+    }
+
+    //================= Permission Toggles =================//
+    fun initPermissions(){
+        val defaultPermissions = listOf(
+            PermissionToggleState(
+                username = "{{username}}",
+                role = "Super Admin",
+                roleColor = Color(0xFF1A1A1A),
+                activeColor = Color(0xFF2FA14F),
+                inactiveColor = Color(0xFFCCCCCC),
+                active = true
+            ),
+            PermissionToggleState(
+                username = "{{username}}",
+                role = "Admin",
+                roleColor = Color(0xFF1A1A1A),
+                activeColor = Color(0xFF2FA14F),
+                inactiveColor = Color(0xFFCCCCCC),
+                active = true
+            ),
+            PermissionToggleState(
+                username = "{{username}}",
+                role = "Member",
+                roleColor = Color(0xFF1A1A1A),
+                activeColor = Color(0xFF616161),
+                inactiveColor = Color(0xFFC2C2C2),
+                active = false
+            )
+        )
+        _ui.value = _ui.value.copy(permissions = defaultPermissions)
+    }
+
+    fun onPermissionToggle(index: Int, checked: Boolean) {
+
     }
 }
