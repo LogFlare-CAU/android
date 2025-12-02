@@ -13,7 +13,7 @@ class AuthMeUseCase @Inject constructor(
     private val authRepository: AuthRepository,
 ){
     suspend operator fun invoke(): UserDTO?{
-        val token = authRepository.getToken() ?: return null
+        val token = authRepository.getToken()
         val result = runCatching {
             api.getme(token)
         }.getOrElse {
