@@ -134,7 +134,11 @@ class ProjectCreateViewModel @Inject constructor(
         _ui.value = _ui.value.copy(permissions = defaultPermissions)
     }
 
-    fun onPermissionToggle(index: Int, checked: Boolean) {
-
+    fun onPermissionToggle(index: Int, checked: Boolean) {                                                                                                
+        _ui.value = _ui.value.copy(
+            permissions = _ui.value.permissions.mapIndexed { i, perm ->
+                if (i == index) perm.copy(active = checked) else perm
+            }
+        )
     }
 }
