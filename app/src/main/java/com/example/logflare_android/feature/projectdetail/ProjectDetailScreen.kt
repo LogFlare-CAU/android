@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare_android.ui.components.BackHeader
 
 private val CardGray = Color(0xFFEEEEEE)
 private val LogCardGray = Color(0xFFEDEDED)
@@ -98,7 +99,7 @@ private fun ProjectDetailContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        ProjectHeader(projectName = uiState.projectName, onBack = onBack)
+    BackHeader(title = uiState.projectName, onBack = onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
             onClick = { onOpenProjectSettings(uiState.projectId) }
@@ -109,31 +110,7 @@ private fun ProjectDetailContent(
     }
 }
 
-@Composable
-private fun ProjectHeader(
-    projectName: String,
-    onBack: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back"
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = projectName,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = PrimaryText
-        )
-    }
-}
+// Local ProjectHeader is now standardized to use BackHeader
 
 @Composable
 private fun ProjectSettingsCard(
