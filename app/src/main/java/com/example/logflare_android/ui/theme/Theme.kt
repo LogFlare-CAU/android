@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.example.logflare.core.designsystem.AppTheme
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -40,11 +41,14 @@ fun LogflareandroidTheme(
     // 항상 LightColorScheme 사용
     val colorScheme = LightColorScheme
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    // Provide design system colors via AppTheme
+    AppTheme {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
 
 
