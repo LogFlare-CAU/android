@@ -34,3 +34,4 @@ output.json
 *.log
 .DS_Store
 docs/*
+.config/
