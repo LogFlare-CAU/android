@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.ui.components.BackHeader
+import com.example.logflare.core.designsystem.AppTheme
 
 private val CardGray = Color(0xFFEEEEEE)
 private val LogCardGray = Color(0xFFEDEDED)
@@ -134,7 +135,7 @@ private fun ProjectSettingsCard(
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTheme.typography.bodyMdMedium,
                 color = PrimaryText.copy(alpha = 0.86f)
             )
             Box(
@@ -156,7 +157,7 @@ private fun LogsSection(logs: List<ProjectDetailLog>) {
     ) {
         Text(
             text = "Logs",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            style = AppTheme.typography.bodyLgBold,
             color = PrimaryText,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
@@ -186,14 +187,14 @@ private fun ProjectLogCard(log: ProjectDetailLog) {
             Spacer(Modifier.width(8.dp))
             Text(
                 text = log.timestamp,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTheme.typography.captionMdMedium,
                 color = InfoGray
             )
         }
         Spacer(Modifier.height(12.dp))
         Text(
             text = log.message,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            style = AppTheme.typography.bodyLgBold,
             color = PrimaryText,
             lineHeight = 24.sp,
             maxLines = 6,
@@ -203,13 +204,13 @@ private fun ProjectLogCard(log: ProjectDetailLog) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = log.projectName,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTheme.typography.captionSmMedium,
                 color = InfoGray
             )
-            Text(" / ", style = MaterialTheme.typography.bodySmall, color = InfoGray)
+            Text(" / ", style = AppTheme.typography.captionSmMedium, color = InfoGray)
             Text(
                 text = log.fileName,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTheme.typography.captionSmMedium,
                 color = InfoGray
             )
         }
@@ -233,7 +234,7 @@ private fun LevelBadge(level: ProjectLogLevel) {
         Text(
             text = level.displayName,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+            style = AppTheme.typography.captionSmMedium.copy(fontWeight = FontWeight.Medium),
             color = Color.White
         )
     }
@@ -342,7 +343,7 @@ private fun FilterHeader(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelSmall.copy(
+            style = AppTheme.typography.captionSmMedium.copy(
                 color = AccentGreen,
                 fontWeight = FontWeight.Medium
             )
@@ -378,7 +379,7 @@ private fun CheckRow(
         Spacer(Modifier.width(8.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(
+            style = AppTheme.typography.captionSmMedium.copy(
                 color = if (selected && fillWhenSelected) highlight else SecondaryText,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
             )

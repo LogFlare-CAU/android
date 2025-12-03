@@ -1,9 +1,6 @@
 package com.example.logflare.core.designsystem
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
@@ -78,55 +75,5 @@ val LocalAppColors = staticCompositionLocalOf {
             Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified,
             Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified
         )
-    )
-}
-
-// 3. Theme Object & Provider
-object AppTheme {
-    val colors: AppColors
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalAppColors.current
-}
-
-@Composable
-fun AppTheme(
-    content: @Composable () -> Unit
-) {
-    val appColors = AppColors(
-        primary = BrandColorState(
-            default = GreenDefault,
-            pressed = GreenPressed,
-            disabled = GreenDisabled
-        ),
-        secondary = BrandColorState(
-            default = GreyDefault,
-            pressed = GreyPressed,
-            disabled = GreyDisabled
-        ),
-        red = BrandColorState(
-            default = RedDefault,
-            pressed = RedPressed,
-            disabled = RedDisabled
-        ),
-        neutral = NeutralColorStep(
-            s5 = Neutral5,
-            s10 = Neutral10,
-            s20 = Neutral20,
-            s30 = Neutral30,
-            s40 = Neutral40,
-            s50 = Neutral50,
-            s60 = Neutral60,
-            s70 = Neutral70,
-            s80 = Neutral80,
-            s90 = Neutral90,
-            black = Black,
-            white = White
-        )
-    )
-
-    CompositionLocalProvider(
-        LocalAppColors provides appColors,
-        content = content
     )
 }
