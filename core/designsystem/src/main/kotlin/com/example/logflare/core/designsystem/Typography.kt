@@ -1,56 +1,65 @@
 package com.example.logflare.core.designsystem
 
-import androidx.compose.material3.Typography
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-/**
- * LogFlare typography definitions.
- * TODO: Define typography based on actual design specifications.
- */
-val LogFlareTypography = Typography(
-    displayLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 57.sp,
-        lineHeight = 64.sp,
-        letterSpacing = 0.sp
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp,
-        letterSpacing = 0.sp
-    ),
-    titleMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.25.sp
-    ),
-    bodySmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
-    ),
-    labelMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    )
+// -------------------------------------------------------------------
+// 1. Font Family Setup (Pretendard)
+// -------------------------------------------------------------------
+// NOTE:
+// - If you add actual font files under core/designsystem/src/main/res/font
+//   as pretendard_bold.otf, pretendard_medium.otf, pretendard_light.otf,
+//   you can replace the fallback with resource-based fonts.
+// - For now, we fallback to the default sans-serif family to avoid build errors
+//   when font resources are not present.
+
+val Pretendard = FontFamily.SansSerif
+// Example (uncomment after adding resources to this module):
+// val Pretendard = FontFamily(
+//     Font(R.font.pretendard_bold, FontWeight.Bold),
+//     Font(R.font.pretendard_medium, FontWeight.Medium),
+//     Font(R.font.pretendard_light, FontWeight.Light)
+// )
+
+// -------------------------------------------------------------------
+// 2. Typography Definition (roleSizeWeight -> camelCase)
+// -------------------------------------------------------------------
+
+@Immutable
+data class AppTypography(
+    // Body - Large
+    val bodyLgBold: TextStyle,
+
+    // Body - Medium
+    val bodyMdBold: TextStyle,
+    val bodyMdMedium: TextStyle,
+    val bodyMdLight: TextStyle,
+
+    // Body - Small
+    val bodySmBold: TextStyle,
+    val bodySmMedium: TextStyle,
+    val bodySmLight: TextStyle,
+
+    // Caption
+    val captionMdMedium: TextStyle,
+    val captionSmMedium: TextStyle
 )
+
+// CompositionLocal 생성 (기본값은 비어있음)
+val LocalAppTypography = staticCompositionLocalOf {
+    AppTypography(
+        bodyLgBold = TextStyle.Default,
+        bodyMdBold = TextStyle.Default,
+        bodyMdMedium = TextStyle.Default,
+        bodyMdLight = TextStyle.Default,
+        bodySmBold = TextStyle.Default,
+        bodySmMedium = TextStyle.Default,
+        bodySmLight = TextStyle.Default,
+        captionMdMedium = TextStyle.Default,
+        captionSmMedium = TextStyle.Default
+    )
+}
