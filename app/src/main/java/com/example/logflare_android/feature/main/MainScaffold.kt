@@ -26,6 +26,9 @@ import androidx.navigation.NavType
 import com.example.logflare_android.feature.log.LogListScreen
 import com.example.logflare_android.feature.home.HomeScreen
 import com.example.logflare_android.feature.mypage.MyPageScreen
+import com.example.logflare_android.feature.mypage.AddMemberScreen
+import com.example.logflare_android.feature.mypage.EditMemberScreen
+import com.example.logflare_android.feature.mypage.LogoutScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.project.ProjectCreateScreen
 import com.example.logflare_android.feature.projectdetail.ProjectDetailScreen
@@ -148,7 +151,35 @@ private fun MainNavHost(
             // Simple project creation screen; on success navigate back to Projects
             ProjectCreateScreen(onCreated = { navController.navigate(Route.Projects.path) })
         }
-        composable(Route.MyPage.path) { MyPageScreen(onLogout = onLogout) }
+        composable(Route.MyPage.path) {
+            MyPageScreen(
+                onBack = { navController.popBackStack() },
+                onLogout = { navController.navigate(Route.MyPageLogout.path) },
+                onAddMember = { navController.navigate(Route.MyPageAddMember.path) },
+                onEditMember = { username ->
+                    navController.navigate(Route.MyPageEditMember.createRoute(username))
+                }
+            )
+        }
+        composable(Route.MyPageAddMember.path) {
+            AddMemberScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Route.MyPageEditMember.path,
+            arguments = listOf(navArgument("username") { type = NavType.StringType })
+        ) {
+            EditMemberScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Route.MyPageLogout.path) {
+            LogoutScreen(
+                onBack = { navController.popBackStack() },
+                onLogout = onLogout
+            )
+        }
         composable(
             route = Route.ProjectDetail.path,
             arguments = listOf(navArgument("projectId") { type = NavType.IntType })

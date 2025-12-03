@@ -28,7 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.enum.UserPermission
+import com.example.logflare_android.enums.UserPermission
 import com.example.logflare_android.feature.auth.AuthViewModel
 import com.example.logflare_android.feature.log.LogViewModel
 import com.example.logflare_android.feature.project.ProjectsViewModel

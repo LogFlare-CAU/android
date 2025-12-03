@@ -19,6 +19,13 @@ sealed class Route(val path: String) {
     // Create project screen
     data object ProjectCreate : Route("projects/create")
 
+    // MyPage screens
+    data object MyPageAddMember : Route("mypage/add-member")
+    data object MyPageEditMember : Route("mypage/edit-member/{username}") {
+        fun createRoute(username: String) = "mypage/edit-member/$username"
+    }
+    data object MyPageLogout : Route("mypage/logout")
+
     // Detail screens with arguments
     data object ProjectDetail : Route("project/{projectId}") {
         fun createRoute(projectId: Int) = "project/$projectId"
