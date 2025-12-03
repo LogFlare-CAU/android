@@ -52,7 +52,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
-private val StatusBarGray = Color(0xFFF5F5F5)
 private val CardGray = Color(0xFFEDEDED)
 private val FatalRed = Color(0xFFB12B38)
 private val InfoGray = Color(0xFF616161)
@@ -108,7 +107,6 @@ fun LogListScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        FakeStatusBar()
         LogHeader()
         FilterDropdownRow(
             selectedLevel = uiState.filter,
@@ -140,33 +138,6 @@ fun LogListScreen(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun FakeStatusBar() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(StatusBarGray)
-            .padding(vertical = 4.dp)
-    ) {
-        Text(
-            text = LocalTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("HH:mm")),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.CenterStart),
-            color = SecondaryText
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .height(8.dp)
-                .width(24.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(SecondaryText.copy(alpha = 0.9f))
-        )
     }
 }
 

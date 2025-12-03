@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 
-private val StatusBarGray = Color(0xFFF5F5F5)
 private val CardGray = Color(0xFFEEEEEE)
 private val LogCardGray = Color(0xFFEDEDED)
 private val FatalRed = Color(0xFFB12B38)
@@ -99,7 +98,6 @@ private fun ProjectDetailContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        FakeStatusBar(timeLabel = uiState.statusTimeLabel)
         ProjectHeader(projectName = uiState.projectName, onBack = onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
@@ -108,33 +106,6 @@ private fun ProjectDetailContent(
         FilterPanel(filterState = uiState.filterState)
         LogsSection(logs = uiState.logs)
         BottomSpacerBar()
-    }
-}
-
-@Composable
-private fun FakeStatusBar(timeLabel: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(StatusBarGray)
-            .padding(vertical = 4.dp)
-    ) {
-        Text(
-            text = timeLabel,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.CenterStart),
-            color = SecondaryText
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .height(8.dp)
-                .width(24.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(SecondaryText.copy(alpha = 0.9f))
-        )
     }
 }
 
@@ -445,6 +416,6 @@ private fun BottomSpacerBar() {
             .fillMaxWidth()
             .padding(top = 24.dp)
     ) {
-        HorizontalDivider(color = StatusBarGray, thickness = 48.dp)
+        HorizontalDivider(color = CardGray, thickness = 48.dp)
     }
 }
