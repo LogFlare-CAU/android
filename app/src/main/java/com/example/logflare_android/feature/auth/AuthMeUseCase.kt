@@ -20,6 +20,7 @@ class AuthMeUseCase @Inject constructor(
             return null
             // TODO: 실제 예외 처리
         }
+        result.data?.username?.let { authRepository.setUsername(it) }
         return result.data
     }
 }

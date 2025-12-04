@@ -52,6 +52,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
+private val StatusBarGray = Color(0xFFF5F5F5)
 private val CardGray = Color(0xFFEDEDED)
 private val FatalRed = Color(0xFFB12B38)
 private val InfoGray = Color(0xFF616161)
@@ -140,6 +141,7 @@ fun LogListScreen(
         }
     }
 }
+
 
 @Composable
 private fun LogHeader() {
