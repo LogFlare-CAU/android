@@ -23,7 +23,6 @@ data class ProjectDetailUiState(
     val loading: Boolean = true,
     val projectId: Int = 0,
     val projectName: String = "",
-    val statusTimeLabel: String = LocalTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("HH:mm")),
     val settingsLabel: String = "Project Settings",
     val logs: List<ProjectDetailLog> = emptyList(),
     val filterState: ProjectDetailFilterState = ProjectDetailFilterState()
@@ -85,7 +84,6 @@ class ProjectDetailViewModel @Inject constructor(
     private val projectId: Int = savedStateHandle["projectId"] ?: 0
 
     private val _ui = MutableStateFlow(ProjectDetailUiState(projectId = projectId))
-    // TODO: 과연 이게 필요할까요 어차피 시간은 내 핸드폰에서 나오는건데
     val ui: StateFlow<ProjectDetailUiState> = _ui
 
     init {
@@ -120,7 +118,7 @@ class ProjectDetailViewModel @Inject constructor(
     }
 
     private suspend fun getLogs() {
-        val project = getProjectDetailUseCase(projectId) ?: return
+        val project = getProjectDetailUseCase(projectId)?.dto ?: return
         addInitialLogs(project)
         val logfiles = project.logfiles ?: return
         var first = true

@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 
+private val StatusBarGray = Color(0xFFF5F5F5)
 private val CardGray = Color(0xFFEEEEEE)
 private val LogCardGray = Color(0xFFEDEDED)
 private val FatalRed = Color(0xFFB12B38)
@@ -108,6 +109,7 @@ private fun ProjectDetailContent(
         BottomSpacerBar()
     }
 }
+
 
 @Composable
 private fun ProjectHeader(
@@ -416,6 +418,6 @@ private fun BottomSpacerBar() {
             .fillMaxWidth()
             .padding(top = 24.dp)
     ) {
-        HorizontalDivider(color = CardGray, thickness = 48.dp)
+        HorizontalDivider(color = StatusBarGray, thickness = 48.dp)
     }
 }
