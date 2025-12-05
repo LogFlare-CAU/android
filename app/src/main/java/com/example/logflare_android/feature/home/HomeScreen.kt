@@ -28,7 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.enum.UserPermission
+import com.example.logflare_android.enums.UserPermission
 import com.example.logflare_android.feature.auth.AuthViewModel
 import com.example.logflare_android.feature.log.LogViewModel
 import com.example.logflare_android.feature.project.ProjectsViewModel
@@ -56,7 +56,8 @@ fun HomeScreen(
     }
     LaunchedEffect(projectsState.items) {
         // Fetch only a small recent subset of logs (limit=5) for Home dashboard context
-        projectsState.items.firstOrNull()?.let { p -> logsVm.refresh(p.id, limit = 5) }
+        logsVm.getLogs(5)
+        // projectsState.items.firstOrNull()?.let { p -> logsVm.refresh(p.id, limit = 5) }
     }
 
     Column(modifier = Modifier
@@ -125,14 +126,14 @@ fun HomeScreen(
         when {
             logsState.loading -> Text("Loading logs…", modifier = Modifier.padding(start = 16.dp))
             logsState.error != null -> Text("Logs error: ${logsState.error}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 16.dp))
-            logsState.items.isEmpty() -> EmptyStateCard(
+            logsState.errorLogs.isEmpty() -> EmptyStateCard(
                 text = "No logs found.\nPlease check your server connection.",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
             )
             else -> LazyColumn(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
             ) {
-                items(logsState.items.take(5)) { e ->
+                items(logsState.errorLogs.take(5)) { e ->
                     LogRowItem(e)
                 }
             }
