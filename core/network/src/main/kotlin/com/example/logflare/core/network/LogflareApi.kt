@@ -59,9 +59,10 @@ interface LogflareApi {
     @GET("/log/error")
     suspend fun getErrors(
         @Header("Authorization") bearer: String,
-        @Query("project_id") projectId: Int,
+        @Query("project_id") projectId: Int? = null,
         @Query("limit") limit: Int = 50,
-        @Query("offset") offset: Int = 0
+        @Query("offset") offset: Int = 0,
+        @Query("sortby") sortby: String? = null
     ): ErrorSequenceResponse
 
     @POST("/log/error")
@@ -77,7 +78,8 @@ interface LogflareApi {
         @Path("projectid") projectId: Int,
         @Path("logfileid") logfileid: Int,
         @Query("limit") limit: Int = 50,
-        @Query("offset") offset: Int = 0
+        @Query("offset") offset: Int = 0,
+        @Query("sortby") sortBy: String? = null
     ): StringSequenceResponse
 
     @POST("/project/perm/batch/reset")
