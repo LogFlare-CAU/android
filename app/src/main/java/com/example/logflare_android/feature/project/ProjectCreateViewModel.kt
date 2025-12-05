@@ -1,15 +1,13 @@
 package com.example.logflare_android.feature.project
 
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.logflare_android.data.AuthRepository
 import com.example.logflare_android.data.ProjectsRepository
-import com.example.logflare_android.enum.LogLevel
-import com.example.logflare_android.enum.UserPermission
+import com.example.logflare_android.enums.LogLevel
+import com.example.logflare_android.enums.UserPermission
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
