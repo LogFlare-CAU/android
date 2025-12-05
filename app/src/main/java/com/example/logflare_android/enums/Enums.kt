@@ -1,4 +1,4 @@
-package com.example.logflare_android.enum
+package com.example.logflare_android.enums
 
 import androidx.compose.ui.graphics.Color
 
@@ -38,4 +38,11 @@ enum class LogLevel(val code: Int, val label: String, val color: Color) {
         fun getAboveLevel(level: String): List<LogLevel> =
             LogLevel.entries.filter { it.code >= fromCodeByLabel(level).code }
     }
+}
+
+enum class LogSort(val label: String) {
+    NEWEST("newest"),
+    OLDEST("oldest"),
+    LEVEL_DESC("highest"),
+    LEVEL_ASC("lowest")
 }
