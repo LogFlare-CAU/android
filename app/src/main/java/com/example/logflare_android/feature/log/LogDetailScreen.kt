@@ -33,12 +33,11 @@ import com.example.logflare_android.ui.common.TopTitle
 fun LogDetailScreen(
     onBack: () -> Unit,
     vm: LogDetailViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
 ) {
     val log = vm.getLogDetail() ?: return EmptyState(true)
     LogDetailScreenContent(
         onBack = onBack,
-        log
+        log = log
     )
 }
 
@@ -48,47 +47,45 @@ fun LogDetailScreenContent(
     log: LogCardInfo,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = Color.White
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(bottom = 16.dp)
     ) {
+        TopTitle("Log Details", onBack = onBack)
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxWidth()
+                .weight(1f)
+                .verticalScroll(state = rememberScrollState())
+                .padding(horizontal = 16.dp),
         ) {
-            TopTitle("Log Details", onBack = onBack)
-            Column(
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = "Log Info",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp).fillMaxWidth())
+            GlobalLogCard(log = log)
+            Spacer(modifier = Modifier.height(12.dp).fillMaxWidth())
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = "Raw Data",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp).fillMaxWidth())
+            Text(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(state = rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(end = 16.dp),
-            ) {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = "Log Info",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp).fillMaxWidth())
-                GlobalLogCard(log = log)
-                Spacer(modifier = Modifier.height(12.dp).fillMaxWidth())
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = "Raw Data",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp).fillMaxWidth())
-                Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(color = CardGray)
-                        .padding(24.dp),
-                    text = log.message,
-                    fontFamily = Cascadia,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(color = CardGray)
+                    .padding(24.dp),
+                text = log.message,
+                fontFamily = Cascadia,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
