@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,11 +18,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -267,7 +268,9 @@ fun LoadMoreRow(
 data class LogCardInfo(
     val level: String,
     val timestamp: String,
-    val message: String
+    val message: String,
+    val prefix: String,
+    val suffix: String,
 )
 
 /**
@@ -280,8 +283,7 @@ data class LogCardInfo(
 @Composable
 fun GlobalLogCard(
     log: LogCardInfo,
-    prefix: String,
-    suffix: String
+    onClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -289,6 +291,9 @@ fun GlobalLogCard(
             .clip(RoundedCornerShape(12.dp))
             .background(CardGray)
             .padding(24.dp)
+            .clickable {
+                onClick()
+            }
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CommonLevelBadge(level = log.level)
@@ -301,7 +306,7 @@ fun GlobalLogCard(
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            text = log.message,
+            text = cropLongText(log.message),
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
             color = PrimaryText,
             lineHeight = 24.sp,
@@ -311,13 +316,13 @@ fun GlobalLogCard(
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = prefix,
+                text = log.prefix,
                 style = MaterialTheme.typography.bodySmall,
                 color = InfoGray
             )
             Text(" / ", style = MaterialTheme.typography.bodySmall, color = InfoGray)
             Text(
-                text = suffix,
+                text = log.suffix,
                 style = MaterialTheme.typography.bodySmall,
                 color = InfoGray
             )
@@ -343,13 +348,15 @@ private fun displayTimestamp(value: String?): String {
 fun EmptyState(projectFiltered: Boolean = false, filter: List<LogLevel> = emptyList()) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 48.dp),
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardGray)
+            .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = if (projectFiltered) "No logs available" else "No logs for this Project / LogFile",
@@ -363,5 +370,44 @@ fun EmptyState(projectFiltered: Boolean = false, filter: List<LogLevel> = emptyL
                 )
             }
         }
+    }
+}
+
+
+@Composable
+fun TopTitle(
+    title: String,
+    onBack: (() -> Unit)? = null
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(60.dp)
+    ) {
+        if (onBack != null) {
+            Row(
+                modifier = Modifier.align(Alignment.CenterStart),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back"
+                    )
+                }
+            }
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = PrimaryText,
+            modifier = Modifier.align(Alignment.Center)
+        )
+    }
+}
+
+private fun cropLongText(text: String, maxLength: Int = 100): String {
+    return if (text.length <= maxLength) {
+        text
+    } else {
+        text.take(maxLength) + "..."
     }
 }
