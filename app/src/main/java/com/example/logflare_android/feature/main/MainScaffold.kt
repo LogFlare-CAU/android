@@ -137,7 +137,7 @@ private fun MainNavHost(
             )
         }
         composable(Route.Logs.path) {
-            LogListScreen(projectId = null)
+            LogListScreen()
         }
         composable(Route.Projects.path) {
             ProjectListScreen(onProjectClick = { projectId ->
