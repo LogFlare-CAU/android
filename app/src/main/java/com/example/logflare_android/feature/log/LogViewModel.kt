@@ -3,11 +3,13 @@ package com.example.logflare_android.feature.log
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.compose.rememberNavController
 import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare_android.data.LogsRepository
 import com.example.logflare_android.data.ProjectsRepository
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
+import com.example.logflare_android.ui.common.LogCardInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -183,6 +185,18 @@ class LogViewModel @Inject constructor(
         getLogs(
             projectid = _ui.value.selectedProject,
             sortBy = sortBy
+        )
+    }
+
+    fun onLogClick(log: ErrorlogDTO) {
+        repo.selectLog(
+            LogCardInfo(
+                level = log.level,
+                timestamp = log.timestamp,
+                message = log.message,
+                prefix = _ui.value.projectNames[log.project_id] ?: "Project #${log.project_id}",
+                suffix = log.errortype ?: "Unknown"
+            )
         )
     }
 

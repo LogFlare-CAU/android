@@ -49,6 +49,7 @@ import java.nio.channels.Selector
 fun ProjectDetailScreen(
     onBack: () -> Unit,
     onOpenProjectSettings: (Int) -> Unit,
+    onLogClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProjectDetailViewModel = hiltViewModel()
 ) {
@@ -72,7 +73,8 @@ fun ProjectDetailScreen(
                 onOpenProjectSettings = onOpenProjectSettings,
                 onLevelSelected = { level -> viewModel.onLevelSelected(level) },
                 onLogfileSelected = { id -> viewModel.onLogfileSelected(id) },
-                onSortSelected = { sort -> viewModel.onSortSelected(sort) }
+                onSortSelected = { sort -> viewModel.onSortSelected(sort) },
+                onLogClick = { log -> viewModel.onLogClick(log); onLogClick() }
             )
         }
     }
@@ -86,6 +88,7 @@ private fun ProjectDetailContent(
     onLevelSelected: (LogLevel) -> Unit,
     onLogfileSelected: (Int) -> Unit,
     onSortSelected: (LogSort) -> Unit,
+    onLogClick: (ProjectDetailLog) -> Unit = { }
 ) {
     Column(
         modifier = Modifier
@@ -94,7 +97,7 @@ private fun ProjectDetailContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        ProjectHeader(projectName = uiState.projectName, onBack = onBack)
+        TopTitle(uiState.projectName, onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
             onClick = { onOpenProjectSettings(uiState.projectId) }
@@ -112,35 +115,13 @@ private fun ProjectDetailContent(
         ) {
             when {
                 uiState.logs.isEmpty() -> EmptyState(uiState.projectId > 0, uiState.filterState.selectedLevel)
-                else -> LogsSection(logs = uiState.logs, showMore = uiState.showMoreState)
+                else -> LogsSection(
+                    logs = uiState.logs,
+                    showMore = uiState.showMoreState,
+                    onLogClick = onLogClick
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun ProjectHeader(
-    projectName: String,
-    onBack: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back"
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = projectName,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = PrimaryText
-        )
     }
 }
 
@@ -180,7 +161,11 @@ private fun ProjectSettingsCard(
 }
 
 @Composable
-private fun LogsSection(logs: List<ProjectDetailLog>, showMore: ShowMoreState) {
+private fun LogsSection(
+    logs: List<ProjectDetailLog>,
+    showMore: ShowMoreState,
+    onLogClick: (ProjectDetailLog) -> Unit
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -191,9 +176,14 @@ private fun LogsSection(logs: List<ProjectDetailLog>, showMore: ShowMoreState) {
 
         items(items = logs, key = { it.id }) { log ->
             GlobalLogCard(
-                log = LogCardInfo(log.level.label, log.timestamp, log.message),
-                prefix = log.projectName,
-                suffix = log.fileName,
+                log = LogCardInfo(
+                    log.level.label,
+                    log.timestamp,
+                    log.message,
+                    log.projectName,
+                    log.fileName,
+                ),
+                onClick = { onLogClick(log) }
             )
         }
         if (showMore.hasMore) {
@@ -273,16 +263,5 @@ private fun FilterPanel(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun BottomSpacerBar() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 24.dp)
-    ) {
-        HorizontalDivider(color = StatusBarGray, thickness = 48.dp)
     }
 }
