@@ -25,6 +25,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.example.logflare_android.feature.log.LogListScreen
 import com.example.logflare_android.feature.home.HomeScreen
+import com.example.logflare_android.feature.log.LogDetailScreen
 import com.example.logflare_android.feature.mypage.MyPageScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.project.ProjectCreateScreen
@@ -41,7 +42,7 @@ fun MainScaffold(
     onLogout: () -> Unit
 ) {
     val navController = rememberNavController()
-    
+
     Scaffold(
         bottomBar = {
             BottomNavigationBar(navController = navController)
@@ -59,20 +60,20 @@ fun MainScaffold(
 private fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    
+
     val items = listOf(
         BottomNavItem(route = Route.Home, icon = Icons.Default.Home, label = "Home"),
-    BottomNavItem(route = Route.Logs, icon = Icons.AutoMirrored.Filled.List, label = "Logs"),
-    BottomNavItem(route = Route.Projects, icon = Icons.AutoMirrored.Filled.List, label = "Projects"),
+        BottomNavItem(route = Route.Logs, icon = Icons.AutoMirrored.Filled.List, label = "Logs"),
+        BottomNavItem(route = Route.Projects, icon = Icons.AutoMirrored.Filled.List, label = "Projects"),
         BottomNavItem(route = Route.MyPage, icon = Icons.Default.Person, label = "MyPage")
     )
-    
+
     NavigationBar {
         items.forEach { item ->
-            val selected = currentDestination?.hierarchy?.any { 
-                it.route == item.route.path 
+            val selected = currentDestination?.hierarchy?.any {
+                it.route == item.route.path
             } == true
-            
+
             NavigationBarItem(
                 selected = selected,
                 onClick = {
@@ -137,7 +138,9 @@ private fun MainNavHost(
             )
         }
         composable(Route.Logs.path) {
-            LogListScreen()
+            LogListScreen(
+                onLogClick = { navController.navigate(Route.LogDetail.path) }
+            )
         }
         composable(Route.Projects.path) {
             ProjectListScreen(onProjectClick = { projectId ->
@@ -145,7 +148,6 @@ private fun MainNavHost(
             })
         }
         composable(Route.ProjectCreate.path) {
-            // Simple project creation screen; on success navigate back to Projects
             ProjectCreateScreen(onCreated = { navController.navigate(Route.Projects.path) })
         }
         composable(Route.MyPage.path) { MyPageScreen(onLogout = onLogout) }
@@ -157,7 +159,8 @@ private fun MainNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenProjectSettings = { projectId ->
                     navController.navigate(Route.ProjectSettings.createRoute(projectId))
-                }
+                },
+                onLogClick = { navController.navigate(Route.LogDetail.path) }
             )
         }
         composable(
@@ -169,6 +172,9 @@ private fun MainNavHost(
                 projectId = projectId,
                 onBack = { navController.popBackStack() }
             )
+        }
+        composable(route = Route.LogDetail.path) {
+            LogDetailScreen(onBack = { navController.popBackStack() })
         }
     }
 }
