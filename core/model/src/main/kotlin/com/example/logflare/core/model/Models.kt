@@ -11,11 +11,42 @@ data class UserAuthParams(
 )
 
 @Serializable
+data class UserResponse(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: UserDTO? = null
+)
+
+@Serializable
+data class UserSequenceResponse(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: List<UserDTO>? = null
+)
+
+@Serializable
+data class UserDTO(
+    val idx: Int,
+    val username: String,
+    val permission: Int,
+)
+
+@Serializable
 data class StringResponse(
     val success: Boolean,
     val message: String,
     val error_code: Int? = null,
     val data: String? = null
+)
+
+@Serializable
+data class StringSequenceResponse(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: List<String>? = null
 )
 
 @Serializable
@@ -41,11 +72,36 @@ data class ProjectDTO(
 )
 
 @Serializable
+data class ProjectDTOWithToken(
+    val id: Int,
+    val name: String,
+    val alias: String? = null,
+    val description: String? = null,
+    val token: String,
+    val logfiles: List<LogFileDTO>? = null
+)
+
+@Serializable
+data class ProjectData(
+    val dto: ProjectDTO,
+    val excludeKeywords: Set<String> = emptySet(),
+    val alertLevel: String,
+)
+
+@Serializable
 data class ProjectSequenceResponse(
     val success: Boolean,
     val message: String,
     val error_code: Int? = null,
     val data: List<ProjectDTO>? = null
+)
+
+@Serializable
+data class ProjectResponseWithToken(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: ProjectDTOWithToken? = null
 )
 
 @Serializable
@@ -135,4 +191,27 @@ data class FcmTokenDTO(
     val idx: Int,
     @SerialName("user_idx") val userIdx: Int,
     @SerialName("last_delivery") val lastDelivery: String? = null
+)
+
+@Serializable
+data class ProjectPermsBatchParams(
+    val projectid: Int,
+    val usernames: Set<String>
+)
+
+@Serializable
+data class ProjectPermsSequenceResponse(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: List<ProjectPermsDTO>? = null
+)
+
+@Serializable
+data class ProjectPermsDTO(
+    val id: Int,
+    val project_id: Int,
+    val user_id: Int,
+    val view: Boolean,
+    val project: ProjectDTO? = null,
 )

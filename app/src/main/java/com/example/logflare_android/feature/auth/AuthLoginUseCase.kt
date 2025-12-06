@@ -1,21 +1,16 @@
 package com.example.logflare_android.feature.auth
 
-import com.example.logflare.core.model.StringResponse
 import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare.core.network.LogflareApi
 import com.example.logflare_android.data.AuthRepository
 import com.example.logflare_android.data.DeviceRepository
-import com.google.firebase.messaging.FirebaseMessaging
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
 
 @Singleton
 class AuthLoginUseCase @Inject constructor(
     private val api: LogflareApi,
     private val authRepository: AuthRepository,
-//    private val firebaseRepository: FirebaseRepository,
     private val deviceRepository: DeviceRepository
 ) {
 
@@ -37,7 +32,7 @@ class AuthLoginUseCase @Inject constructor(
 
         val bearer = "Bearer $token"
         authRepository.setToken(bearer)
-
+        authRepository.setUsername(username)
         runCatching {
             deviceRepository.syncConfigAndRegister()
         }.onFailure {

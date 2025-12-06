@@ -1,5 +1,6 @@
 package com.example.logflare_android.feature.project
 
+import android.content.ClipData
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,12 +48,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.logflare_android.enum.LogLevel
 import kotlinx.coroutines.launch
 
 private val AccentGreen = Color(0xFF61B175)
@@ -67,7 +75,7 @@ fun ProjectCreateScreen(
     vm: ProjectCreateViewModel = hiltViewModel()
 ) {
     val ui by vm.ui.collectAsState()
-    val clipboard: ClipboardManager = LocalClipboardManager.current
+    val clipboard: Clipboard = LocalClipboard.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -82,7 +90,7 @@ fun ProjectCreateScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 140.dp),
+                .padding(bottom = 88.dp),
             contentPadding = PaddingValues(vertical = 12.dp)
         ) {
             item { ScreenHeader("Create Project") }
@@ -114,8 +122,10 @@ fun ProjectCreateScreen(
                     token = ui.token,
                     onCopy = {
                         ui.token?.let { token ->
-                            clipboard.setText(AnnotatedString(token))
-                            scope.launch { snackbarHostState.showSnackbar("Token copied") }
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(ui.token, token)))
+                                snackbarHostState.showSnackbar("Token copied")
+                            }
                         }
                     }
                 )
@@ -126,7 +136,8 @@ fun ProjectCreateScreen(
                     value = ui.keywordInput,
                     error = ui.keywordError,
                     onValueChange = vm::onKeywordInputChanged,
-                    onSave = vm::addKeyword
+                    onSave = vm::addKeyword,
+                    enabled = ui.saved
                 )
             }
 
@@ -137,12 +148,13 @@ fun ProjectCreateScreen(
             item {
                 LogLevelSection(
                     selected = ui.alertLevels,
-                    onToggle = vm::toggleAlertLevel
+                    onToggle = vm::toggleAlertLevel,
+                    enabled = ui.saved
                 )
             }
 
             item {
-                PermissionsSection()
+                PermissionsSection(ui.permissions, onToggle = vm::onPermissionToggle, enabled = ui.saved)
             }
         }
 
@@ -151,11 +163,14 @@ fun ProjectCreateScreen(
                 hostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 72.dp)
+                    .padding(top = 72.dp)
             )
 
             BottomActionBar(
-                onDone = onCreated,
+                onDone = {
+                    vm.savePerms()
+                    onCreated()
+                },
                 enabled = ui.token != null
             )
         }
@@ -186,7 +201,8 @@ private fun ProjectNameSection(
     val showError = !isValid && name.isNotEmpty()
     val buttonEnabled = isValid && !loading
     val buttonLabel = if (saved) "Edit" else "Save"
-
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(text = "Project Name", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
         Spacer(modifier = Modifier.height(8.dp))
@@ -209,7 +225,10 @@ private fun ProjectNameSection(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Button(
-                onClick = onSave,
+                onClick = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    onSave() },
                 enabled = buttonEnabled,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -218,7 +237,7 @@ private fun ProjectNameSection(
                 ),
                 modifier = Modifier
                     .height(50.dp)
-                    .width(72.dp)
+                    .width(88.dp)
             ) {
                 Text(buttonLabel)
             }
@@ -283,11 +302,15 @@ private fun KeywordSection(
     value: String,
     error: String?,
     onValueChange: (String) -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    enabled: Boolean = false,
 ) {
     val canSave = value.isNotBlank()
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = "Exclusion Keywords", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+        Text(
+            text = "Exclusion Keywords",
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
@@ -299,6 +322,7 @@ private fun KeywordSection(
                 placeholder = { Text("Enter keyword") },
                 singleLine = true,
                 shape = RoundedCornerShape(8.dp),
+                enabled = enabled,
                 isError = error != null,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentGreen,
@@ -317,7 +341,7 @@ private fun KeywordSection(
                 ),
                 modifier = Modifier
                     .height(50.dp)
-                    .width(72.dp)
+                    .width(88.dp)
             ) {
                 Text("Save")
             }
@@ -368,8 +392,8 @@ private fun KeywordList(keywords: List<String>, onRemove: (String) -> Unit) {
 }
 
 @Composable
-private fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit) {
-    val options = listOf("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL")
+private fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit, enabled: Boolean = false) {
+    val options = LogLevel.getAllLabels()
     var expanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -385,7 +409,8 @@ private fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.height(44.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                enabled = enabled
             ) {
                 Text(
                     text = if (selected.isEmpty()) "Select" else selected.joinToString(", "),
@@ -415,25 +440,22 @@ private fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit) {
     }
 }
 
-private data class PermissionToggleState(
+data class PermissionToggleState(
     val username: String,
     val role: String,
-    val roleColor: Color,
+    val rolenum: Int = 0,
+    val roleColor: Color, // TODO: 이거 안쓰는데 왜 있는건지요?
     val activeColor: Color,
     val inactiveColor: Color,
     val active: Boolean
 )
 
 @Composable
-private fun PermissionsSection() {
-    val permissions = remember {
-        mutableStateListOf(
-            PermissionToggleState("{{username}}", "Super Admin", Color(0xFF1A1A1A), Color(0xFF2FA14F), Color(0xFFCCCCCC), true),
-            PermissionToggleState("{{username}}", "Admin", Color(0xFF1A1A1A), Color(0xFF2FA14F), Color(0xFFCCCCCC), true),
-            PermissionToggleState("{{username}}", "Member", Color(0xFF1A1A1A), Color(0xFF616161), Color(0xFFC2C2C2), false)
-        )
-    }
-
+private fun PermissionsSection(
+    permissions: List<PermissionToggleState>,
+    onToggle: (index: Int, checked: Boolean) -> Unit,
+    enabled: Boolean = false
+) {
     Column(
         modifier = Modifier
             .padding(16.dp)
@@ -446,16 +468,16 @@ private fun PermissionsSection() {
             PermissionRow(
                 state = state,
                 onToggle = { checked ->
-                    permissions[index] = state.copy(active = checked)
-                }
+                    onToggle(index, checked)
+                },
+                enabled = enabled
             )
         }
-        Text(text = "TODO: Replace with API driven permissions", color = Color(0xFF6F6F6F), style = MaterialTheme.typography.bodySmall)
     }
 }
 
 @Composable
-private fun PermissionRow(state: PermissionToggleState, onToggle: (Boolean) -> Unit) {
+private fun PermissionRow(state: PermissionToggleState, onToggle: (Boolean) -> Unit, enabled: Boolean = false) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -479,13 +501,17 @@ private fun PermissionRow(state: PermissionToggleState, onToggle: (Boolean) -> U
         Switch(
             checked = state.active,
             onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(checkedTrackColor = AccentGreen)
+            colors = SwitchDefaults.colors(checkedTrackColor = AccentGreen),
+            enabled = enabled
         )
     }
 }
 
 @Composable
-private fun BottomActionBar(onDone: () -> Unit, enabled: Boolean) {
+private fun BottomActionBar(
+    onDone: () -> Unit,
+    enabled: Boolean,
+) {
     Surface(shadowElevation = 8.dp) {
         Row(
             modifier = Modifier
