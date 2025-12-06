@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.enums.LogLevel
+import com.example.logflare_android.ui.common.TopTitle
 import kotlinx.coroutines.launch
 
 private val AccentGreen = Color(0xFF61B175)
@@ -79,108 +80,98 @@ fun ProjectCreateScreen(
             vm.clearSnackbar()
         }
     }
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopTitle(title = "Create Project")
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 88.dp),
+                contentPadding = PaddingValues(vertical = 12.dp)
+            ) {
+                item {
+                    if (ui.error != null) {
+                        Text(
+                            text = ui.error ?: "",
+                            color = ErrorRed,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 88.dp),
-            contentPadding = PaddingValues(vertical = 12.dp)
-        ) {
-            item { ScreenHeader("Create Project") }
-
-            item {
-                if (ui.error != null) {
-                    Text(
-                        text = ui.error ?: "",
-                        color = ErrorRed,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                item {
+                    ProjectNameSection(
+                        name = ui.name,
+                        isValid = ui.nameValid,
+                        loading = ui.loading,
+                        saved = ui.saved,
+                        onChange = vm::onNameChanged,
+                        onSave = { if (ui.saved) vm.editProject() else vm.saveProject() }
                     )
+                }
+
+                item {
+                    TokenSection(
+                        token = ui.token,
+                        onCopy = {
+                            ui.token?.let { token ->
+                                scope.launch {
+                                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(ui.token, token)))
+                                    snackbarHostState.showSnackbar("Token copied")
+                                }
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    KeywordSection(
+                        value = ui.keywordInput,
+                        error = ui.keywordError,
+                        onValueChange = vm::onKeywordInputChanged,
+                        onSave = vm::addKeyword,
+                        enabled = ui.saved
+                    )
+                }
+
+                item {
+                    KeywordList(keywords = ui.keywords, onRemove = vm::removeKeyword)
+                }
+
+                item {
+                    LogLevelSection(
+                        selected = ui.alertLevels,
+                        onToggle = vm::toggleAlertLevel,
+                        enabled = ui.saved
+                    )
+                }
+
+                item {
+                    PermissionsSection(ui.permissions, onToggle = vm::onPermissionToggle, enabled = ui.saved)
                 }
             }
 
-            item {
-                ProjectNameSection(
-                    name = ui.name,
-                    isValid = ui.nameValid,
-                    loading = ui.loading,
-                    saved = ui.saved,
-                    onChange = vm::onNameChanged,
-                    onSave = { if (ui.saved) vm.editProject() else vm.saveProject() }
+            Column(modifier = Modifier.align(Alignment.BottomCenter)) {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 72.dp)
+                )
+
+                BottomActionBar(
+                    onDone = {
+                        vm.savePerms()
+                        onCreated()
+                    },
+                    enabled = ui.token != null
                 )
             }
-
-            item {
-                TokenSection(
-                    token = ui.token,
-                    onCopy = {
-                        ui.token?.let { token ->
-                            scope.launch {
-                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(ui.token, token)))
-                                snackbarHostState.showSnackbar("Token copied")
-                            }
-                        }
-                    }
-                )
-            }
-
-            item {
-                KeywordSection(
-                    value = ui.keywordInput,
-                    error = ui.keywordError,
-                    onValueChange = vm::onKeywordInputChanged,
-                    onSave = vm::addKeyword,
-                    enabled = ui.saved
-                )
-            }
-
-            item {
-                KeywordList(keywords = ui.keywords, onRemove = vm::removeKeyword)
-            }
-
-            item {
-                LogLevelSection(
-                    selected = ui.alertLevels,
-                    onToggle = vm::toggleAlertLevel,
-                    enabled = ui.saved
-                )
-            }
-
-            item {
-                PermissionsSection(ui.permissions, onToggle = vm::onPermissionToggle, enabled = ui.saved)
-            }
-        }
-
-        Column(modifier = Modifier.align(Alignment.BottomCenter)) {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 72.dp)
-            )
-
-            BottomActionBar(
-                onDone = {
-                    vm.savePerms()
-                    onCreated()
-                },
-                enabled = ui.token != null
-            )
         }
     }
 }
 
-@Composable
-private fun ScreenHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

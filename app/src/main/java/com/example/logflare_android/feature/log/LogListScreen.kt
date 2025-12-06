@@ -35,6 +35,7 @@ data class ProjectToggleOption(
 
 @Composable
 fun LogListScreen(
+    onLogClick: () -> Unit,
     viewModel: LogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.ui.collectAsState()
@@ -44,7 +45,7 @@ fun LogListScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        LogHeader()
+        TopTitle("Logs")
         FilterDropdownRow(
             selectedLevels = uiState.filter,
             onLevelSelected = viewModel::setFilter,
@@ -53,7 +54,6 @@ fun LogListScreen(
             sortSelection = uiState.sortBy,
             onSortSelected = { selection -> viewModel.setSortBy(selection) }
         )
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -68,28 +68,14 @@ fun LogListScreen(
                     projectNames = uiState.projectNames,
                     showLoadMore = uiState.hasMore,
                     loadingMore = uiState.loadingMore,
-                    onLoadMore = { viewModel.loadMore() }
+                    onLoadMore = { viewModel.loadMore() },
+                    onLogClick = { log -> viewModel.onLogClick(log); onLogClick() }
                 )
             }
         }
     }
 }
 
-@Composable
-private fun LogHeader() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "LOG",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = PrimaryText
-        )
-    }
-}
 
 @Composable
 private fun FilterDropdownRow(
@@ -103,8 +89,8 @@ private fun FilterDropdownRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(top = 12.dp),
+//            .padding(top = 12.dp)
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         CommonFilterDropdown(
@@ -198,7 +184,8 @@ private fun LogListContent(
     showLoadMore: Boolean,
     loadingMore: Boolean,
     onLoadMore: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLogClick: (ErrorlogDTO) -> Unit
 ) {
     LazyColumn(
         modifier = modifier
@@ -209,9 +196,14 @@ private fun LogListContent(
     ) {
         items(items = logs, key = { it.id }) { log ->
             GlobalLogCard(
-                log = LogCardInfo(log.level, log.timestamp, log.message),
-                prefix = projectNames[log.project_id] ?: "Project #${log.project_id}",
-                suffix = log.errortype ?: "Unknown"
+                log = LogCardInfo(
+                    log.level,
+                    log.timestamp,
+                    log.message,
+                    projectNames[log.project_id] ?: "Project #${log.project_id}",
+                    log.errortype ?: "Unknown"
+                ),
+                onClick = { onLogClick(log) }
             )
         }
         if (showLoadMore) {
