@@ -1,6 +1,5 @@
 package com.example.logflare_android.feature.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare_android.enum.UserPermission
+import com.example.logflare_android.feature.auth.AuthViewModel
 import com.example.logflare_android.feature.log.LogViewModel
 import com.example.logflare_android.feature.project.ProjectsViewModel
 
@@ -42,12 +43,17 @@ fun HomeScreen(
     onViewMoreLogs: () -> Unit = {},
     onCreateProject: () -> Unit = {},
     projectsVm: ProjectsViewModel = hiltViewModel(),
-    logsVm: LogViewModel = hiltViewModel()
+    logsVm: LogViewModel = hiltViewModel(),
+    authVm: AuthViewModel = hiltViewModel(),
 ) {
     val projectsState by projectsVm.ui.collectAsState()
     val logsState by logsVm.ui.collectAsState()
+    val userState by authVm.ui.collectAsState()
 
-    LaunchedEffect(Unit) { projectsVm.refresh() }
+    LaunchedEffect(Unit) {
+        authVm.getMe()
+        projectsVm.refresh()
+    }
     LaunchedEffect(projectsState.items) {
         // Fetch only a small recent subset of logs (limit=5) for Home dashboard context
         projectsState.items.firstOrNull()?.let { p -> logsVm.refresh(p.id, limit = 5) }
@@ -64,6 +70,14 @@ fun HomeScreen(
             colors = CardDefaults.cardColors(containerColor = Color(0xFFEEEEEE)),
             shape = RoundedCornerShape(12.dp)
         ) {
+            val username = when {
+                userState.loading -> "Loading..."
+                userState.username == null -> "Guest"
+                else -> userState.username
+            }
+
+            val perm = UserPermission.fromCode(userState.permission)
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -71,17 +85,19 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "{username}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    username?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
                 Surface(
-                    color = Color(0xFF2FA14F),
+                    color = perm.color,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "Super Admin",
+                        text = perm.label,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFFF9F9F9)

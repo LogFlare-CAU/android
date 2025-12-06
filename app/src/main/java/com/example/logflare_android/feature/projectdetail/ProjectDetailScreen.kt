@@ -99,7 +99,6 @@ private fun ProjectDetailContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        FakeStatusBar(timeLabel = uiState.statusTimeLabel)
         ProjectHeader(projectName = uiState.projectName, onBack = onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
@@ -111,32 +110,6 @@ private fun ProjectDetailContent(
     }
 }
 
-@Composable
-private fun FakeStatusBar(timeLabel: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(StatusBarGray)
-            .padding(vertical = 4.dp)
-    ) {
-        Text(
-            text = timeLabel,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.CenterStart),
-            color = SecondaryText
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .height(8.dp)
-                .width(24.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(SecondaryText.copy(alpha = 0.9f))
-        )
-    }
-}
 
 @Composable
 private fun ProjectHeader(
@@ -271,12 +244,12 @@ private fun ProjectLogCard(log: ProjectDetailLog) {
 @Composable
 private fun LevelBadge(level: ProjectLogLevel) {
     val badgeColor = when (level) {
-        ProjectLogLevel.FATAL -> FatalRed
+        ProjectLogLevel.CIRITCAL -> FatalRed
         ProjectLogLevel.ERROR -> Color(0xFFD84534)
-        ProjectLogLevel.WARN -> Color(0xFFFFB74D)
+        ProjectLogLevel.WARNING -> Color(0xFFFFB74D)
         ProjectLogLevel.INFO -> Color(0xFF1976D2)
         ProjectLogLevel.DEBUG -> Color(0xFF388E3C)
-        ProjectLogLevel.TRACE -> Color(0xFF455A64)
+//        ProjectLogLevel.TRACE -> Color(0xFF455A64)
     }
     Surface(
         color = badgeColor,

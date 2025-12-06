@@ -56,11 +56,11 @@ class LogViewModel @Inject constructor(
         viewModelScope.launch {
             projectsRepo.list()
                 .onSuccess { projects ->
-                    val names = projects.associate { it.id to it.name }
+                    val names = projects.associate { it.dto.id to it.dto.name }
                     val aggregated = mutableListOf<ErrorlogDTO>()
                     var firstError: String? = null
                     for (project in projects) {
-                        repo.getErrors(project.id, limit = limitPerProject)
+                        repo.getErrors(project.dto.id, limit = limitPerProject)
                             .onSuccess { aggregated.addAll(it) }
                             .onFailure { e -> if (firstError == null) firstError = e.message }
                     }

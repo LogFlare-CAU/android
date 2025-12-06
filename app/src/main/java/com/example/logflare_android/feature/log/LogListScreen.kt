@@ -47,6 +47,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.model.ErrorlogDTO
 import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 private val StatusBarGray = Color(0xFFF5F5F5)
@@ -105,7 +108,6 @@ fun LogListScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        FakeStatusBar()
         LogHeader()
         FilterDropdownRow(
             selectedLevel = uiState.filter,
@@ -140,32 +142,6 @@ fun LogListScreen(
     }
 }
 
-@Composable
-private fun FakeStatusBar() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(StatusBarGray)
-            .padding(vertical = 4.dp)
-    ) {
-        Text(
-            text = "12:30",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.CenterStart),
-            color = SecondaryText
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .height(8.dp)
-                .width(24.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(SecondaryText.copy(alpha = 0.9f))
-        )
-    }
-}
 
 @Composable
 private fun LogHeader() {
