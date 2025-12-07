@@ -9,8 +9,75 @@ package com.example.logflare_android.ui.components
  * - com.example.logflare.core.designsystem.components.navigation.*
  */
 
-// Re-export from core/designsystem for backward compatibility
-import com.example.logflare.core.designsystem.components.button.BottomPrimaryButton
-import com.example.logflare.core.designsystem.components.button.BottomOutlinedButton
-import com.example.logflare.core.designsystem.components.button.BottomDangerOutlinedButton
-import com.example.logflare.core.designsystem.components.navigation.BackHeader
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+
+// Re-export wrappers for backward compatibility
+
+@Composable
+fun BottomPrimaryButton(
+	text: String,
+	onClick: () -> Unit,
+	enabled: Boolean = true,
+	modifier: Modifier = Modifier
+) {
+	com.example.logflare.core.designsystem.components.button.BottomPrimaryButton(
+		text = text,
+		onClick = onClick,
+		enabled = enabled,
+		modifier = modifier
+	)
+}
+
+@Composable
+fun BottomOutlinedButton(
+	text: String,
+	onClick: () -> Unit,
+	enabled: Boolean = true,
+	modifier: Modifier = Modifier
+) {
+	com.example.logflare.core.designsystem.components.button.BottomOutlinedButton(
+		text = text,
+		onClick = onClick,
+		enabled = enabled,
+		modifier = modifier
+	)
+}
+
+@Composable
+fun BottomDangerOutlinedButton(
+	text: String,
+	onClick: () -> Unit,
+	enabled: Boolean = true,
+	modifier: Modifier = Modifier
+) {
+	com.example.logflare.core.designsystem.components.button.BottomDangerOutlinedButton(
+		text = text,
+		onClick = onClick,
+		enabled = enabled,
+		modifier = modifier
+	)
+}
+
+@Composable
+fun BackHeader(
+	title: String,
+	onBack: () -> Unit,
+	modifier: Modifier = Modifier,
+	titleColor: Color = com.example.logflare.core.designsystem.AppTheme.colors.neutral.black,
+	iconTint: Color = com.example.logflare.core.designsystem.AppTheme.colors.secondary.default,
+	horizontalPadding: Dp = com.example.logflare.core.designsystem.AppTheme.spacing.s4,
+	verticalPadding: Dp = com.example.logflare.core.designsystem.AppTheme.spacing.s3
+) {
+	com.example.logflare.core.designsystem.components.navigation.BackHeader(
+		title = title,
+		onBack = onBack,
+		modifier = modifier,
+		titleColor = titleColor,
+		iconTint = iconTint,
+		horizontalPadding = horizontalPadding,
+		verticalPadding = verticalPadding
+	)
+}
