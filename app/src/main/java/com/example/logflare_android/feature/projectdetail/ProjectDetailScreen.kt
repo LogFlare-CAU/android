@@ -44,6 +44,17 @@ import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
 import com.example.logflare_android.ui.common.*
 import java.nio.channels.Selector
+import com.example.logflare_android.ui.components.BackHeader
+import com.example.logflare.core.designsystem.AppTheme
+
+private val CardGray = Color(0xFFEEEEEE)
+private val LogCardGray = Color(0xFFEDEDED)
+private val FatalRed = Color(0xFFB12B38)
+private val InfoGray = Color(0xFF616161)
+private val PrimaryText = Color(0xFF1A1A1A)
+private val SecondaryText = Color(0xFF353535)
+private val AccentGreen = Color(0xFF61B075)
+private val OutlineGray = Color(0xFFBDBDBD)
 
 @Composable
 fun ProjectDetailScreen(
@@ -97,7 +108,7 @@ private fun ProjectDetailContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        TopTitle(uiState.projectName, onBack)
+    BackHeader(title = uiState.projectName, onBack = onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
             onClick = { onOpenProjectSettings(uiState.projectId) }
@@ -147,7 +158,7 @@ private fun ProjectSettingsCard(
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTheme.typography.bodyMdMedium,
                 color = PrimaryText.copy(alpha = 0.86f)
             )
             Box(
@@ -195,6 +206,26 @@ private fun LogsSection(
             }
         }
 
+@Composable
+private fun LevelBadge(level: ProjectLogLevel) {
+    val badgeColor = when (level) {
+        ProjectLogLevel.CIRITCAL -> FatalRed
+        ProjectLogLevel.ERROR -> Color(0xFFD84534)
+        ProjectLogLevel.WARNING -> Color(0xFFFFB74D)
+        ProjectLogLevel.INFO -> Color(0xFF1976D2)
+        ProjectLogLevel.DEBUG -> Color(0xFF388E3C)
+//        ProjectLogLevel.TRACE -> Color(0xFF455A64)
+    }
+    Surface(
+        color = badgeColor,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = level.displayName,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            style = AppTheme.typography.captionSmMedium.copy(fontWeight = FontWeight.Medium),
+            color = Color.White
+        )
     }
 }
 
