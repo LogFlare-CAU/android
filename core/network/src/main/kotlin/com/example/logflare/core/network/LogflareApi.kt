@@ -9,6 +9,9 @@ import com.example.logflare.core.model.ProjectSequenceResponse
 import com.example.logflare.core.model.StringResponse
 import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare.core.model.ErrorParams
+import com.example.logflare.core.model.ProjectPermsBatchParams
+import com.example.logflare.core.model.ProjectPermsSequenceResponse
+import com.example.logflare.core.model.ProjectResponseWithToken
 import com.example.logflare.core.model.StringSequenceResponse
 import com.example.logflare.core.model.UserResponse
 import com.example.logflare.core.model.UserSequenceResponse
@@ -45,7 +48,7 @@ interface LogflareApi {
     suspend fun createProject(
         @Header("Authorization") bearer: String,
         @Body body: ProjectCreateParams
-    ): StringResponse
+    ): ProjectResponseWithToken
 
     @DELETE("/project/{projectid}")
     suspend fun deleteProject(
@@ -56,9 +59,10 @@ interface LogflareApi {
     @GET("/log/error")
     suspend fun getErrors(
         @Header("Authorization") bearer: String,
-        @Query("project_id") projectId: Int,
+        @Query("project_id") projectId: Int? = null,
         @Query("limit") limit: Int = 50,
-        @Query("offset") offset: Int = 0
+        @Query("offset") offset: Int = 0,
+        @Query("sortby") sortby: String? = null
     ): ErrorSequenceResponse
 
     @POST("/log/error")
@@ -74,8 +78,15 @@ interface LogflareApi {
         @Path("projectid") projectId: Int,
         @Path("logfileid") logfileid: Int,
         @Query("limit") limit: Int = 50,
-        @Query("offset") offset: Int = 0
+        @Query("offset") offset: Int = 0,
+        @Query("sortby") sortBy: String? = null
     ): StringSequenceResponse
+
+    @POST("/project/perm/batch/reset")
+    suspend fun resetProjectPerms(
+        @Header("Authorization") bearer: String,
+        @Body body: ProjectPermsBatchParams
+    ): ProjectPermsSequenceResponse
 
     @GET("/fcm/data")
     suspend fun getFcmConfig(

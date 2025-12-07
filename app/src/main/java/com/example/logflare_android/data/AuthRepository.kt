@@ -20,6 +20,7 @@ class AuthRepository @Inject constructor(
 ) {
     companion object {
         private val KEY_TOKEN: Preferences.Key<String> = stringPreferencesKey("jwt")
+        private val KEY_USERNAME: Preferences.Key<String> = stringPreferencesKey("username")
     }
 
     val token: Flow<String?> = context.dataStore.data.map { it[KEY_TOKEN] }
@@ -40,4 +41,15 @@ class AuthRepository @Inject constructor(
             prefs.remove(KEY_TOKEN)
         }
     }
+
+    suspend fun setUsername(username: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_USERNAME] = username
+        }
+    }
+
+    suspend fun getUsername(): String? {
+        return context.dataStore.data.first()[KEY_USERNAME]
+    }
+
 }
