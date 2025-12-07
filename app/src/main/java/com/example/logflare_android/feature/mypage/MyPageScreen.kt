@@ -51,19 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.enums.UserPermission
 import com.example.logflare_android.ui.components.BackHeader
-
-private val ColorNeutralWhite = Color(0xFFFFFFFF)
-private val ColorNeutralBlack = Color(0xFF1A1A1A)
-private val ColorNeutral10 = Color(0xFFF5F5F5)
-private val ColorNeutral20 = Color(0xFFEEEEEE)
-private val ColorNeutral40 = Color(0xFFBDBDBD)
-private val ColorNeutral60 = Color(0xFF757575)
-private val ColorNeutral70 = Color(0xFF616161)
-private val ColorNeutral5 = Color(0xFFFAFAFA)
-private val ColorPrimaryDefault = Color(0xFF60B176)
-private val ColorPrimaryPressed = Color(0xFF30A14F)
-private val ColorSecondaryDefault = Color(0xFF9E9E9E)
-private val ColorDanger = Color(0xFFB12B38)
+import com.example.logflare.core.designsystem.AppTheme
 
 @Composable
 fun MyPageScreen(
