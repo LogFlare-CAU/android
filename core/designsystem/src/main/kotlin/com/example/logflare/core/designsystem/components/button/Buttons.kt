@@ -1,17 +1,31 @@
 package com.example.logflare.core.designsystem.components.button
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.button.ButtonSize.Large
+import com.example.logflare.core.designsystem.components.button.ButtonSize.Medium
+import com.example.logflare.core.designsystem.components.button.ButtonSize.Small
+import com.example.logflare.core.designsystem.components.button.ButtonType.Filled
+import com.example.logflare.core.designsystem.components.button.ButtonType.Outline
+import com.example.logflare.core.designsystem.components.button.ButtonType.Text
+import com.example.logflare.core.designsystem.components.button.ButtonVariant.Primary
+import com.example.logflare.core.designsystem.components.button.ButtonVariant.Secondary
 
 /**
  * Standard primary CTA button anchored near the bottom.
@@ -24,23 +38,14 @@ fun BottomPrimaryButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    Button(
+    PrimaryButton(
+        text = text,
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = AppTheme.colors.primary.default,
-            disabledContainerColor = AppTheme.colors.neutral.s20
-        ),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        shape = AppTheme.radius.medium
-    ) {
-        Text(
-            text = text,
-            color = AppTheme.colors.neutral.white,
-            style = AppTheme.typography.bodyMdBold
-        )
-    }
+        type = Filled,
+        size = Large,
+        enabled = enabled
+    )
 }
 
 /**
@@ -53,25 +58,14 @@ fun BottomOutlinedButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
+    PrimaryButton(
+        text = text,
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = AppTheme.colors.neutral.s70
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (enabled) AppTheme.colors.neutral.s60 else AppTheme.colors.neutral.s40
-        ),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        shape = AppTheme.radius.medium
-    ) {
-        Text(
-            text = text,
-            style = AppTheme.typography.bodyMdBold
-        )
-    }
+        type = Outline,
+        size = Large,
+        enabled = enabled
+    )
 }
 
 /**
@@ -84,23 +78,196 @@ fun BottomDangerOutlinedButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
+    SecondaryButton(
+        text = text,
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = AppTheme.colors.red.default
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (enabled) AppTheme.colors.red.default else AppTheme.colors.neutral.s60
-        ),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        shape = AppTheme.radius.medium
-    ) {
-        Text(
-            text = text,
-            style = AppTheme.typography.bodyMdBold
+        type = Outline,
+        size = Large,
+        enabled = enabled
+    )
+}
+
+/**
+ * Single master button used across the app.
+ *
+ * - [variant]: Primary or Secondary (controls color palette)
+ * - [type]: Filled / Outline / Text (controls container, border, and emphasis)
+ * - [size]: Large / Medium / Small (controls height, padding, and typography)
+ */
+@Composable
+fun LogFlareButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    variant: ButtonVariant = Primary,
+    type: ButtonType = Filled,
+    size: ButtonSize = Large,
+    enabled: Boolean = true,
+    leadingIcon: ImageVector? = null,
+) {
+    val variantColors = when (variant) {
+        Primary -> AppTheme.colors.primary
+        Secondary -> AppTheme.colors.secondary
+    }
+
+    val colors = when (type) {
+        Filled -> ButtonDefaults.buttonColors(
+            containerColor = variantColors.default,
+            contentColor = AppTheme.colors.neutral.white,
+            disabledContainerColor = variantColors.disabled,
+            disabledContentColor = AppTheme.colors.neutral.s40,
+        )
+
+        Outline -> ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.Transparent,
+            contentColor = variantColors.default,
+            disabledContentColor = variantColors.disabled,
+        )
+
+        Text -> ButtonDefaults.textButtonColors(
+            containerColor = Color.Transparent,
+            contentColor = variantColors.default,
+            disabledContentColor = variantColors.disabled,
         )
     }
+
+    val border: BorderStroke? = when (type) {
+        Filled, Text -> null
+        Outline -> BorderStroke(
+            width = 1.dp,
+            color = if (enabled) variantColors.default else AppTheme.colors.neutral.s40,
+        )
+    }
+
+    val (height, horizontalPadding, textStyle) = when (size) {
+        Large -> Triple(48.dp, 24.dp, AppTheme.typography.bodyMdBold)
+        Medium -> Triple(40.dp, 16.dp, AppTheme.typography.bodyMdBold)
+        Small -> Triple(30.dp, 12.dp, AppTheme.typography.bodySmBold)
+    }
+
+    val contentPadding = PaddingValues(
+        horizontal = horizontalPadding,
+        vertical = 0.dp,
+    )
+
+    val shape = AppTheme.radius.medium
+
+    val content: @Composable () -> Unit = {
+        Row(
+            modifier = Modifier.height(height),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            if (leadingIcon != null) {
+                androidx.compose.material3.Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(end = AppTheme.spacing.s1),
+                )
+            }
+            Text(
+                text = text,
+                style = textStyle,
+            )
+        }
+    }
+
+    when (type) {
+        Filled -> Button(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            colors = colors,
+            contentPadding = contentPadding,
+            shape = shape,
+        ) { content() }
+
+        Outline -> OutlinedButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            colors = colors,
+            border = border,
+            contentPadding = contentPadding,
+            shape = shape,
+        ) { content() }
+
+        Text -> TextButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            colors = colors,
+            contentPadding = contentPadding,
+            shape = shape,
+        ) { content() }
+    }
 }
+
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    type: ButtonType = Filled,
+    size: ButtonSize = Large,
+    enabled: Boolean = true,
+    leadingIcon: ImageVector? = null,
+) {
+    LogFlareButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        variant = Primary,
+        type = type,
+        size = size,
+        enabled = enabled,
+        leadingIcon = leadingIcon,
+    )
+}
+
+@Composable
+fun SecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    type: ButtonType = Filled,
+    size: ButtonSize = Large,
+    enabled: Boolean = true,
+    leadingIcon: ImageVector? = null,
+) {
+    LogFlareButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        variant = Secondary,
+        type = type,
+        size = size,
+        enabled = enabled,
+        leadingIcon = leadingIcon,
+    )
+}
+
+@Composable
+fun OutlineButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    variant: ButtonVariant = Primary,
+    size: ButtonSize = Large,
+    enabled: Boolean = true,
+    leadingIcon: ImageVector? = null,
+) {
+    LogFlareButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        variant = variant,
+        type = Outline,
+        size = size,
+        enabled = enabled,
+        leadingIcon = leadingIcon,
+    )
+}
+
