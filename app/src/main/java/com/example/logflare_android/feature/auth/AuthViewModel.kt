@@ -1,12 +1,8 @@
 package com.example.logflare_android.feature.auth
 
-import android.Manifest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare_android.data.ServerConfigRepository
-import com.example.logflare_android.feature.log.LogLevel
-import com.example.logflare_android.feature.log.LogsUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
