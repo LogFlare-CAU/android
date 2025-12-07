@@ -30,7 +30,7 @@ class ProjectsViewModel @Inject constructor(
         _ui.value = _ui.value.copy(loading = true, error = null)
         viewModelScope.launch {
             repo.list()
-                .onSuccess { list -> _ui.value = ProjectsUiState(loading = false, items = list) }
+                .onSuccess { list -> _ui.value = ProjectsUiState(loading = false, items = list.map { it.dto }) }
                 .onFailure { e -> _ui.value = ProjectsUiState(loading = false, error = e.message) }
         }
     }
