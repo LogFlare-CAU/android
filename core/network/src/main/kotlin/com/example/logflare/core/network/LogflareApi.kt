@@ -14,8 +14,10 @@ import com.example.logflare.core.model.ProjectPermsSequenceResponse
 import com.example.logflare.core.model.ProjectResponse
 import com.example.logflare.core.model.ProjectResponseWithToken
 import com.example.logflare.core.model.StringSequenceResponse
+import com.example.logflare.core.model.UserCreateParams
 import com.example.logflare.core.model.UserResponse
 import com.example.logflare.core.model.UserSequenceResponse
+import com.example.logflare.core.model.UserUpdateParams
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -30,11 +32,36 @@ interface LogflareApi {
     @GET("/user/")
     suspend fun getAllUsers(@Header("Authorization") token: String): UserSequenceResponse
 
+    @POST("/user/")
+    suspend fun createUser(
+        @Header("Authorization") token: String,
+        @Body body: UserCreateParams
+    ): UserResponse
+
     @POST("/user/auth")
     suspend fun authenticate(@Body body: UserAuthParams): StringResponse
 
     @GET("/user/me")
     suspend fun getme(@Header("Authorization") token: String): UserResponse
+
+    @GET("/user/name")
+    suspend fun getUserByUsername(
+        @Header("Authorization") token: String,
+        @Query("username") username: String
+    ): UserResponse
+
+    @PATCH("/user/{userid}")
+    suspend fun updateUser(
+        @Header("Authorization") token: String,
+        @Path("userid") userId: Int,
+        @Body body: UserUpdateParams
+    ): UserResponse
+
+    @DELETE("/user/{userid}")
+    suspend fun deleteUser(
+        @Header("Authorization") token: String,
+        @Path("userid") userId: Int
+    ): StringResponse
 
     @GET("/fcm/data")
     suspend fun getFirebaseConfig(

@@ -8,6 +8,8 @@ import com.example.logflare.core.model.ProjectData
 import com.example.logflare_android.data.LogsRepository
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
+import com.example.logflare_android.feature.usecase.GetProjectDetailUseCase
+import com.example.logflare_android.feature.usecase.GetProjectLogsUseCase
 import com.example.logflare_android.ui.common.LogCardInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
