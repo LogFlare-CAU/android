@@ -1,4 +1,4 @@
-package com.example.logflare_android.ui.component.common
+package com.example.logflare_android.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,28 +45,6 @@ enum class LogFlareActionTextFieldHelperTone {
 }
 
 /**
- * Validation status for member fields (username, password, etc.)
- */
-enum class MemberFieldStatus {
-    Idle,
-    Validating,
-    Valid,
-    Error,
-    Completed
-}
-
-/**
- * Extension to convert MemberFieldStatus to LogFlareActionTextFieldState
- */
-fun MemberFieldStatus.toActionTextFieldState(): LogFlareActionTextFieldState = when (this) {
-    MemberFieldStatus.Valid -> LogFlareActionTextFieldState.Success
-    MemberFieldStatus.Validating -> LogFlareActionTextFieldState.Validating
-    MemberFieldStatus.Error -> LogFlareActionTextFieldState.Error
-    MemberFieldStatus.Completed -> LogFlareActionTextFieldState.Saved
-    MemberFieldStatus.Idle -> LogFlareActionTextFieldState.Default
-}
-
-/**
  * Text input with inline action button (like ProjectCreateScreen's name input)
  * 
  * @param label Optional header text above the input field
@@ -89,9 +67,7 @@ fun LogFlareActionTextField(
     label: String? = null,
     helperText: String? = null,
     helperTone: LogFlareActionTextFieldHelperTone = LogFlareActionTextFieldHelperTone.Info,
-    actionText: String,
-    actionEnabled: Boolean,
-    showLoading: Boolean = false,
+    actionEnabled: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     onActionClick: () -> Unit
@@ -112,16 +88,16 @@ fun LogFlareActionTextField(
         else -> colors.neutral.white
     }
 
-    val isButtonEnabled = actionEnabled && !showLoading && state != LogFlareActionTextFieldState.Saved
+    val isButtonEnabled = actionEnabled && state != LogFlareActionTextFieldState.Saved && state != LogFlareActionTextFieldState.Validating
 
     val buttonBackground = when {
-        showLoading -> colors.primary.default
+        state == LogFlareActionTextFieldState.Validating -> colors.primary.default
         isButtonEnabled -> colors.primary.default
         else -> colors.neutral.s30
     }
 
     val buttonContentColor = when {
-        showLoading || isButtonEnabled -> colors.neutral.white
+        state == LogFlareActionTextFieldState.Validating || isButtonEnabled -> colors.neutral.white
         else -> colors.neutral.s70
     }
 
@@ -189,7 +165,7 @@ fun LogFlareActionTextField(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (showLoading) {
+                    if (state == LogFlareActionTextFieldState.Validating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             color = colors.neutral.white,
@@ -197,7 +173,7 @@ fun LogFlareActionTextField(
                         )
                     } else {
                         Text(
-                            text = actionText,
+                            text = "Check",
                             style = AppTheme.typography.bodySmMedium,
                             color = buttonContentColor
                         )
