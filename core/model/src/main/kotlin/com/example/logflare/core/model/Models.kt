@@ -105,6 +105,14 @@ data class ProjectResponseWithToken(
 )
 
 @Serializable
+data class ProjectResponse(
+    val success: Boolean,
+    val message: String,
+    val error_code: Int? = null,
+    val data: ProjectDTO? = null
+)
+
+@Serializable
 data class ErrorlogDTO(
     val id: Int,
     val project_id: Int,
