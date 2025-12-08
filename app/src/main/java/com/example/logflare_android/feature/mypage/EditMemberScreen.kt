@@ -47,9 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.components.BackHeader
-import com.example.logflare_android.ui.components.BottomPrimaryButton
-import com.example.logflare_android.ui.components.BottomDangerOutlinedButton
+import com.example.logflare.core.designsystem.components.button.BottomDangerOutlinedButton
+import com.example.logflare.core.designsystem.components.button.BottomPrimaryButton
+import com.example.logflare.core.designsystem.components.input.LogFlareTextField
+import com.example.logflare.core.designsystem.components.navigation.BackHeader
 
 private val ColorNeutralWhite = Color(0xFFFFFFFF)
 private val ColorNeutralBlack = Color(0xFF1A1A1A)
@@ -127,26 +128,13 @@ private fun EditMemberContent(
             .padding(horizontal = 24.dp)
             .padding(top = 24.dp)
     ) {
-        Text(
-            text = "Username",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = ColorNeutral70,
-            modifier = Modifier.padding(bottom = 8.dp)
+        LogFlareTextField(
+            value = uiState.username,
+            onValueChange = {},
+            label = "Username",
+            enabled = false,
+            modifier = Modifier.fillMaxWidth()
         )
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            color = ColorNeutral20
-        ) {
-            Text(
-                text = uiState.username,
-                fontSize = 16.sp,
-                color = ColorNeutral60,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
-            )
-        }
 
         Spacer(modifier = Modifier.height(24.dp))
 

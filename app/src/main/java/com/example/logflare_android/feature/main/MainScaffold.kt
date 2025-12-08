@@ -26,11 +26,16 @@ import com.example.logflare_android.feature.project.ProjectCreateScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.projectdetail.ProjectDetailScreen
 import com.example.logflare_android.feature.projectdetail.ProjectSettingsScreen
-import com.example.logflare_android.ui.components.GnbItem
-import com.example.logflare_android.ui.components.LogFlareGnbItem
 import com.example.logflare_android.ui.navigation.Route
 import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.navigation.LogFlareGnbItem
 import com.example.logflare.core.designsystem.R as DesignSystemR
+
+data class GnbItem(
+    val route: Route,
+    @androidx.annotation.DrawableRes val iconRes: Int,
+    val label: String
+)
 
 /**
  * Main app scaffold with bottom navigation.

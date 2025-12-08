@@ -28,8 +28,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,8 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.components.BackHeader
-import com.example.logflare_android.ui.components.BottomPrimaryButton
+import com.example.logflare.core.designsystem.components.button.BottomPrimaryButton
+import com.example.logflare.core.designsystem.components.input.LogFlareTextField
+import com.example.logflare.core.designsystem.components.navigation.BackHeader
 
 private val ColorNeutralWhite = Color(0xFFFFFFFF)
 private val ColorNeutralBlack = Color(0xFF1A1A1A)
@@ -105,25 +104,18 @@ private fun AddMemberContent(
             .padding(horizontal = 24.dp)
             .padding(top = 24.dp)
     ) {
-        Text(
-            text = "Username",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = ColorNeutral70,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        val usernameHelperText = uiState.errorMessage?.takeIf { it.startsWith("Username") }
+        val bannerErrorMessage = uiState.errorMessage?.takeUnless { it.startsWith("Username") }
 
-        OutlinedTextField(
+        LogFlareTextField(
             value = uiState.username,
             onValueChange = onUsernameChange,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Enter username") },
+            label = "Username",
+            placeholder = "Enter username",
+            helperText = usernameHelperText,
+            isError = usernameHelperText != null,
             enabled = !uiState.isLoading,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = ColorPrimaryDefault,
-                unfocusedBorderColor = ColorNeutral40
-            ),
-            shape = RoundedCornerShape(8.dp)
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -147,7 +139,7 @@ private fun AddMemberContent(
             enabled = !uiState.isLoading
         )
 
-        uiState.errorMessage?.let { message ->
+        bannerErrorMessage?.let { message ->
             Spacer(modifier = Modifier.height(16.dp))
             ErrorBanner(
                 message = message,
