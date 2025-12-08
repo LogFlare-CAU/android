@@ -29,11 +29,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.ui.components.BackHeader
-import com.example.logflare_android.ui.components.BottomOutlinedButton
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.button.ButtonVariant
 import com.example.logflare.core.designsystem.components.button.LogFlareButton
+import com.example.logflare.core.designsystem.components.button.BottomOutlinedButton
+import com.example.logflare.core.designsystem.components.navigation.BackHeader
 
 @Composable
 fun LogoutScreen(

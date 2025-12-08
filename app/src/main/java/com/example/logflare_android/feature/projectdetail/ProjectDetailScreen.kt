@@ -35,7 +35,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.ui.components.BackHeader
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort

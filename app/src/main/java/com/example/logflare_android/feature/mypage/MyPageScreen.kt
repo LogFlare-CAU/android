@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,9 +48,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.components.BackHeader
 import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.chip.ChipSize
+import com.example.logflare.core.designsystem.components.chip.RoleChip
+import com.example.logflare.core.designsystem.components.navigation.BackHeader
+import com.example.logflare.core.designsystem.components.userlist.RoleChipStyle
+import com.example.logflare.core.designsystem.components.userlist.UserItemSize
+import com.example.logflare.core.designsystem.components.userlist.UserListItem
+import com.example.logflare_android.enums.UserPermission
 
 @Composable
 fun MyPageScreen(
@@ -269,6 +275,7 @@ private fun UserCard(
     role: UserPermission,
     modifier: Modifier = Modifier
 ) {
+    val roleChipStyle = rememberRoleChipStyle(role)
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -295,45 +302,16 @@ private fun UserCard(
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            RoleChip(role = role, size = RoleChipSize.Large)
-        }
-    }
-}
-
-@Composable
-private fun RoleChip(
-    role: UserPermission,
-    size: RoleChipSize = RoleChipSize.Small
-) {
-    val backgroundColor = when (role) {
-    UserPermission.SUPER_USER -> AppTheme.colors.primary.pressed
-    UserPermission.MODERATOR -> AppTheme.colors.primary.default
-    UserPermission.USER -> AppTheme.colors.neutral.s70
-    }
-
-    val (height, fontSize, horizontalPadding) = when (size) {
-        RoleChipSize.Large -> Triple(28.dp, 14.sp, 12.dp)
-        RoleChipSize.Small -> Triple(20.dp, 10.sp, 8.dp)
-    }
-
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = backgroundColor,
-        modifier = Modifier.height(height)
-    ) {
-        Box(
-            modifier = Modifier.padding(horizontal = horizontalPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
+            RoleChip(
                 text = role.label,
-                fontSize = fontSize,
-                fontWeight = FontWeight.Medium,
-                color = AppTheme.colors.neutral.s5
+                size = ChipSize.Large,
+                backgroundColor = roleChipStyle.backgroundColor,
+                contentColor = roleChipStyle.contentColor
             )
         }
     }
 }
+
 
 @Composable
 private fun LogLevelDropdown(
@@ -414,9 +392,23 @@ private fun MembersCard(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 members.forEach { member ->
-                    MemberListItem(
-                        member = member,
-                        onClick = { onMemberClick(member) }
+                    val roleChipStyle = rememberRoleChipStyle(member.role)
+                    UserListItem(
+                        username = member.username,
+                        roleLabel = member.role.label,
+                        roleChipStyle = roleChipStyle,
+                        size = UserItemSize.Small,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onMemberClick(member) },
+                        trailingContent = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "View member",
+                                tint = AppTheme.colors.secondary.default,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     )
                 }
             }
@@ -425,39 +417,17 @@ private fun MembersCard(
 }
 
 @Composable
-private fun MemberListItem(
-    member: MyPageMemberUiModel,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = member.username,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = AppTheme.colors.neutral.black
-            )
-            RoleChip(role = member.role, size = RoleChipSize.Small)
-        }
-
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "View member",
-            tint = AppTheme.colors.secondary.default,
-            modifier = Modifier.size(20.dp)
+private fun rememberRoleChipStyle(role: UserPermission): RoleChipStyle {
+    val colors = AppTheme.colors
+    return remember(role, colors) {
+        RoleChipStyle(
+            backgroundColor = when (role) {
+                UserPermission.SUPER_USER -> colors.primary.pressed
+                UserPermission.MODERATOR -> colors.primary.default
+                UserPermission.USER -> colors.neutral.s70
+            },
+            contentColor = colors.neutral.s5
         )
     }
 }
 
-private enum class RoleChipSize {
-    Large, Small
-}
