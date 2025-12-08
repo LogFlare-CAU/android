@@ -20,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.model.ProjectDTO
 import com.example.logflare_android.enums.LogLevel
-import com.example.logflare_android.ui.common.AccentGreen
 
 val AccentGreen = Color(0xFF61B175)
 val DisabledGray = Color(0xFFC2C2C2)
