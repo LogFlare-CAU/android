@@ -1,11 +1,9 @@
 package com.example.logflare_android.feature.mypage
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,49 +11,36 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.button.ButtonSize
+import com.example.logflare.core.designsystem.components.button.LogFlareButton
+import com.example.logflare.core.designsystem.components.dropdown.DropdownSize
+import com.example.logflare.core.designsystem.components.dropdown.LogFlareDropdown
+import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
+import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
+import com.example.logflare_android.components.LogFlareActionTextField
+import com.example.logflare_android.components.LogFlareActionTextFieldHelperTone
+import com.example.logflare_android.components.LogFlareActionTextFieldState
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare.core.designsystem.components.button.BottomPrimaryButton
-import com.example.logflare.core.designsystem.components.input.LogFlareTextField
-import com.example.logflare.core.designsystem.components.navigation.BackHeader
-
-private val ColorNeutralWhite = Color(0xFFFFFFFF)
-private val ColorNeutralBlack = Color(0xFF1A1A1A)
-private val ColorNeutral20 = Color(0xFFEEEEEE)
-private val ColorNeutral40 = Color(0xFFBDBDBD)
-private val ColorNeutral60 = Color(0xFF757575)
-private val ColorNeutral70 = Color(0xFF616161)
-private val ColorPrimaryDefault = Color(0xFF60B176)
-private val ColorDanger = Color(0xFFB12B38)
+import com.example.logflare_android.ui.common.member.MemberFieldStatus
 
 @Composable
 fun AddMemberScreen(
@@ -65,25 +50,58 @@ fun AddMemberScreen(
 ) {
     val uiState by viewModel.ui.collectAsState()
 
-    Surface(
+    val canSubmit = uiState.usernameValidation.status == MemberFieldStatus.Valid &&
+        uiState.passwordValidation.status == MemberFieldStatus.Valid &&
+        uiState.username.isNotBlank() &&
+        uiState.temporaryPassword.isNotBlank() &&
+        !uiState.isLoading
+
+    Scaffold(
         modifier = modifier.fillMaxSize(),
-        color = ColorNeutralWhite
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .navigationBarsPadding()
-        ) {
-            BackHeader(title = "Add Member", onBack = onBack)
-            
-            AddMemberContent(
-                uiState = uiState,
-                onUsernameChange = viewModel::updateUsername,
-                onPermissionSelect = viewModel::selectPermission,
-                onAddMember = { viewModel.addMember(onBack) },
-                onClearError = viewModel::clearError
+        containerColor = AppTheme.colors.neutral.white,
+        topBar = {
+            LogFlareTopAppBar(
+                titleType = TopAppBarTitleType.Title,
+                titleText = "Add Member",
+                onBack = onBack
             )
+        },
+        bottomBar = {
+            Surface(
+                tonalElevation = 4.dp,
+                shadowElevation = 4.dp,
+                color = AppTheme.colors.neutral.white
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = AppTheme.spacing.s4)
+                        .padding(vertical = AppTheme.spacing.s3)
+                        .navigationBarsPadding()
+                ) {
+                    LogFlareButton(
+                        text = if (uiState.isLoading) "Saving..." else "Done",
+                        onClick = { viewModel.addMember(onBack) },
+                        size = ButtonSize.Large,
+                        enabled = canSubmit,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
+    ) { innerPadding ->
+        AddMemberContent(
+            uiState = uiState,
+            onUsernameChange = viewModel::updateUsername,
+            onPasswordChange = viewModel::updateTemporaryPassword,
+            onPermissionSelect = viewModel::selectPermission,
+            onRequestUsernameValidation = viewModel::retryUsernameValidation,
+            onRequestPasswordValidation = viewModel::retryPasswordValidation,
+            onClearBanner = viewModel::clearError,
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        )
     }
 }
 
@@ -92,181 +110,168 @@ fun AddMemberScreen(
 private fun AddMemberContent(
     uiState: AddMemberUiState,
     onUsernameChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
     onPermissionSelect: (UserPermission) -> Unit,
-    onAddMember: () -> Unit,
-    onClearError: () -> Unit
+    onRequestUsernameValidation: () -> Unit,
+    onRequestPasswordValidation: () -> Unit,
+    onClearBanner: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    var showPermissionDropdown by rememberSaveable { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    val usernameFieldState = uiState.usernameValidation.status.toActionTextFieldState()
+    val passwordFieldState = uiState.passwordValidation.status.toActionTextFieldState()
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .padding(top = 24.dp)
+            .verticalScroll(scrollState)
+            .padding(horizontal = AppTheme.spacing.s4)
+            .padding(bottom = AppTheme.spacing.s6)
     ) {
-        val usernameHelperText = uiState.errorMessage?.takeIf { it.startsWith("Username") }
-        val bannerErrorMessage = uiState.errorMessage?.takeUnless { it.startsWith("Username") }
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
 
-        LogFlareTextField(
+        Text(
+            text = "Member name",
+            style = AppTheme.typography.bodySmBold,
+            color = AppTheme.colors.neutral.black
+        )
+
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
+
+        LogFlareActionTextField(
             value = uiState.username,
             onValueChange = onUsernameChange,
-            label = "Username",
-            placeholder = "Enter username",
-            helperText = usernameHelperText,
-            isError = usernameHelperText != null,
-            enabled = !uiState.isLoading,
+            placeholder = "Enter member name",
+            state = usernameFieldState,
+            helperText = uiState.usernameValidation.helperText,
+            helperTone = if (usernameFieldState == LogFlareActionTextFieldState.Error) {
+                LogFlareActionTextFieldHelperTone.Error
+            } else {
+                LogFlareActionTextFieldHelperTone.Info
+            },
+            actionEnabled = uiState.username.isNotBlank() && !uiState.isLoading &&
+                usernameFieldState != LogFlareActionTextFieldState.Saved,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false
+            ),
+            onActionClick = onRequestUsernameValidation,
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
 
         Text(
-            text = "Permission Level",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = ColorNeutral70,
-            modifier = Modifier.padding(bottom = 8.dp)
+            text = "Password",
+            style = AppTheme.typography.bodySmBold,
+            color = AppTheme.colors.neutral.black
         )
 
-        PermissionDropdown(
-            selectedPermission = uiState.selectedPermission,
-            expanded = showPermissionDropdown,
-            onExpandedChange = { showPermissionDropdown = it },
-            onPermissionSelected = {
-                onPermissionSelect(it)
-                showPermissionDropdown = false
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
+
+        LogFlareActionTextField(
+            value = uiState.temporaryPassword,
+            onValueChange = onPasswordChange,
+            placeholder = "Use English, numbers, symbols",
+            state = passwordFieldState,
+            helperText = uiState.passwordValidation.helperText,
+            helperTone = if (passwordFieldState == LogFlareActionTextFieldState.Error) {
+                LogFlareActionTextFieldHelperTone.Error
+            } else {
+                LogFlareActionTextFieldHelperTone.Info
             },
-            enabled = !uiState.isLoading
+            actionEnabled = uiState.temporaryPassword.isNotBlank() && !uiState.isLoading &&
+                passwordFieldState != LogFlareActionTextFieldState.Saved,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Password
+            ),
+            visualTransformation = PasswordVisualTransformation(),
+            onActionClick = onRequestPasswordValidation,
+            modifier = Modifier.fillMaxWidth()
         )
 
-        bannerErrorMessage?.let { message ->
-            Spacer(modifier = Modifier.height(16.dp))
-            ErrorBanner(
-                message = message,
-                onDismiss = onClearError
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Role",
+                style = AppTheme.typography.bodySmBold,
+                color = AppTheme.colors.neutral.black
+            )
+            LogFlareDropdown(
+                items = UserPermission.entries,
+                selectedItem = uiState.selectedPermission,
+                onItemSelected = onPermissionSelect,
+                itemLabelMapper = { it.label },
+                size = DropdownSize.Large,
+                modifier = Modifier.width(140.dp)
+            )
+        }
+
+        uiState.errorMessage?.let { message ->
+            Spacer(modifier = Modifier.height(AppTheme.spacing.s4))
+            AddMemberBanner(
+                text = message,
+                isError = true,
+                onDismiss = onClearBanner
             )
         }
 
         uiState.successMessage?.let { message ->
-            Spacer(modifier = Modifier.height(16.dp))
-            SuccessBanner(message = message)
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        BottomPrimaryButton(
-            text = if (uiState.isLoading) "Adding..." else "Add Member",
-            onClick = onAddMember,
-            enabled = !uiState.isLoading && uiState.username.isNotBlank(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 24.dp)
-        )
-    }
-}
-
-@Composable
-private fun PermissionDropdown(
-    selectedPermission: UserPermission,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    onPermissionSelected: (UserPermission) -> Unit,
-    enabled: Boolean
-) {
-    val permissions = listOf(
-        UserPermission.USER,
-        UserPermission.MODERATOR,
-        UserPermission.SUPER_USER
-    )
-
-    Box {
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = if (enabled) ColorNeutralWhite else ColorNeutral20,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = enabled) { onExpandedChange(!expanded) },
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                if (expanded) ColorPrimaryDefault else ColorNeutral40
+            Spacer(modifier = Modifier.height(AppTheme.spacing.s4))
+            AddMemberBanner(
+                text = message,
+                isError = false,
+                onDismiss = onClearBanner
             )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = selectedPermission.label,
-                    fontSize = 16.sp,
-                    color = if (enabled) ColorNeutralBlack else ColorNeutral60
-                )
-                Icon(
-                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = if (enabled) ColorNeutral70 else ColorNeutral60
-                )
-            }
         }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-            permissions.forEach { permission ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = permission.label,
-                            fontSize = 16.sp
-                        )
-                    },
-                    onClick = { onPermissionSelected(permission) }
-                )
-            }
-        }
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
     }
 }
 
+private fun MemberFieldStatus.toActionTextFieldState(): LogFlareActionTextFieldState = when (this) {
+    MemberFieldStatus.Valid -> LogFlareActionTextFieldState.Success
+    MemberFieldStatus.Validating -> LogFlareActionTextFieldState.Validating
+    MemberFieldStatus.Error -> LogFlareActionTextFieldState.Error
+    MemberFieldStatus.Completed -> LogFlareActionTextFieldState.Saved
+    MemberFieldStatus.Idle -> LogFlareActionTextFieldState.Default
+}
+
 @Composable
-private fun ErrorBanner(
-    message: String,
-    onDismiss: () -> Unit
+private fun AddMemberBanner(
+    text: String,
+    isError: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val colors = AppTheme.colors
+    val background = if (isError) {
+        colors.red.default.copy(alpha = 0.08f)
+    } else {
+        colors.primary.default.copy(alpha = 0.12f)
+    }
+    val contentColor = if (isError) colors.red.default else colors.primary.default
+
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onDismiss() },
-        color = ColorDanger.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(8.dp)
+        color = background,
+        shape = AppTheme.radius.large
     ) {
         Text(
-            text = message,
-            color = ColorDanger,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
-    }
-}
-
-@Composable
-private fun SuccessBanner(message: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = ColorPrimaryDefault.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Text(
-            text = message,
-            color = ColorPrimaryDefault,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            text = text,
+            style = AppTheme.typography.bodySmMedium,
+            color = contentColor,
+            modifier = Modifier
+                .padding(horizontal = AppTheme.spacing.s4, vertical = AppTheme.spacing.s3)
         )
     }
 }
