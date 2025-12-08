@@ -48,6 +48,7 @@ fun AppTheme(
             pressed = GreenPressed,
             disabled = GreenDisabled
         ),
+        primarySubtle = GreenSubtle,
         secondary = BrandColorState(
             default = GreyDefault,
             pressed = GreyPressed,
