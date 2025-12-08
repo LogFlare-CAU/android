@@ -81,7 +81,6 @@ fun ProjectCreateScreen(
         }
     }
     Column(modifier = Modifier.fillMaxSize()) {
-        TopTitle(title = "Create Project")
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier

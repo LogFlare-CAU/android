@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.components.BackHeader
 import com.example.logflare_android.ui.components.BottomPrimaryButton
 
 private val ColorNeutralWhite = Color(0xFFFFFFFF)
@@ -75,8 +74,6 @@ fun AddMemberScreen(
                 .fillMaxSize()
                 .navigationBarsPadding()
         ) {
-            BackHeader(title = "Add Member", onBack = onBack)
-            
             AddMemberContent(
                 uiState = uiState,
                 onUsernameChange = viewModel::updateUsername,

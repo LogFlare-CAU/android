@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.components.BackHeader
 import com.example.logflare_android.ui.components.BottomPrimaryButton
 import com.example.logflare_android.ui.components.BottomDangerOutlinedButton
 
@@ -87,8 +86,6 @@ fun EditMemberScreen(
                         .fillMaxSize()
                         .navigationBarsPadding()
                 ) {
-                    BackHeader(title = "Edit Member", onBack = onBack)
-                    
                     EditMemberContent(
                         uiState = uiState,
                         onPermissionSelect = viewModel::selectPermission,

@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.feature.mypage.MyPageViewModel
-import com.example.logflare_android.ui.components.BackHeader
 import com.example.logflare_android.ui.components.BottomOutlinedButton
 import com.example.logflare_android.ui.components.BottomPrimaryButton
 
@@ -78,8 +77,6 @@ fun LogoutScreen(
                 .fillMaxSize()
                 .navigationBarsPadding()
         ) {
-            BackHeader(title = "Logout", onBack = onBack)
-            
             LogoutContent(
                 username = uiState.username ?: "User",
                 onConfirmLogout = { hasConfirmedLogout = true },

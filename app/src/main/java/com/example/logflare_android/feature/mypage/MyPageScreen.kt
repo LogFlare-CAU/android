@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.components.BackHeader
+// Legacy BackHeader removed; main top app bar is provided by MainScaffold.
 
 private val ColorNeutralWhite = Color(0xFFFFFFFF)
 private val ColorNeutralBlack = Color(0xFF1A1A1A)
@@ -117,7 +117,6 @@ private fun MyPageContent(
             .background(ColorNeutralWhite)
             .navigationBarsPadding()
     ) {
-    BackHeader(title = "MYPAGE", onBack = onBack)
 
         LazyColumn(
             modifier = Modifier
