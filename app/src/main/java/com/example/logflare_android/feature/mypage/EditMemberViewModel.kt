@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.common.member.MemberFieldStatus
+import com.example.logflare_android.ui.component.common.MemberFieldStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job

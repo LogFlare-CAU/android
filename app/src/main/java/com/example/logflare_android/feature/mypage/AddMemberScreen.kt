@@ -36,11 +36,12 @@ import com.example.logflare.core.designsystem.components.dropdown.DropdownSize
 import com.example.logflare.core.designsystem.components.dropdown.LogFlareDropdown
 import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
 import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
-import com.example.logflare_android.components.LogFlareActionTextField
-import com.example.logflare_android.components.LogFlareActionTextFieldHelperTone
-import com.example.logflare_android.components.LogFlareActionTextFieldState
+import com.example.logflare_android.ui.component.common.LogFlareActionTextField
+import com.example.logflare_android.ui.component.common.LogFlareActionTextFieldHelperTone
+import com.example.logflare_android.ui.component.common.LogFlareActionTextFieldState
+import com.example.logflare_android.ui.component.common.MemberFieldStatus
+import com.example.logflare_android.ui.component.common.toActionTextFieldState
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.common.member.MemberFieldStatus
 
 @Composable
 fun AddMemberScreen(
@@ -130,15 +131,8 @@ private fun AddMemberContent(
     ) {
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
 
-        Text(
-            text = "Member name",
-            style = AppTheme.typography.bodySmBold,
-            color = AppTheme.colors.neutral.black
-        )
-
-        Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
-
         LogFlareActionTextField(
+            label = "Member name",
             value = uiState.username,
             onValueChange = onUsernameChange,
             placeholder = "Enter member name",
@@ -161,15 +155,8 @@ private fun AddMemberContent(
 
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
 
-        Text(
-            text = "Password",
-            style = AppTheme.typography.bodySmBold,
-            color = AppTheme.colors.neutral.black
-        )
-
-        Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
-
         LogFlareActionTextField(
+            label = "Password",
             value = uiState.temporaryPassword,
             onValueChange = onPasswordChange,
             placeholder = "Use English, numbers, symbols",
@@ -234,14 +221,6 @@ private fun AddMemberContent(
 
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
     }
-}
-
-private fun MemberFieldStatus.toActionTextFieldState(): LogFlareActionTextFieldState = when (this) {
-    MemberFieldStatus.Valid -> LogFlareActionTextFieldState.Success
-    MemberFieldStatus.Validating -> LogFlareActionTextFieldState.Validating
-    MemberFieldStatus.Error -> LogFlareActionTextFieldState.Error
-    MemberFieldStatus.Completed -> LogFlareActionTextFieldState.Saved
-    MemberFieldStatus.Idle -> LogFlareActionTextFieldState.Default
 }
 
 @Composable
