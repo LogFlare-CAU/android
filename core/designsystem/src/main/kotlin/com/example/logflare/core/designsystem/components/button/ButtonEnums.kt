@@ -15,4 +15,5 @@ enum class ButtonSize {
     Large,
     Medium,
     Small,
+    Field,
 }

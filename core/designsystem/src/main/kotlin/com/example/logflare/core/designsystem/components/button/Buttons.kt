@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.button.ButtonSize.Field
 import com.example.logflare.core.designsystem.components.button.ButtonSize.Large
 import com.example.logflare.core.designsystem.components.button.ButtonSize.Medium
 import com.example.logflare.core.designsystem.components.button.ButtonSize.Small
@@ -144,6 +145,7 @@ fun LogFlareButton(
         Large -> Triple(48.dp, 24.dp, AppTheme.typography.bodyMdBold)
         Medium -> Triple(40.dp, 16.dp, AppTheme.typography.bodyMdBold)
         Small -> Triple(30.dp, 12.dp, AppTheme.typography.bodySmBold)
+        Field -> Triple(50.dp, 16.dp, AppTheme.typography.bodySmMedium)
     }
 
     val contentPadding = PaddingValues(

@@ -24,12 +24,13 @@ import com.example.logflare.core.designsystem.components.chip.ChipSize
 import com.example.logflare.core.designsystem.components.chip.RoleChip
 
 enum class UserItemSize { Large, Small }
+enum class RoleBadgeType { SuperUser, Moderator, Member }
 
 @Composable
 fun UserListItem(
     username: String,
     roleLabel: String,
-    roleChipStyle: RoleChipStyle,
+    roleType: RoleBadgeType = RoleBadgeType.Member,
     size: UserItemSize = UserItemSize.Small,
     showRadio: Boolean = false,
     isSelected: Boolean = false,
@@ -53,6 +54,8 @@ fun UserListItem(
             chipSize = ChipSize.Small
         )
     }
+
+    val roleChipStyle = roleChipStyle(roleType)
 
     Row(
         modifier = modifier
@@ -115,6 +118,25 @@ data class RoleChipStyle(
     val backgroundColor: Color,
     val contentColor: Color = Color.White
 )
+
+@Composable
+fun roleChipStyle(roleType: RoleBadgeType): RoleChipStyle {
+    val colors = AppTheme.colors
+    return when (roleType) {
+        RoleBadgeType.SuperUser -> RoleChipStyle(
+            backgroundColor = colors.primary.pressed,
+            contentColor = colors.neutral.white
+        )
+        RoleBadgeType.Moderator -> RoleChipStyle(
+            backgroundColor = colors.primary.default,
+            contentColor = colors.neutral.white
+        )
+        RoleBadgeType.Member -> RoleChipStyle(
+            backgroundColor = colors.neutral.s70,
+            contentColor = colors.neutral.white
+        )
+    }
+}
 
 private data class UserListItemMetrics(
     val textStyle: TextStyle,
