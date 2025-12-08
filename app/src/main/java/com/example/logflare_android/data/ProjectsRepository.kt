@@ -75,6 +75,19 @@ class ProjectsRepository @Inject constructor(
         return getAll().find { it.dto.id == projectId }
     }
 
+    suspend fun delete(projectId: Int) {
+        context.dataStore.edit { prefs ->
+            val oldList = prefs[KEY_PROJECTS]?.let {
+                runCatching { Json.decodeFromString<List<ProjectData>>(it) }
+                    .getOrDefault(emptyList())
+            } ?: emptyList()
+            val newList = oldList.filter { it.dto.id != projectId }
+            prefs[KEY_PROJECTS] = Json.encodeToString(newList)
+        }
+        val token = auth.getToken()
+        api.deleteProject(token, projectId)
+    }
+
     suspend fun setAlertLevel(projectId: Int, level: String) {
         context.dataStore.edit { prefs ->
             val oldList = prefs[KEY_PROJECTS]?.let {
@@ -134,6 +147,24 @@ class ProjectsRepository @Inject constructor(
         }
     }
 
+    suspend fun rename(projectId: Int, newName: String): Result<Boolean> = runCatching {
+        val token = auth.token.first() ?: throw IllegalStateException("No token")
+        val body = ProjectCreateParams(name = newName)
+        val res = api.changeProjectName(token, projectId, body)
+        if (!res.success) throw IllegalStateException("changeProjectName failed: ${res.message}")
+        val project = get(projectId)
+            ?: throw IllegalStateException("Project not found")
+        val updatedProject = project.copy(
+            dto = project.dto.copy(name = newName)
+        )
+        add(updatedProject)
+        true
+    }.recoverCatching { e ->
+        if (e is HttpException && e.code() == 401) {
+            auth.clearToken()
+            throw IllegalStateException("Unauthorized")
+        } else throw e
+    }
 
     suspend fun create(name: String): Result<ProjectDTOWithToken> = runCatching {
         val token = auth.token.first() ?: throw IllegalStateException("No token")

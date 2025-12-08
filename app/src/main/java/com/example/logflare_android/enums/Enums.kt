@@ -28,7 +28,7 @@ enum class LogLevel(val code: Int, val label: String, val color: Color) {
         fun fromCode(code: Int): LogLevel =
             LogLevel.entries.find { it.code == code } ?: DEBUG
 
-        fun fromCodeByLabel(label: String): LogLevel =
+        fun fromLabel(label: String): LogLevel =
             LogLevel.entries.find { it.label.equals(label, ignoreCase = true) } ?: DEBUG
 
         fun getAll(): List<LogLevel> = LogLevel.entries.toList()
@@ -36,7 +36,7 @@ enum class LogLevel(val code: Int, val label: String, val color: Color) {
         fun getAllLabels(): List<String> = LogLevel.entries.map { it.label }
 
         fun getAboveLevel(level: String): List<LogLevel> =
-            LogLevel.entries.filter { it.code >= fromCodeByLabel(level).code }
+            LogLevel.entries.filter { it.code >= fromLabel(level).code }
     }
 }
 
