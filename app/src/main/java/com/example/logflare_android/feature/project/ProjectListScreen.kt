@@ -5,13 +5,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.feature.project.components.ProjectCard
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 /**
  * Project list screen showing all user projects.
@@ -34,12 +36,21 @@ fun ProjectListScreen(
     viewModel: ProjectsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.ui.collectAsState()
-    
-    // Load projects on screen appear
-    LaunchedEffect(Unit) {
-        viewModel.refresh()
+
+    // ALWAYS refresh when screen comes into focus
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
-    
+
     when {
         uiState.loading -> {
             Box(
@@ -49,7 +60,7 @@ fun ProjectListScreen(
                 CircularProgressIndicator()
             }
         }
-        
+
         uiState.error != null -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -61,7 +72,7 @@ fun ProjectListScreen(
                 )
             }
         }
-        
+
         uiState.items.isEmpty() -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -83,7 +94,7 @@ fun ProjectListScreen(
                 }
             }
         }
-        
+
         else -> {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

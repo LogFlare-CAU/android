@@ -3,6 +3,8 @@ package com.example.logflare_android.feature.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.logflare_android.data.ServerConfigRepository
+import com.example.logflare_android.feature.usecase.AuthLoginUseCase
+import com.example.logflare_android.feature.usecase.AuthMeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +16,7 @@ data class AuthUiState(
     val loading: Boolean = false,
     val username: String? = null,
     val permission: Int = 0,
+    val loginError: String? = null
 )
 
 
@@ -30,6 +33,7 @@ class AuthViewModel @Inject constructor(
 
     private val _ui = MutableStateFlow(AuthUiState())
     val ui: StateFlow<AuthUiState> = _ui
+
     /**
      * Legacy login without dynamic server URL (kept for backward compatibility with existing UI).
      * Uses whatever server URL was previously saved (or default).
@@ -70,12 +74,19 @@ class AuthViewModel @Inject constructor(
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
+            _ui.value = _ui.value.copy(loading = true, loginError = null)
+
             val ok = authLoginUseCase(username, password)
             if (ok) {
+                _ui.value = _ui.value.copy(loading = false, loginError = null)
                 onSuccess()
             } else {
-                // TODO: 에러 상태 emit
+                _ui.value = _ui.value.copy(
+                    loading = false,
+                    loginError = "Login failed"
+                )
             }
         }
     }
+
 }

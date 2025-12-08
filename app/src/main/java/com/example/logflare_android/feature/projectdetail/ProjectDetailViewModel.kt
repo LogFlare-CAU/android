@@ -5,8 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.logflare.core.model.LogFileDTO
 import com.example.logflare.core.model.ProjectData
+import com.example.logflare_android.data.LogsRepository
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
+import com.example.logflare_android.feature.usecase.GetProjectDetailUseCase
+import com.example.logflare_android.feature.usecase.GetProjectLogsUseCase
+import com.example.logflare_android.ui.common.LogCardInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +73,7 @@ class ProjectDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getProjectDetailUseCase: GetProjectDetailUseCase,
     private val getProjectLogsUseCase: GetProjectLogsUseCase,
+    private val logsRepository: LogsRepository,
 ) : ViewModel() {
 
     private val projectId: Int = savedStateHandle["projectId"] ?: 0
@@ -274,4 +279,13 @@ class ProjectDetailViewModel @Inject constructor(
         }
     }
 
+    fun onLogClick(log: ProjectDetailLog) {
+        logsRepository.selectLog(LogCardInfo(
+            level = log.level.label,
+            timestamp = log.timestamp,
+            message = log.message,
+            prefix = log.projectName,
+            suffix = log.fileName
+        ))
+    }
 }

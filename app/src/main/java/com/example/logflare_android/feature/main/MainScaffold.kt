@@ -1,19 +1,11 @@
 package com.example.logflare_android.feature.main
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -23,14 +15,28 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
-import com.example.logflare_android.feature.log.LogListScreen
 import com.example.logflare_android.feature.home.HomeScreen
+import com.example.logflare_android.feature.log.LogDetailScreen
+import com.example.logflare_android.feature.log.LogListScreen
 import com.example.logflare_android.feature.mypage.MyPageScreen
+import com.example.logflare_android.feature.mypage.AddMemberScreen
+import com.example.logflare_android.feature.mypage.EditMemberScreen
+import com.example.logflare_android.feature.mypage.LogoutScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.project.ProjectCreateScreen
+import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.projectdetail.ProjectDetailScreen
-import com.example.logflare_android.feature.projectdetail.ProjectSettingsScreen
+import com.example.logflare_android.feature.project.ProjectSettingsScreen
 import com.example.logflare_android.ui.navigation.Route
+import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.navigation.LogFlareGnbItem
+import com.example.logflare.core.designsystem.R as DesignSystemR
+
+data class GnbItem(
+    val route: Route,
+    @androidx.annotation.DrawableRes val iconRes: Int,
+    val label: String
+)
 
 /**
  * Main app scaffold with bottom navigation.
@@ -41,7 +47,7 @@ fun MainScaffold(
     onLogout: () -> Unit
 ) {
     val navController = rememberNavController()
-    
+
     Scaffold(
         bottomBar = {
             BottomNavigationBar(navController = navController)
@@ -59,21 +65,21 @@ fun MainScaffold(
 private fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    
+
     val items = listOf(
-        BottomNavItem(route = Route.Home, icon = Icons.Default.Home, label = "Home"),
-    BottomNavItem(route = Route.Logs, icon = Icons.AutoMirrored.Filled.List, label = "Logs"),
-    BottomNavItem(route = Route.Projects, icon = Icons.AutoMirrored.Filled.List, label = "Projects"),
-        BottomNavItem(route = Route.MyPage, icon = Icons.Default.Person, label = "MyPage")
+        GnbItem(route = Route.Home, iconRes = DesignSystemR.drawable.ic_home, label = "Home"),
+        GnbItem(route = Route.Logs, iconRes = DesignSystemR.drawable.ic_log, label = "Logs"),
+        GnbItem(route = Route.Projects, iconRes = DesignSystemR.drawable.ic_project, label = "Projects"),
+        GnbItem(route = Route.MyPage, iconRes = DesignSystemR.drawable.ic_mypage, label = "MyPage")
     )
-    
-    NavigationBar {
+
+    NavigationBar(containerColor = AppTheme.colors.neutral.white) {
         items.forEach { item ->
-            val selected = currentDestination?.hierarchy?.any { 
-                it.route == item.route.path 
+            val selected = currentDestination?.hierarchy?.any {
+                it.route == item.route.path
             } == true
-            
-            NavigationBarItem(
+
+            LogFlareGnbItem(
                 selected = selected,
                 onClick = {
                     // Special-case Home: clear its saved state so transient screens (eg. Create) don't persist when returning
@@ -95,13 +101,8 @@ private fun BottomNavigationBar(navController: NavHostController) {
                         }
                     }
                 },
-                icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.label
-                    )
-                },
-                label = { Text(item.label) }
+                iconRes = item.iconRes,
+                label = item.label
             )
         }
     }
@@ -137,7 +138,9 @@ private fun MainNavHost(
             )
         }
         composable(Route.Logs.path) {
-            LogListScreen()
+            LogListScreen(
+                onLogClick = { navController.navigate(Route.LogDetail.path) }
+            )
         }
         composable(Route.Projects.path) {
             ProjectListScreen(onProjectClick = { projectId ->
@@ -145,10 +148,37 @@ private fun MainNavHost(
             })
         }
         composable(Route.ProjectCreate.path) {
-            // Simple project creation screen; on success navigate back to Projects
             ProjectCreateScreen(onCreated = { navController.navigate(Route.Projects.path) })
         }
-        composable(Route.MyPage.path) { MyPageScreen(onLogout = onLogout) }
+        composable(Route.MyPage.path) {
+            MyPageScreen(
+                onBack = { navController.popBackStack() },
+                onLogout = { navController.navigate(Route.MyPageLogout.path) },
+                onAddMember = { navController.navigate(Route.MyPageAddMember.path) },
+                onEditMember = { username ->
+                    navController.navigate(Route.MyPageEditMember.createRoute(username))
+                }
+            )
+        }
+        composable(Route.MyPageAddMember.path) {
+            AddMemberScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Route.MyPageEditMember.path,
+            arguments = listOf(navArgument("username") { type = NavType.StringType })
+        ) {
+            EditMemberScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Route.MyPageLogout.path) {
+            LogoutScreen(
+                onBack = { navController.popBackStack() },
+                onLogout = onLogout
+            )
+        }
         composable(
             route = Route.ProjectDetail.path,
             arguments = listOf(navArgument("projectId") { type = NavType.IntType })
@@ -157,7 +187,8 @@ private fun MainNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenProjectSettings = { projectId ->
                     navController.navigate(Route.ProjectSettings.createRoute(projectId))
-                }
+                },
+                onLogClick = { navController.navigate(Route.LogDetail.path) }
             )
         }
         composable(
@@ -167,14 +198,12 @@ private fun MainNavHost(
             val projectId = backStackEntry.arguments?.getInt("projectId") ?: return@composable
             ProjectSettingsScreen(
                 projectId = projectId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onDelete = { navController.popBackStack(Route.Projects.path, inclusive = false) }
             )
+        }
+        composable(route = Route.LogDetail.path) {
+            LogDetailScreen(onBack = { navController.popBackStack() })
         }
     }
 }
-
-private data class BottomNavItem(
-    val route: Route,
-    val icon: ImageVector,
-    val label: String
-)

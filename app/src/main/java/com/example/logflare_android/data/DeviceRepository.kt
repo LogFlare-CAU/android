@@ -37,6 +37,7 @@ class DeviceRepository @Inject constructor(
 
     companion object {
         private val KEY_FCM_CONFIG: Preferences.Key<String> = stringPreferencesKey("config")
+        private val KEY_ALERT_LEVEL: Preferences.Key<String> = stringPreferencesKey("alert_level")
         private const val TAG = "DeviceRepository"
     }
 
@@ -194,4 +195,17 @@ class DeviceRepository @Inject constructor(
             }
             .build()
     }
+
+    suspend fun getAlertLevel(): String? {
+        return context.fcmDataStore.data
+            .map { it[KEY_ALERT_LEVEL] }
+            .firstOrNull()
+    }
+
+    suspend fun setAlertLevel(level: String) {
+        context.fcmDataStore.edit { prefs ->
+            prefs[KEY_ALERT_LEVEL] = level
+        }
+    }
+
 }

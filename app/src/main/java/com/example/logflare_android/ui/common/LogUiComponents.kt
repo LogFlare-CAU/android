@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,11 +18,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,17 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import com.example.logflare_android.enums.LogLevel
+import com.example.logflare.core.designsystem.AppTheme
 import kotlinx.serialization.Serializable
 import java.time.Instant
 import java.time.format.DateTimeParseException
-
-val StatusBarGray = Color(0xFFF5F5F5)
-val CardGray = Color(0xFFEDEDED)
-val InfoGray = Color(0xFF616161)
-val PrimaryText = Color(0xFF1A1A1A)
-val SecondaryText = Color(0xFF353535)
-val AccentGreen = Color(0xFF61B075)
-val OutlineGray = Color(0xFFBDBDBD)
 
 @Composable
 fun CommonFilterDropdown(
@@ -74,25 +68,24 @@ fun CommonFilterDropdown(
                 .onGloballyPositioned { coords ->
                     buttonWidth = coords.size.width
                 }
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.White)
-                .border(0.5.dp, OutlineGray, androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .clip(AppTheme.radius.large)
+                .background(AppTheme.colors.neutral.white)
+                .border(0.5.dp, AppTheme.colors.neutral.s40, AppTheme.radius.large)
                 .clickable { expanded = !expanded }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = AppTheme.spacing.s3, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = if (isActive || expanded) AccentGreen else SecondaryText,
-                    fontWeight = FontWeight.Medium
+                style = AppTheme.typography.captionSmMedium.copy(
+                    color = if (isActive || expanded) AppTheme.colors.primary.default else AppTheme.colors.neutral.s80
                 )
             )
             Icon(
                 imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                 contentDescription = null,
-                tint = AccentGreen
+                tint = AppTheme.colors.primary.default
             )
         }
 
@@ -105,11 +98,11 @@ fun CommonFilterDropdown(
                 Column(
                     modifier = Modifier
                         .width(with(density) { buttonWidth.toDp() })
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                        .background(Color.White)
-                        .border(0.5.dp, OutlineGray, androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                        .clip(AppTheme.radius.large)
+                        .background(AppTheme.colors.neutral.white)
+                        .border(0.5.dp, AppTheme.colors.neutral.s40, AppTheme.radius.large)
+                        .padding(horizontal = AppTheme.spacing.s3, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.s1),
                     content = content
                 )
             }
@@ -122,7 +115,7 @@ fun CommonCheckRow(
     label: String,
     selected: Boolean,
     modifier: Modifier = Modifier.Companion,
-    highlightColor: Color = AccentGreen,
+    highlightColor: Color = AppTheme.colors.primary.default,
     fillWhenSelected: Boolean = true,
     onClick: () -> Unit
 ) {
@@ -130,7 +123,7 @@ fun CommonCheckRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .padding(horizontal = AppTheme.spacing.s1, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
@@ -139,16 +132,16 @@ fun CommonCheckRow(
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
                 .border(
                     width = 0.6.dp,
-                    color = OutlineGray,
+                    color = AppTheme.colors.neutral.s40,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
                 ),
             color = if (selected && fillWhenSelected) highlightColor else Color.Transparent
         ) {}
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(AppTheme.spacing.s2))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(
-                color = if (selected) highlightColor else SecondaryText,
+            style = AppTheme.typography.captionSmMedium.copy(
+                color = if (selected) highlightColor else AppTheme.colors.neutral.s80,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
             )
         )
@@ -165,13 +158,13 @@ fun CommonRadioRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .padding(horizontal = AppTheme.spacing.s1, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(
-                color = if (selected) AccentGreen else SecondaryText,
+            style = AppTheme.typography.captionSmMedium.copy(
+                color = if (selected) AppTheme.colors.primary.default else AppTheme.colors.neutral.s80,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
             )
         )
@@ -180,7 +173,7 @@ fun CommonRadioRow(
 
 @Composable
 fun CommonLevelBadge(level: String) {
-    val enum = LogLevel.fromCodeByLabel(level)
+    val enum = LogLevel.fromLabel(level)
     Surface(
         color = enum.color,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
@@ -217,27 +210,28 @@ fun LoadMoreRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 4.dp)
-            .clip(RoundedCornerShape(999.dp))
-            .background(Color.White)
-            .border(0.5.dp, OutlineGray, RoundedCornerShape(999.dp))
+            .padding(top = AppTheme.spacing.s1)
+            .clip(AppTheme.radius.full)
+            .background(AppTheme.colors.neutral.white)
+            .border(0.5.dp, AppTheme.colors.neutral.s40, AppTheme.radius.full)
             .clickable(enabled = !loading, onClick = onClick)
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         if (loading) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.s2),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
+                    strokeWidth = 2.dp,
+                    color = AppTheme.colors.primary.default
                 )
                 Text(
                     text = "Loading more...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SecondaryText
+                    style = AppTheme.typography.bodySmMedium,
+                    color = AppTheme.colors.neutral.s80
                 )
             }
         } else {
@@ -248,13 +242,13 @@ fun LoadMoreRow(
                 Icon(
                     imageVector = Icons.Filled.Add,
                     contentDescription = "Load more",
-                    tint = AccentGreen,
+                    tint = AppTheme.colors.primary.default,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = "Load more logs",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = AccentGreen,
+                    style = AppTheme.typography.bodySmMedium.copy(
+                        color = AppTheme.colors.primary.default,
                         fontWeight = FontWeight.Medium
                     )
                 )
@@ -267,7 +261,9 @@ fun LoadMoreRow(
 data class LogCardInfo(
     val level: String,
     val timestamp: String,
-    val message: String
+    val message: String,
+    val prefix: String,
+    val suffix: String,
 )
 
 /**
@@ -280,46 +276,52 @@ data class LogCardInfo(
 @Composable
 fun GlobalLogCard(
     log: LogCardInfo,
-    prefix: String,
-    suffix: String
+    onClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardGray)
-            .padding(24.dp)
+            .clip(AppTheme.radius.large)
+            .background(AppTheme.colors.neutral.s20)
+            .padding(AppTheme.spacing.s6)
+            .clickable {
+                onClick()
+            }
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CommonLevelBadge(level = log.level)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(AppTheme.spacing.s2))
             Text(
                 text = displayTimestamp(log.timestamp),
-                style = MaterialTheme.typography.bodySmall,
-                color = InfoGray
+                style = AppTheme.typography.bodySmMedium,
+                color = AppTheme.colors.neutral.s70
             )
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(AppTheme.spacing.s3))
         Text(
-            text = log.message,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-            color = PrimaryText,
+            text = cropLongText(log.message),
+            style = AppTheme.typography.bodyLgBold,
+            color = AppTheme.colors.neutral.black,
             lineHeight = 24.sp,
             maxLines = 6,
             overflow = TextOverflow.Ellipsis
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(AppTheme.spacing.s3))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = prefix,
-                style = MaterialTheme.typography.bodySmall,
-                color = InfoGray
+                text = log.prefix,
+                style = AppTheme.typography.bodySmMedium,
+                color = AppTheme.colors.neutral.s70
             )
-            Text(" / ", style = MaterialTheme.typography.bodySmall, color = InfoGray)
             Text(
-                text = suffix,
-                style = MaterialTheme.typography.bodySmall,
-                color = InfoGray
+                " / ",
+                style = AppTheme.typography.bodySmMedium,
+                color = AppTheme.colors.neutral.s70
+            )
+            Text(
+                text = log.suffix,
+                style = AppTheme.typography.bodySmMedium,
+                color = AppTheme.colors.neutral.s70
             )
         }
     }
@@ -343,25 +345,68 @@ private fun displayTimestamp(value: String?): String {
 fun EmptyState(projectFiltered: Boolean = false, filter: List<LogLevel> = emptyList()) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 48.dp),
+            .fillMaxWidth()
+            .clip(AppTheme.radius.large)
+            .background(AppTheme.colors.neutral.s20)
+            .padding(AppTheme.spacing.s6),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.s2),
         ) {
             Text(
                 text = if (projectFiltered) "No logs available" else "No logs for this Project / LogFile",
-                style = MaterialTheme.typography.bodyLarge
+                style = AppTheme.typography.bodyLgBold,
+                color = AppTheme.colors.neutral.black
             )
             if (filter.isNotEmpty()) {
                 Text(
                     text = "Try adjusting the filters",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = AppTheme.typography.bodyMdMedium,
+                    color = AppTheme.colors.neutral.s60
                 )
             }
         }
+    }
+}
+
+
+@Composable
+fun TopTitle(
+    title: String,
+    onBack: (() -> Unit)? = null
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(60.dp)
+    ) {
+        if (onBack != null) {
+            Row(
+                modifier = Modifier.align(Alignment.CenterStart),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = AppTheme.colors.neutral.black
+                    )
+                }
+            }
+        }
+        Text(
+            text = title,
+            style = AppTheme.typography.bodyLgBold,
+            color = AppTheme.colors.neutral.black,
+            modifier = Modifier.align(Alignment.Center)
+        )
+    }
+}
+
+private fun cropLongText(text: String, maxLength: Int = 100): String {
+    return if (text.length <= maxLength) {
+        text
+    } else {
+        text.take(maxLength) + "..."
     }
 }
