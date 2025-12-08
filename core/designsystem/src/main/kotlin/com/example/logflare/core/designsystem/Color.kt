@@ -23,6 +23,7 @@ val Neutral90 = Color(0xFF212121)
 val GreenDefault = Color(0xFF60B176)
 val GreenPressed = Color(0xFF30A14F)
 val GreenDisabled = Color(0xFF9ED4AD)
+val GreenSubtle = Color(0xFFB8EEC7)
 
 val GreyDefault = Color(0xFF9E9E9E)
 val GreyPressed = Color(0xFF4C4C4C)
@@ -60,6 +61,7 @@ data class NeutralColorStep(
 @Immutable
 data class AppColors(
     val primary: BrandColorState,
+    val primarySubtle: Color,
     val secondary: BrandColorState,
     val red: BrandColorState,
     val neutral: NeutralColorStep
@@ -68,6 +70,7 @@ data class AppColors(
 val LocalAppColors = staticCompositionLocalOf {
     AppColors(
         primary = BrandColorState(Color.Unspecified, Color.Unspecified, Color.Unspecified),
+        primarySubtle = Color.Unspecified,
         secondary = BrandColorState(Color.Unspecified, Color.Unspecified, Color.Unspecified),
         red = BrandColorState(Color.Unspecified, Color.Unspecified, Color.Unspecified),
         neutral = NeutralColorStep(

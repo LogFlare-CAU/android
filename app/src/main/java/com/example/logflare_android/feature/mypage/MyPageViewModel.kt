@@ -3,6 +3,7 @@ package com.example.logflare_android.feature.mypage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.logflare_android.data.AuthRepository
+import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.UserPermission
 import com.example.logflare_android.feature.auth.AuthMeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,16 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val DEFAULT_LOG_LEVEL_LABEL = "Log Level"
-private val DEFAULT_LOG_LEVELS = listOf("ERROR", "WARN", "INFO", "DEBUG")
-
 data class MyPageUiState(
     val loading: Boolean = true,
     val username: String? = null,
     val permission: UserPermission = UserPermission.USER,
     val members: List<MyPageMemberUiModel> = emptyList(),
-    val selectedLogLevel: String = DEFAULT_LOG_LEVEL_LABEL,
-    val logLevels: List<String> = DEFAULT_LOG_LEVELS,
+    val selectedLogLevel: LogLevel? = null,
+    val logLevels: List<LogLevel> = LogLevel.entries.toList(),
     val errorMessage: String? = null
 )
 
@@ -54,7 +52,7 @@ class MyPageViewModel @Inject constructor(
                         loading = false,
                         username = user.username,
                         permission = permission,
-                        members = buildMembers(user.username, permission)
+                        members = emptyList()
                     )
                 }
             } else {
@@ -68,7 +66,7 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    fun selectLogLevel(level: String) {
+    fun selectLogLevel(level: LogLevel) {
         if (level == _ui.value.selectedLogLevel) return
         _ui.update { it.copy(selectedLogLevel = level) }
     }
@@ -80,13 +78,4 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    private fun buildMembers(username: String, permission: UserPermission): List<MyPageMemberUiModel> {
-        if (username.isBlank()) return emptyList()
-        val defaultMembers = listOf(
-            MyPageMemberUiModel(username = username, role = permission),
-            MyPageMemberUiModel(username = "ops-monitor", role = UserPermission.MODERATOR),
-            MyPageMemberUiModel(username = "bot-watcher", role = UserPermission.USER)
-        )
-        return defaultMembers.distinctBy { it.username }
-    }
 }
