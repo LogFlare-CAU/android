@@ -23,3 +23,4 @@ rootProject.name = "logflare-android"
 include(":app")
 include(":core:model")
 include(":core:network")
+include(":core:designsystem")

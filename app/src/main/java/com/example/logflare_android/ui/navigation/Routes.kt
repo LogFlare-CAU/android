@@ -1,5 +1,7 @@
 package com.example.logflare_android.ui.navigation
 
+import com.example.logflare_android.ui.common.LogCardInfo
+
 /**
  * Navigation routes with hierarchical structure.
  * RootGraph: Auth vs Main
@@ -19,6 +21,13 @@ sealed class Route(val path: String) {
     // Create project screen
     data object ProjectCreate : Route("projects/create")
 
+    // MyPage screens
+    data object MyPageAddMember : Route("mypage/add-member")
+    data object MyPageEditMember : Route("mypage/edit-member/{username}") {
+        fun createRoute(username: String) = "mypage/edit-member/$username"
+    }
+    data object MyPageLogout : Route("mypage/logout")
+
     // Detail screens with arguments
     data object ProjectDetail : Route("project/{projectId}") {
         fun createRoute(projectId: Int) = "project/$projectId"
@@ -28,7 +37,11 @@ sealed class Route(val path: String) {
         fun createRoute(projectId: Int) = "project/$projectId/settings"
     }
 
-    data object LogDetail : Route("log/{projectId}") {
-        fun createRoute(projectId: Int) = "log/$projectId"
+    data object LogDetail : Route("log/{logId}"){
+        fun createRoute(logId: String) = "log/$logId"
     }
+
+//    data object LogDetail : Route("log/{projectId}") {
+//        fun createRoute(projectId: Int) = "log/$projectId"
+//    }
 }

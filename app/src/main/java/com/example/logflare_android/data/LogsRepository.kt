@@ -3,6 +3,8 @@ package com.example.logflare_android.data
 import com.example.logflare.core.model.ErrorSequenceResponse
 import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare.core.network.LogflareApi
+import com.example.logflare_android.ui.common.LogCardInfo
+import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
@@ -24,4 +26,19 @@ class LogsRepository @Inject constructor(
             throw IllegalStateException("Unauthorized")
         } else throw e
     }
+
+    private val selectedLog = MutableStateFlow<LogCardInfo?>(null)
+
+    fun selectLog(log: LogCardInfo) {
+        selectedLog.value = log
+    }
+
+    fun clearSelectedLog() {
+        selectedLog.value = null
+    }
+
+    fun getSelectedLog(): LogCardInfo? {
+        return selectedLog.value
+    }
+
 }

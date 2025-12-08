@@ -28,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.model.ErrorlogDTO
+import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.UserPermission
 import com.example.logflare_android.feature.auth.AuthViewModel
 import com.example.logflare_android.feature.log.LogViewModel
@@ -205,21 +207,15 @@ private fun EmptyStateCard(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun LogRowItem(log: com.example.logflare.core.model.ErrorlogDTO) {
+private fun LogRowItem(log: ErrorlogDTO) {
     // Color badge based on level
-    val badgeColor = when (log.level.uppercase()) {
-        "ERROR", "FATAL" -> Color(0xFFD32F2F)
-        "WARN", "WARNING" -> Color(0xFFFFA000)
-        "INFO" -> Color(0xFF1976D2)
-        "DEBUG" -> Color(0xFF388E3C)
-        else -> Color(0xFF616161)
-    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val badgeColor = LogLevel.fromLabel(log.level).color
         Surface(
             color = badgeColor,
             shape = RoundedCornerShape(4.dp),
@@ -228,7 +224,7 @@ private fun LogRowItem(log: com.example.logflare.core.model.ErrorlogDTO) {
         Spacer(Modifier.size(8.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "${log.errortype ?: "Error"}: ${log.message}",
+                text = cropLongText("${log.errortype ?: "Error"}: ${log.message}"),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF212121)
             )
@@ -238,5 +234,13 @@ private fun LogRowItem(log: com.example.logflare.core.model.ErrorlogDTO) {
                 color = badgeColor
             )
         }
+    }
+}
+
+private fun cropLongText(text: String, maxLength: Int=200): String {
+    return if (text.length <= maxLength) {
+        text
+    } else {
+        text.take(maxLength) + "…"
     }
 }
