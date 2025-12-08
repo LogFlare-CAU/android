@@ -7,24 +7,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,7 +54,7 @@ fun ProjectDetailScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = Color.White
+    color = AppTheme.colors.neutral.white
     ) {
         when {
             uiState.loading -> Box(
@@ -95,7 +90,7 @@ private fun ProjectDetailContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(AppTheme.colors.neutral.white)
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
@@ -138,7 +133,7 @@ private fun ProjectSettingsCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = CardGray
+    color = AppTheme.colors.neutral.s20
     ) {
         Row(
             modifier = Modifier
@@ -150,13 +145,13 @@ private fun ProjectSettingsCard(
             Text(
                 text = label,
                 style = AppTheme.typography.bodyMdMedium,
-                color = PrimaryText.copy(alpha = 0.86f)
+                color = AppTheme.colors.neutral.black.copy(alpha = 0.86f)
             )
             Box(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.3f))
+                    .background(AppTheme.colors.neutral.white.copy(alpha = 0.3f))
             )
         }
     }
@@ -227,7 +222,7 @@ private fun FilterPanel(
                     CommonCheckRow(
                         label = level.label,
                         selected = filterState.selectedLevel.contains(level),
-                        highlightColor = AccentGreen,
+                        highlightColor = AppTheme.colors.primary.default,
                         onClick = { onLevelSelected(level) }
                     )
                 }

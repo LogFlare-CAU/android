@@ -1,10 +1,7 @@
 package com.example.logflare_android.feature.mypage
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,17 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,24 +24,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.feature.mypage.MyPageViewModel
 import com.example.logflare_android.ui.components.BackHeader
 import com.example.logflare_android.ui.components.BottomOutlinedButton
-import com.example.logflare_android.ui.components.BottomPrimaryButton
-
-private val ColorNeutralWhite = Color(0xFFFFFFFF)
-private val ColorNeutralBlack = Color(0xFF1A1A1A)
-private val ColorNeutral20 = Color(0xFFEEEEEE)
-private val ColorNeutral60 = Color(0xFF757575)
-private val ColorNeutral70 = Color(0xFF616161)
-private val ColorPrimaryDefault = Color(0xFF60B176)
-private val ColorDanger = Color(0xFFB12B38)
+import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.button.ButtonVariant
+import com.example.logflare.core.designsystem.components.button.LogFlareButton
 
 @Composable
 fun LogoutScreen(
@@ -70,8 +52,8 @@ fun LogoutScreen(
     }
 
     Surface(
-        modifier = modifier.fillMaxSize(),
-        color = ColorNeutralWhite
+    modifier = modifier.fillMaxSize(),
+    color = AppTheme.colors.neutral.white
     ) {
         Column(
             modifier = Modifier
@@ -105,7 +87,7 @@ private fun LogoutContent(
     ) {
         Surface(
             shape = RoundedCornerShape(50),
-            color = ColorNeutral20,
+            color = AppTheme.colors.neutral.s20,
             modifier = Modifier.size(100.dp)
         ) {
             Column(
@@ -116,7 +98,7 @@ private fun LogoutContent(
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = null,
-                    tint = ColorNeutral60,
+                    tint = AppTheme.colors.neutral.s60,
                     modifier = Modifier.size(48.dp)
                 )
             }
@@ -128,7 +110,7 @@ private fun LogoutContent(
             text = "Log Out?",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = ColorNeutralBlack,
+            color = AppTheme.colors.neutral.black,
             textAlign = TextAlign.Center
         )
 
@@ -137,7 +119,7 @@ private fun LogoutContent(
         Text(
             text = "Are you sure you want to log out from your account \"$username\"?",
             fontSize = 14.sp,
-            color = ColorNeutral70,
+            color = AppTheme.colors.neutral.s70,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp,
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -145,13 +127,13 @@ private fun LogoutContent(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        BottomPrimaryButton(
+        LogFlareButton(
             text = "Log Out",
             onClick = onConfirmLogout,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            containerColor = ColorDanger
+            variant = ButtonVariant.Secondary
         )
 
         Spacer(modifier = Modifier.height(12.dp))

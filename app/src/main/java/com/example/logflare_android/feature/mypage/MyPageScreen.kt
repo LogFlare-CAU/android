@@ -15,11 +15,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -65,8 +63,8 @@ fun MyPageScreen(
     val uiState by viewModel.ui.collectAsState()
 
     Surface(
-        modifier = modifier.fillMaxSize(),
-        color = ColorNeutralWhite
+    modifier = modifier.fillMaxSize(),
+    color = AppTheme.colors.neutral.white
     ) {
         when {
             uiState.loading -> Box(
@@ -102,10 +100,10 @@ private fun MyPageContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ColorNeutralWhite)
+            .background(AppTheme.colors.neutral.white)
             .navigationBarsPadding()
     ) {
-    BackHeader(title = "MYPAGE", onBack = onBack)
+        BackHeader(title = "MYPAGE", onBack = onBack)
 
         LazyColumn(
             modifier = Modifier
@@ -141,7 +139,7 @@ private fun MyPageContent(
                         text = "Alert Level",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorNeutralBlack
+                        color = AppTheme.colors.neutral.black
                     )
 
                     LogLevelDropdown(
@@ -169,13 +167,13 @@ private fun MyPageContent(
                         text = "Members",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorNeutralBlack
+                        color = AppTheme.colors.neutral.black
                     )
 
                     TextButton(
                         onClick = onAddMember,
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = ColorSecondaryDefault
+                            contentColor = AppTheme.colors.secondary.default
                         )
                     ) {
                         Text(
@@ -211,7 +209,7 @@ private fun MyPageContent(
                     TextButton(
                         onClick = onLogout,
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = ColorSecondaryDefault
+                            contentColor = AppTheme.colors.secondary.default
                         )
                     ) {
                         Text(
@@ -236,12 +234,12 @@ private fun ErrorBanner(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = ColorDanger.copy(alpha = 0.08f),
+    color = AppTheme.colors.red.default.copy(alpha = 0.08f),
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(
             text = message,
-            color = ColorDanger,
+            color = AppTheme.colors.red.default,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -258,7 +256,7 @@ private fun SectionHeader(
         text = title,
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
-        color = ColorNeutralBlack,
+    color = AppTheme.colors.neutral.black,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 32.dp)
@@ -274,7 +272,7 @@ private fun UserCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = ColorNeutral20)
+    colors = CardDefaults.cardColors(containerColor = AppTheme.colors.neutral.s20)
     ) {
         Row(
             modifier = Modifier
@@ -288,12 +286,12 @@ private fun UserCard(
                     text = username,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorNeutralBlack
+                    color = AppTheme.colors.neutral.black
                 )
                 Text(
                     text = role.label,
                     fontSize = 12.sp,
-                    color = ColorNeutral60,
+                    color = AppTheme.colors.neutral.s60,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -308,9 +306,9 @@ private fun RoleChip(
     size: RoleChipSize = RoleChipSize.Small
 ) {
     val backgroundColor = when (role) {
-        UserPermission.SUPER_USER -> ColorPrimaryPressed
-        UserPermission.MODERATOR -> ColorPrimaryDefault
-        UserPermission.USER -> ColorNeutral70
+    UserPermission.SUPER_USER -> AppTheme.colors.primary.pressed
+    UserPermission.MODERATOR -> AppTheme.colors.primary.default
+    UserPermission.USER -> AppTheme.colors.neutral.s70
     }
 
     val (height, fontSize, horizontalPadding) = when (size) {
@@ -331,7 +329,7 @@ private fun RoleChip(
                 text = role.label,
                 fontSize = fontSize,
                 fontWeight = FontWeight.Medium,
-                color = ColorNeutral5
+                color = AppTheme.colors.neutral.s5
             )
         }
     }
@@ -348,7 +346,7 @@ private fun LogLevelDropdown(
     Column(horizontalAlignment = Alignment.End) {
         Surface(
             shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, ColorNeutral40),
+            border = BorderStroke(1.dp, AppTheme.colors.neutral.s40),
             color = Color.Transparent,
             modifier = Modifier
                 .width(133.5.dp)
@@ -365,12 +363,12 @@ private fun LogLevelDropdown(
                     text = selectedLevel,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = ColorNeutral70
+                    color = AppTheme.colors.neutral.s70
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                     contentDescription = null,
-                    tint = ColorNeutral70
+                    tint = AppTheme.colors.neutral.s70
                 )
             }
         }
@@ -399,13 +397,13 @@ private fun MembersCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = ColorNeutral10)
+    colors = CardDefaults.cardColors(containerColor = AppTheme.colors.neutral.s10)
     ) {
         if (members.isEmpty()) {
             Text(
                 text = "No members registered yet",
                 fontSize = 13.sp,
-                color = ColorNeutral60,
+                color = AppTheme.colors.neutral.s60,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
             )
         } else {
@@ -446,7 +444,7 @@ private fun MemberListItem(
                 text = member.username,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = ColorNeutralBlack
+                color = AppTheme.colors.neutral.black
             )
             RoleChip(role = member.role, size = RoleChipSize.Small)
         }
@@ -454,7 +452,7 @@ private fun MemberListItem(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = "View member",
-            tint = ColorSecondaryDefault,
+            tint = AppTheme.colors.secondary.default,
             modifier = Modifier.size(20.dp)
         )
     }
