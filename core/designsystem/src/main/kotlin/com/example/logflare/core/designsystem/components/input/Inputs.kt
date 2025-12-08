@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -123,6 +124,166 @@ fun LogFlareTextField(
                     text = it,
                     style = AppTheme.typography.captionSmMedium,
                     color = helperColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LogFlareActionTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    actionText: String,
+    onActionClick: () -> Unit,
+    label: String? = null,
+    placeholder: String? = null,
+    helperText: String? = null,
+    isError: Boolean = false,
+    enabled: Boolean = true,
+    actionEnabled: Boolean = enabled,
+    actionLoading: Boolean = false,
+    modifier: Modifier = Modifier,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val borderColor = when {
+        !enabled -> AppTheme.colors.neutral.s70
+        isError -> AppTheme.colors.red.default
+        isFocused -> AppTheme.colors.primary.default
+        else -> AppTheme.colors.neutral.s70
+    }
+    val backgroundColor = if (enabled) AppTheme.colors.neutral.white else AppTheme.colors.neutral.s10
+    val textColor = if (enabled) AppTheme.colors.neutral.s90 else AppTheme.colors.neutral.s60
+    val placeholderColor = AppTheme.colors.neutral.s60
+    val helperColor = if (isError) AppTheme.colors.red.default else AppTheme.colors.neutral.s70
+
+    Column(modifier = modifier) {
+        label?.let {
+            Text(
+                text = it,
+                style = AppTheme.typography.bodyMdMedium,
+                color = AppTheme.colors.neutral.s70
+            )
+            Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
+        }
+
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            enabled = enabled,
+            textStyle = AppTheme.typography.bodyMdMedium.copy(color = textColor),
+            interactionSource = interactionSource,
+            singleLine = true,
+            keyboardOptions = keyboardOptions,
+            visualTransformation = visualTransformation,
+            cursorBrush = SolidColor(AppTheme.colors.primary.default),
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { innerTextField ->
+                Surface(
+                    shape = AppTheme.radius.medium,
+                    border = BorderStroke(1.dp, borderColor),
+                    color = backgroundColor,
+                    modifier = Modifier
+                        .height(50.dp)
+                        .fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = AppTheme.spacing.s3),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.s2)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = AppTheme.spacing.s1),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (value.isEmpty() && placeholder != null) {
+                                Text(
+                                    text = placeholder,
+                                    style = AppTheme.typography.bodyMdMedium,
+                                    color = placeholderColor
+                                )
+                            }
+                            innerTextField()
+                        }
+
+                        InlineActionButton(
+                            text = actionText,
+                            onClick = onActionClick,
+                            enabled = actionEnabled && enabled && !actionLoading,
+                            loading = actionLoading
+                        )
+                    }
+                }
+            }
+        )
+
+        helperText?.takeIf { it.isNotBlank() }?.let {
+            Spacer(modifier = Modifier.height(AppTheme.spacing.s1))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.s1)
+            ) {
+                if (isError) {
+                    Icon(
+                        imageVector = Icons.Outlined.Warning,
+                        contentDescription = null,
+                        tint = AppTheme.colors.red.default,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+                Text(
+                    text = it,
+                    style = AppTheme.typography.captionSmMedium,
+                    color = helperColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InlineActionButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    loading: Boolean
+) {
+    val colors = AppTheme.colors
+    val backgroundColor = when {
+        !enabled -> colors.neutral.s40
+        else -> colors.primary.default
+    }
+
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = AppTheme.radius.small,
+        color = backgroundColor
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(horizontal = AppTheme.spacing.s3, vertical = AppTheme.spacing.s1),
+            contentAlignment = Alignment.Center
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = colors.neutral.white
+                )
+            } else {
+                Text(
+                    text = text,
+                    style = AppTheme.typography.captionSmMedium,
+                    color = colors.neutral.white
                 )
             }
         }
