@@ -1,19 +1,11 @@
 package com.example.logflare_android.feature.main
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -23,18 +15,28 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
-import com.example.logflare_android.feature.log.LogListScreen
 import com.example.logflare_android.feature.home.HomeScreen
 import com.example.logflare_android.feature.log.LogDetailScreen
+import com.example.logflare_android.feature.log.LogListScreen
 import com.example.logflare_android.feature.mypage.MyPageScreen
 import com.example.logflare_android.feature.mypage.AddMemberScreen
 import com.example.logflare_android.feature.mypage.EditMemberScreen
 import com.example.logflare_android.feature.mypage.LogoutScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.project.ProjectCreateScreen
+import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.projectdetail.ProjectDetailScreen
 import com.example.logflare_android.feature.project.ProjectSettingsScreen
 import com.example.logflare_android.ui.navigation.Route
+import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.navigation.LogFlareGnbItem
+import com.example.logflare.core.designsystem.R as DesignSystemR
+
+data class GnbItem(
+    val route: Route,
+    @androidx.annotation.DrawableRes val iconRes: Int,
+    val label: String
+)
 
 /**
  * Main app scaffold with bottom navigation.
@@ -65,19 +67,19 @@ private fun BottomNavigationBar(navController: NavHostController) {
     val currentDestination = navBackStackEntry?.destination
 
     val items = listOf(
-        BottomNavItem(route = Route.Home, icon = Icons.Default.Home, label = "Home"),
-        BottomNavItem(route = Route.Logs, icon = Icons.AutoMirrored.Filled.List, label = "Logs"),
-        BottomNavItem(route = Route.Projects, icon = Icons.AutoMirrored.Filled.List, label = "Projects"),
-        BottomNavItem(route = Route.MyPage, icon = Icons.Default.Person, label = "MyPage")
+        GnbItem(route = Route.Home, iconRes = DesignSystemR.drawable.ic_home, label = "Home"),
+        GnbItem(route = Route.Logs, iconRes = DesignSystemR.drawable.ic_log, label = "Logs"),
+        GnbItem(route = Route.Projects, iconRes = DesignSystemR.drawable.ic_project, label = "Projects"),
+        GnbItem(route = Route.MyPage, iconRes = DesignSystemR.drawable.ic_mypage, label = "MyPage")
     )
 
-    NavigationBar {
+    NavigationBar(containerColor = AppTheme.colors.neutral.white) {
         items.forEach { item ->
             val selected = currentDestination?.hierarchy?.any {
                 it.route == item.route.path
             } == true
 
-            NavigationBarItem(
+            LogFlareGnbItem(
                 selected = selected,
                 onClick = {
                     // Special-case Home: clear its saved state so transient screens (eg. Create) don't persist when returning
@@ -99,13 +101,8 @@ private fun BottomNavigationBar(navController: NavHostController) {
                         }
                     }
                 },
-                icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.label
-                    )
-                },
-                label = { Text(item.label) }
+                iconRes = item.iconRes,
+                label = item.label
             )
         }
     }
@@ -210,9 +207,3 @@ private fun MainNavHost(
         }
     }
 }
-
-private data class BottomNavItem(
-    val route: Route,
-    val icon: ImageVector,
-    val label: String
-)
