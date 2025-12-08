@@ -108,7 +108,7 @@ private fun ProjectDetailContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-    BackHeader(title = uiState.projectName, onBack = onBack)
+        BackHeader(title = uiState.projectName, onBack = onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
             onClick = { onOpenProjectSettings(uiState.projectId) }
@@ -184,7 +184,6 @@ private fun LogsSection(
             .padding(top = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-
         items(items = logs, key = { it.id }) { log ->
             GlobalLogCard(
                 log = LogCardInfo(
@@ -205,23 +204,24 @@ private fun LogsSection(
                 )
             }
         }
+    }
+}
 
 @Composable
-private fun LevelBadge(level: ProjectLogLevel) {
+private fun LevelBadge(level: LogLevel) {
     val badgeColor = when (level) {
-        ProjectLogLevel.CIRITCAL -> FatalRed
-        ProjectLogLevel.ERROR -> Color(0xFFD84534)
-        ProjectLogLevel.WARNING -> Color(0xFFFFB74D)
-        ProjectLogLevel.INFO -> Color(0xFF1976D2)
-        ProjectLogLevel.DEBUG -> Color(0xFF388E3C)
-//        ProjectLogLevel.TRACE -> Color(0xFF455A64)
+        LogLevel.CRITICAL -> FatalRed
+        LogLevel.ERROR -> Color(0xFFD84534)
+        LogLevel.WARNING -> Color(0xFFFFB74D)
+        LogLevel.INFO -> Color(0xFF1976D2)
+        LogLevel.DEBUG -> Color(0xFF388E3C)
     }
     Surface(
         color = badgeColor,
         shape = RoundedCornerShape(8.dp)
     ) {
         Text(
-            text = level.displayName,
+            text = level.label,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             style = AppTheme.typography.captionSmMedium.copy(fontWeight = FontWeight.Medium),
             color = Color.White
