@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +21,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.button.PrimaryButton
+import com.example.logflare.core.designsystem.components.input.LogFlareTextField
+import com.example.logflare.core.designsystem.R as CoreR
 
 /**
  * Login screen following the design specifications.
@@ -47,54 +49,55 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Logo - TODO: Add actual logo resource
-        // Image(
-        //     painter = painterResource(id = R.drawable.ic_logflare_logo),
-        //     contentDescription = "LogFlare Logo",
-        //     modifier = Modifier.size(120.dp)
-        // )
-        
-        Text("LogFlare")
-        
-        Spacer(modifier = Modifier.height(48.dp))
-        
-        // Server URL input (for custom backend)
-        OutlinedTextField(
-            value = serverUrl,
-            onValueChange = { serverUrl = it },
-            label = { Text("Server URL (optional)") },
-            placeholder = { Text("http://your-server:port") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+        // Vertical logo (icon + text) centered at the top
+        Image(
+            painter = painterResource(id = CoreR.drawable.ic_logflare_logo_vertical),
+            contentDescription = "LogFlare Logo",
+            modifier = Modifier
+                .width(106.dp)
+                .height(107.dp)
         )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Username input
-        OutlinedTextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Password input
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Sign In button
-        Button(
+
+        // Space between logo and first input (s8)
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s8))
+
+        // Username, Password, Server URL inputs (s2 between each)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.s2),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            LogFlareTextField(
+                value = username,   
+                onValueChange = { username = it },
+                label = null,
+                placeholder = "Username",
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            LogFlareTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = null,
+                placeholder = "Password",
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = PasswordVisualTransformation()
+            )
+
+            LogFlareTextField(
+                value = serverUrl,
+                onValueChange = { serverUrl = it },
+                label = null,
+                placeholder = "http://your-server:port",
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // Space between inputs block and Sign In button (s8)
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s8))
+
+        // Sign In button (primary CTA, design system button)
+        PrimaryButton(
+            text = "Sign In",
             onClick = {
                 if (serverUrl.isNotBlank()) {
                     viewModel.login(serverUrl, username, password, onSuccess = onLoginSuccess)
@@ -104,8 +107,6 @@ fun LoginScreen(
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = username.isNotBlank() && password.isNotBlank()
-        ) {
-            Text("Sign In")
-        }
+        )
     }
 }
