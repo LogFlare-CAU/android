@@ -7,24 +7,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,20 +35,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
 import com.example.logflare_android.ui.common.*
 import java.nio.channels.Selector
-import com.example.logflare.core.designsystem.AppTheme
-
-private val CardGray = Color(0xFFEEEEEE)
-private val LogCardGray = Color(0xFFEDEDED)
-private val FatalRed = Color(0xFFB12B38)
-private val InfoGray = Color(0xFF616161)
-private val PrimaryText = Color(0xFF1A1A1A)
-private val SecondaryText = Color(0xFF353535)
-private val AccentGreen = Color(0xFF61B075)
-private val OutlineGray = Color(0xFFBDBDBD)
 
 @Composable
 fun ProjectDetailScreen(
@@ -73,7 +59,7 @@ fun ProjectDetailScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = Color.White
+    color = AppTheme.colors.neutral.white
     ) {
         when {
             uiState.loading -> Box(
@@ -109,10 +95,11 @@ private fun ProjectDetailContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(AppTheme.colors.neutral.white)
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
+        TopTitle(uiState.projectName, onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
             onClick = { onOpenProjectSettings(uiState.projectId) }
@@ -151,7 +138,7 @@ private fun ProjectSettingsCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = CardGray
+    color = AppTheme.colors.neutral.s20
     ) {
         Row(
             modifier = Modifier
@@ -163,13 +150,13 @@ private fun ProjectSettingsCard(
             Text(
                 text = label,
                 style = AppTheme.typography.bodyMdMedium,
-                color = PrimaryText.copy(alpha = 0.86f)
+                color = AppTheme.colors.neutral.black.copy(alpha = 0.86f)
             )
             Box(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.3f))
+                    .background(AppTheme.colors.neutral.white.copy(alpha = 0.3f))
             )
         }
     }
@@ -209,6 +196,7 @@ private fun LogsSection(
                 )
             }
         }
+
     }
 }
 
@@ -239,7 +227,7 @@ private fun FilterPanel(
                             CommonCheckRow(
                                 label = level.label,
                                 selected = filterState.selectedLevel.contains(level),
-                                highlightColor = AccentGreen,
+                                highlightColor = AppTheme.colors.primary.default,
                                 onClick = { onLevelSelected(level) }
                             )
                         }
