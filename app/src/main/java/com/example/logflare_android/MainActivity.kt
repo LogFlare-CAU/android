@@ -85,9 +85,10 @@ fun App(vm: AppViewModel = hiltViewModel()) {
                 }
             })
         }
-        composable(Route.Main.path) { 
+        composable(Route.Main.path) {
             MainScaffold(
                 onLogout = {
+                    vm.logout()
                     navController.navigate(Route.Auth.path) {
                         popUpTo(Route.Main.path) { inclusive = true }
                     }

@@ -215,7 +215,7 @@ private fun LogRowItem(log: ErrorlogDTO) {
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val badgeColor = LogLevel.fromCodeByLabel(log.level).color
+        val badgeColor = LogLevel.fromLabel(log.level).color
         Surface(
             color = badgeColor,
             shape = RoundedCornerShape(4.dp),
