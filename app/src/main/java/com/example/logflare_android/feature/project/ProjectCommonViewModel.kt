@@ -8,9 +8,9 @@ import com.example.logflare_android.data.AuthRepository
 import com.example.logflare_android.data.ProjectsRepository
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.feature.project.usecase.GetProjectPermsUseCase
-import com.example.logflare_android.feature.project.usecase.GetUsersUseCase
-import com.example.logflare_android.feature.project.usecase.UpdateProjectPermUseCase
+import com.example.logflare_android.feature.usecase.GetProjectPermsUseCase
+import com.example.logflare_android.feature.usecase.GetUsersUseCase
+import com.example.logflare_android.feature.usecase.UpdateProjectPermUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -194,6 +194,7 @@ class ProjectCommonViewModel @Inject constructor(
     }
 
     fun deleteProject() {
+        if (_ui.value.loading) return
         val projectId = projectId ?: return
         updateUi { copy(loading = true, error = null) }
         viewModelScope.launch {

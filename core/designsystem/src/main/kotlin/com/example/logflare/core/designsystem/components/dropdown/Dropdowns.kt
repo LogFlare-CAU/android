@@ -53,7 +53,8 @@ fun <T> LogFlareDropdown(
     placeholder: String = "Select",
     size: DropdownSize = DropdownSize.Small,
     modifier: Modifier = Modifier,
-    showCheckboxInMenu: Boolean = true
+    showCheckboxInMenu: Boolean = true,
+    disabled: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
     val metrics = dropdownMetrics(size)
@@ -76,7 +77,7 @@ fun <T> LogFlareDropdown(
                 color = if (expanded) colors.primary.default else colors.neutral.s40
             ),
             onClick = { if (items.isNotEmpty()) expanded = !expanded },
-            enabled = items.isNotEmpty()
+            enabled = items.isNotEmpty() && !disabled
         ) {
             Row(
                 modifier = Modifier
@@ -105,7 +106,7 @@ fun <T> LogFlareDropdown(
             onDismissRequest = { expanded = false },
             modifier = Modifier
                 .background(color = colors.neutral.white, shape = AppTheme.radius.medium)
-                .border(1.dp, colors.neutral.s40, AppTheme.radius.medium)
+                .border(1.dp, colors.neutral.s40, AppTheme.radius.medium),
         ) {
             items.forEach { item ->
                 val isSelected = selectedItem == item

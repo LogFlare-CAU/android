@@ -11,6 +11,21 @@ data class UserAuthParams(
 )
 
 @Serializable
+data class UserCreateParams(
+    val username: String,
+    val permission: Int,
+    val password: String,
+)
+
+
+@Serializable
+data class UserUpdateParams(
+    val username: String? = null,
+    val permission: Int? = null,
+    val password: String? = null,
+)
+
+@Serializable
 data class UserResponse(
     val success: Boolean,
     val message: String,

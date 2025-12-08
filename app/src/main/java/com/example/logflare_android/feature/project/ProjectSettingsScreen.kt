@@ -110,10 +110,13 @@ fun ProjectSettingsScreen(
                 }
 
                 item {
-                    DeleteProject {
-                        vm.deleteProject()
-                        onDelete()
-                    }
+                    DeleteProject(
+                        onClick = {
+                            vm.deleteProject()
+                            onDelete()
+                        },
+                        enabled = !ui.loading
+                    )
                 }
 
             }
@@ -140,7 +143,8 @@ fun ProjectSettingsScreen(
 
 @Composable
 private fun DeleteProject(
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = Modifier
@@ -156,6 +160,7 @@ private fun DeleteProject(
                 containerColor = ErrorRed,
                 contentColor = Color.White
             ),
+            enabled = enabled
         ) {
             Text("Delete project")
         }
