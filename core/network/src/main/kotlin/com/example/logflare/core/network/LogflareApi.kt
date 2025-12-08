@@ -11,6 +11,7 @@ import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare.core.model.ErrorParams
 import com.example.logflare.core.model.ProjectPermsBatchParams
 import com.example.logflare.core.model.ProjectPermsSequenceResponse
+import com.example.logflare.core.model.ProjectResponse
 import com.example.logflare.core.model.ProjectResponseWithToken
 import com.example.logflare.core.model.StringSequenceResponse
 import com.example.logflare.core.model.UserResponse
@@ -20,6 +21,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -55,6 +57,19 @@ interface LogflareApi {
         @Header("Authorization") bearer: String,
         @Path("projectid") projectId: Int
     ): StringResponse
+
+    @PATCH("/project/{projectid}")
+    suspend fun changeProjectName(
+        @Header("Authorization") bearer: String,
+        @Path("projectid") projectId: Int,
+        @Body body: ProjectCreateParams
+    ): ProjectResponse
+
+    @GET("/project/{projectid}/perm")
+    suspend fun getProjectPermissions(
+        @Header("Authorization") bearer: String,
+        @Path("projectid") projectId: Int
+    ): ProjectPermsSequenceResponse
 
     @GET("/log/error")
     suspend fun getErrors(

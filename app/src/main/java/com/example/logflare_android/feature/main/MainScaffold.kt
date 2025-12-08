@@ -22,10 +22,11 @@ import com.example.logflare_android.feature.mypage.MyPageScreen
 import com.example.logflare_android.feature.mypage.AddMemberScreen
 import com.example.logflare_android.feature.mypage.EditMemberScreen
 import com.example.logflare_android.feature.mypage.LogoutScreen
+import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.project.ProjectCreateScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.projectdetail.ProjectDetailScreen
-import com.example.logflare_android.feature.projectdetail.ProjectSettingsScreen
+import com.example.logflare_android.feature.project.ProjectSettingsScreen
 import com.example.logflare_android.ui.navigation.Route
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.navigation.LogFlareGnbItem
@@ -197,7 +198,8 @@ private fun MainNavHost(
             val projectId = backStackEntry.arguments?.getInt("projectId") ?: return@composable
             ProjectSettingsScreen(
                 projectId = projectId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onDelete = { navController.popBackStack(Route.Projects.path, inclusive = false) }
             )
         }
         composable(route = Route.LogDetail.path) {
