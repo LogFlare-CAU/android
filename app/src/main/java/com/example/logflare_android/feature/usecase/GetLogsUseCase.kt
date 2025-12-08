@@ -1,4 +1,4 @@
-package com.example.logflare_android.feature.log
+package com.example.logflare_android.feature.usecase
 
 import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare.core.network.LogflareApi

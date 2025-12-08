@@ -1,4 +1,4 @@
-package com.example.logflare_android.feature.auth
+package com.example.logflare_android.feature.usecase
 
 import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare.core.network.LogflareApi

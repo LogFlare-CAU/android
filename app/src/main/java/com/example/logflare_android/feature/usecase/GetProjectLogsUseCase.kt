@@ -1,9 +1,10 @@
-package com.example.logflare_android.feature.projectdetail
+package com.example.logflare_android.feature.usecase
 
 import com.example.logflare.core.network.LogflareApi
 import com.example.logflare_android.data.AuthRepository
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
+import com.example.logflare_android.feature.projectdetail.ProjectDetailLog
 import javax.inject.Inject
 import javax.inject.Singleton
 

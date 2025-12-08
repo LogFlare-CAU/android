@@ -1,4 +1,4 @@
-package com.example.logflare_android.feature.projectdetail
+package com.example.logflare_android.feature.usecase
 
 import com.example.logflare.core.model.ProjectData
 import com.example.logflare_android.data.ProjectsRepository
