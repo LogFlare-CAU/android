@@ -40,6 +40,17 @@ import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
 import com.example.logflare_android.ui.common.*
 import java.nio.channels.Selector
+import com.example.logflare_android.ui.components.BackHeader
+import com.example.logflare.core.designsystem.AppTheme
+
+private val CardGray = Color(0xFFEEEEEE)
+private val LogCardGray = Color(0xFFEDEDED)
+private val FatalRed = Color(0xFFB12B38)
+private val InfoGray = Color(0xFF616161)
+private val PrimaryText = Color(0xFF1A1A1A)
+private val SecondaryText = Color(0xFF353535)
+private val AccentGreen = Color(0xFF61B075)
+private val OutlineGray = Color(0xFFBDBDBD)
 
 @Composable
 fun ProjectDetailScreen(
@@ -93,7 +104,7 @@ private fun ProjectDetailContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        TopTitle(uiState.projectName, onBack)
+        BackHeader(title = uiState.projectName, onBack = onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
             onClick = { onOpenProjectSettings(uiState.projectId) }
@@ -169,7 +180,6 @@ private fun LogsSection(
             .padding(top = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-
         items(items = logs, key = { it.id }) { log ->
             GlobalLogCard(
                 log = LogCardInfo(
@@ -190,7 +200,28 @@ private fun LogsSection(
                 )
             }
         }
+    }
+}
 
+@Composable
+private fun LevelBadge(level: LogLevel) {
+    val badgeColor = when (level) {
+        LogLevel.CRITICAL -> FatalRed
+        LogLevel.ERROR -> Color(0xFFD84534)
+        LogLevel.WARNING -> Color(0xFFFFB74D)
+        LogLevel.INFO -> Color(0xFF1976D2)
+        LogLevel.DEBUG -> Color(0xFF388E3C)
+    }
+    Surface(
+        color = badgeColor,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = level.label,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            style = AppTheme.typography.captionSmMedium.copy(fontWeight = FontWeight.Medium),
+            color = Color.White
+        )
     }
 }
 

@@ -7,9 +7,9 @@ enum class UserPermission(
     val label: String,
     val color: Color
 ) {
-    USER(0, "User", Color(0xFF28BB00)),
-    MODERATOR(80, "Moderator", Color(0xFF1976D2)),
-    SUPER_USER(100, "Super Admin", Color(0xFF9C27B0)); // 100번
+    USER(0, "Member", Color(0xFF616161)),
+    MODERATOR(80, "Admin", Color(0xFF60B176)),
+    SUPER_USER(100, "Super Admin", Color(0xFF30A14F));
 
     companion object {
         fun fromCode(code: Int): UserPermission =
@@ -28,7 +28,7 @@ enum class LogLevel(val code: Int, val label: String, val color: Color) {
         fun fromCode(code: Int): LogLevel =
             LogLevel.entries.find { it.code == code } ?: DEBUG
 
-        fun fromCodeByLabel(label: String): LogLevel =
+        fun fromLabel(label: String): LogLevel =
             LogLevel.entries.find { it.label.equals(label, ignoreCase = true) } ?: DEBUG
 
         fun getAll(): List<LogLevel> = LogLevel.entries.toList()
@@ -36,7 +36,7 @@ enum class LogLevel(val code: Int, val label: String, val color: Color) {
         fun getAllLabels(): List<String> = LogLevel.entries.map { it.label }
 
         fun getAboveLevel(level: String): List<LogLevel> =
-            LogLevel.entries.filter { it.code >= fromCodeByLabel(level).code }
+            LogLevel.entries.filter { it.code >= fromLabel(level).code }
     }
 }
 

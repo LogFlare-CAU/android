@@ -1,34 +1,45 @@
 package com.example.logflare_android.feature.project
 
-import android.content.ClipData
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.Clipboard
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare_android.ui.common.AccentGreen
 import com.example.logflare_android.ui.common.TopTitle
-import kotlinx.coroutines.launch
 
 
 @Composable
-fun ProjectCreateScreen(
-    onCreated: () -> Unit = {},
+fun ProjectSettingsScreen(
+    projectId: Int,
+    onBack: () -> Unit,
+    onDelete: () -> Unit,
     vm: ProjectCommonViewModel = hiltViewModel()
 ) {
     val ui by vm.ui.collectAsState()
-    val clipboard: Clipboard = LocalClipboard.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    rememberCoroutineScope()
 
     LaunchedEffect(ui.snackbar) {
         ui.snackbar?.let {
@@ -36,8 +47,13 @@ fun ProjectCreateScreen(
             vm.clearSnackbar()
         }
     }
+
+    LaunchedEffect(projectId) {
+        vm.initWithProject(projectId)
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        TopTitle(title = "Create Project")
+        TopTitle(title = "Project Settings", onBack = onBack)
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier
@@ -67,19 +83,6 @@ fun ProjectCreateScreen(
                     )
                 }
 
-                item {
-                    TokenSection(
-                        token = ui.token,
-                        onCopy = {
-                            ui.token?.let { token ->
-                                scope.launch {
-                                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(ui.token, token)))
-                                    snackbarHostState.showSnackbar("Token copied")
-                                }
-                            }
-                        }
-                    )
-                }
 
                 item {
                     KeywordSection(
@@ -106,6 +109,14 @@ fun ProjectCreateScreen(
                 item {
                     PermissionsSection(ui.permissions, onToggle = vm::onPermissionToggle, enabled = ui.saved)
                 }
+
+                item {
+                    DeleteProject {
+                        vm.deleteProject()
+                        onDelete()
+                    }
+                }
+
             }
 
             Column(modifier = Modifier.align(Alignment.BottomCenter)) {
@@ -119,7 +130,7 @@ fun ProjectCreateScreen(
                 BottomActionBar(
                     onDone = {
                         vm.savePerms()
-                        onCreated()
+                        onDelete()
                     },
                     enabled = ui.token != null
                 )
@@ -129,44 +140,26 @@ fun ProjectCreateScreen(
 }
 
 @Composable
-private fun TokenSection(token: String?, onCopy: () -> Unit) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = "Project Token", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-        Spacer(modifier = Modifier.height(8.dp))
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = CardGray,
+private fun DeleteProject(
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Button(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = token != null) { onCopy() }
-                .padding(end = 0.dp)
+                .height(56.dp),
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = ErrorRed,
+                contentColor = Color.White
+            ),
         ) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .height(50.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = token ?: "Token will be generated when you save",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (token != null) Color(0xFF4C4C4C) else Color(0xFF9E9E9E)
-                )
-                Button(
-                    onClick = onCopy,
-                    enabled = token != null,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF7B7B7B),
-                        contentColor = Color.White,
-                        disabledContainerColor = DisabledGray,
-                        disabledContentColor = Color.White
-                    ),
-                    modifier = Modifier.height(40.dp)
-                ) {
-                    Text("Copy")
-                }
-            }
+            Text("Delete project")
         }
     }
+
 }

@@ -173,7 +173,7 @@ fun CommonRadioRow(
 
 @Composable
 fun CommonLevelBadge(level: String) {
-    val enum = LogLevel.fromCodeByLabel(level)
+    val enum = LogLevel.fromLabel(level)
     Surface(
         color = enum.color,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
