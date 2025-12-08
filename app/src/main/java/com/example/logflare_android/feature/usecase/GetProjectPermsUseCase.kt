@@ -1,4 +1,4 @@
-package com.example.logflare_android.feature.project.usecase
+package com.example.logflare_android.feature.usecase
 
 import com.example.logflare.core.model.ProjectPermsDTO
 import com.example.logflare.core.network.LogflareApi

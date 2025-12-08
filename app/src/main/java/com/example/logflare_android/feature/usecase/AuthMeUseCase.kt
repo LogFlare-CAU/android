@@ -1,6 +1,5 @@
-package com.example.logflare_android.feature.auth
+package com.example.logflare_android.feature.usecase
 
-import android.util.Log
 import com.example.logflare.core.model.UserDTO
 import com.example.logflare.core.network.LogflareApi
 import com.example.logflare_android.data.AuthRepository
