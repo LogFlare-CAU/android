@@ -1,11 +1,9 @@
 package com.example.logflare_android.feature.mypage
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,262 +11,271 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.button.ButtonSize
+import com.example.logflare.core.designsystem.components.button.ButtonType
+import com.example.logflare.core.designsystem.components.button.ButtonVariant
+import com.example.logflare.core.designsystem.components.button.LogFlareButton
+import com.example.logflare.core.designsystem.components.dropdown.DropdownSize
+import com.example.logflare.core.designsystem.components.dropdown.LogFlareDropdown
+import com.example.logflare.core.designsystem.components.feedback.LogFlareSnackbar
+import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
+import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
+import com.example.logflare_android.ui.component.common.LogFlareActionTextField
+import com.example.logflare_android.ui.component.common.LogFlareActionTextFieldHelperTone
+import com.example.logflare_android.ui.component.common.LogFlareActionTextFieldState
+import com.example.logflare_android.ui.component.common.MemberFieldStatus
+import com.example.logflare_android.ui.component.common.toActionTextFieldState
 import com.example.logflare_android.enums.UserPermission
-import com.example.logflare_android.ui.components.BackHeader
-import com.example.logflare_android.ui.components.BottomPrimaryButton
-import com.example.logflare_android.ui.components.BottomDangerOutlinedButton
-
-private val ColorNeutralWhite = Color(0xFFFFFFFF)
-private val ColorNeutralBlack = Color(0xFF1A1A1A)
-private val ColorNeutral20 = Color(0xFFEEEEEE)
-private val ColorNeutral40 = Color(0xFFBDBDBD)
-private val ColorNeutral60 = Color(0xFF757575)
-private val ColorNeutral70 = Color(0xFF616161)
-private val ColorPrimaryDefault = Color(0xFF60B176)
-private val ColorDanger = Color(0xFFB12B38)
+import kotlinx.coroutines.delay
 
 @Composable
 fun EditMemberScreen(
     onBack: () -> Unit,
+    onMemberDeleted: () -> Unit = onBack,
     modifier: Modifier = Modifier,
     viewModel: EditMemberViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.ui.collectAsState()
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = ColorNeutralWhite
-    ) {
-        when {
-            uiState.isLoading && uiState.username.isBlank() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            else -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .navigationBarsPadding()
-                ) {
-                    BackHeader(title = "Edit Member", onBack = onBack)
-                    
-                    EditMemberContent(
-                        uiState = uiState,
-                        onPermissionSelect = viewModel::selectPermission,
-                        onUpdateMember = { viewModel.updateMember(onBack) },
-                        onDeleteMember = viewModel::showDeleteDialog,
-                        onClearError = viewModel::clearError
-                    )
-                }
+    val usernameState = uiState.usernameValidation.status.toActionTextFieldState()
+    val passwordState = uiState.passwordValidation.status.toActionTextFieldState()
+    val usernameChanged = uiState.username != uiState.originalUsername &&
+        uiState.usernameValidation.status == MemberFieldStatus.Valid
+    val passwordReady = uiState.passwordValidation.status == MemberFieldStatus.Valid
+    val roleChanged = uiState.selectedPermission != uiState.originalPermission
+    val canSubmit = (usernameChanged || passwordReady || roleChanged) && !uiState.isLoading
 
-                if (uiState.showDeleteDialog) {
-                    DeleteMemberDialog(
-                        username = uiState.username,
-                        onConfirm = { viewModel.deleteMember(onBack) },
-                        onDismiss = viewModel::hideDeleteDialog
-                    )
-                }
-            }
+    LaunchedEffect(uiState.snackbarMessage) {
+        if (uiState.snackbarMessage != null) {
+            delay(2500)
+            viewModel.dismissSnackbar()
         }
     }
-}
 
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = AppTheme.colors.neutral.white,
+        topBar = {
+            LogFlareTopAppBar(
+                titleType = TopAppBarTitleType.Title,
+                titleText = "Edit Member",
+                onBack = onBack
+            )
+        },
+        bottomBar = {
+            EditMemberBottomBar(
+                snackbarMessage = uiState.snackbarMessage,
+                isLoading = uiState.isLoading,
+                canSubmit = canSubmit,
+                onDismissSnackbar = viewModel::dismissSnackbar,
+                onDeleteClick = viewModel::showDeleteDialog,
+                onSaveClick = { viewModel.saveChanges() }
+            )
+        }
+    ) { innerPadding ->
+        when {
+            uiState.isLoading && uiState.username.isBlank() -> Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+
+            else -> EditMemberContent(
+                uiState = uiState,
+                usernameFieldState = usernameState,
+                passwordFieldState = passwordState,
+                onUsernameChange = viewModel::updateUsername,
+                onPasswordChange = viewModel::updatePassword,
+                onRequestUsernameValidation = viewModel::retryUsernameValidation,
+                onRequestPasswordValidation = viewModel::retryPasswordValidation,
+                onPermissionSelect = viewModel::selectPermission,
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            )
+        }
+    }
+
+    if (uiState.showDeleteDialog) {
+        DeleteMemberDialog(
+            username = uiState.username,
+            onConfirm = { viewModel.deleteMember(onMemberDeleted) },
+            onDismiss = viewModel::hideDeleteDialog
+        )
+    }
+}
 
 @Composable
 private fun EditMemberContent(
     uiState: EditMemberUiState,
+    usernameFieldState: LogFlareActionTextFieldState,
+    passwordFieldState: LogFlareActionTextFieldState,
+    onUsernameChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onRequestUsernameValidation: () -> Unit,
+    onRequestPasswordValidation: () -> Unit,
     onPermissionSelect: (UserPermission) -> Unit,
-    onUpdateMember: () -> Unit,
-    onDeleteMember: () -> Unit,
-    onClearError: () -> Unit
+    modifier: Modifier = Modifier
 ) {
-    var showPermissionDropdown by rememberSaveable { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .padding(top = 24.dp)
+        modifier = modifier
+            .verticalScroll(scrollState)
+            .padding(horizontal = AppTheme.spacing.s4)
+            .padding(bottom = AppTheme.spacing.s6)
     ) {
-        Text(
-            text = "Username",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = ColorNeutral70,
-            modifier = Modifier.padding(bottom = 8.dp)
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
+
+        val canSaveUsername = uiState.usernameValidation.status == MemberFieldStatus.Valid && !uiState.isLoading
+
+        LogFlareActionTextField(
+            label = "Member name",
+            value = uiState.username,
+            onValueChange = onUsernameChange,
+            placeholder = "Enter member name",
+            state = usernameFieldState,
+            helperText = uiState.usernameValidation.helperText,
+            helperTone = if (usernameFieldState == LogFlareActionTextFieldState.Error) {
+                LogFlareActionTextFieldHelperTone.Error
+            } else {
+                LogFlareActionTextFieldHelperTone.Info
+            },
+            actionText = if (uiState.usernameValidation.status == MemberFieldStatus.Completed) "Edit" else "Save",
+            actionEnabled = canSaveUsername,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false
+            ),
+            onActionClick = onRequestUsernameValidation,
+            modifier = Modifier.fillMaxWidth()
         )
 
-        Surface(
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
+
+        val canSavePassword = uiState.passwordValidation.status == MemberFieldStatus.Valid && !uiState.isLoading
+
+        LogFlareActionTextField(
+            label = "Password",
+            value = uiState.newPassword,
+            onValueChange = onPasswordChange,
+            placeholder = "Enter new password",
+            state = passwordFieldState,
+            helperText = uiState.passwordValidation.helperText,
+            helperTone = if (passwordFieldState == LogFlareActionTextFieldState.Error) {
+                LogFlareActionTextFieldHelperTone.Error
+            } else {
+                LogFlareActionTextFieldHelperTone.Info
+            },
+            actionText = if (uiState.passwordValidation.status == MemberFieldStatus.Completed) "Edit" else "Save",
+            actionEnabled = canSavePassword,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Password
+            ),
+            visualTransformation = PasswordVisualTransformation(),
+            onActionClick = onRequestPasswordValidation,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
+
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            color = ColorNeutral20
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = uiState.username,
-                fontSize = 16.sp,
-                color = ColorNeutral60,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                text = "Role",
+                style = AppTheme.typography.bodySmBold,
+                color = AppTheme.colors.neutral.black
+            )
+
+            LogFlareDropdown(
+                items = UserPermission.entries,
+                selectedItem = uiState.selectedPermission,
+                onItemSelected = onPermissionSelect,
+                itemLabelMapper = { it.label },
+                size = DropdownSize.Large,
+                modifier = Modifier.width(140.dp)
             )
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Permission Level",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = ColorNeutral70,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        PermissionDropdownEdit(
-            selectedPermission = uiState.selectedPermission,
-            expanded = showPermissionDropdown,
-            onExpandedChange = { showPermissionDropdown = it },
-            onPermissionSelected = {
-                onPermissionSelect(it)
-                showPermissionDropdown = false
-            },
-            enabled = !uiState.isLoading
-        )
-
-        uiState.errorMessage?.let { message ->
-            Spacer(modifier = Modifier.height(16.dp))
-            ErrorBannerEdit(
-                message = message,
-                onDismiss = onClearError
-            )
-        }
-
-        uiState.successMessage?.let { message ->
-            Spacer(modifier = Modifier.height(16.dp))
-            SuccessBannerEdit(message = message)
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        BottomPrimaryButton(
-            text = if (uiState.isLoading) "Updating..." else "Update Member",
-            onClick = onUpdateMember,
-            enabled = !uiState.isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        BottomDangerOutlinedButton(
-            text = "Delete Member",
-            onClick = onDeleteMember,
-            enabled = !uiState.isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 24.dp)
-        )
     }
 }
 
 @Composable
-private fun PermissionDropdownEdit(
-    selectedPermission: UserPermission,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    onPermissionSelected: (UserPermission) -> Unit,
-    enabled: Boolean
+private fun EditMemberBottomBar(
+    snackbarMessage: String?,
+    isLoading: Boolean,
+    canSubmit: Boolean,
+    onDismissSnackbar: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onSaveClick: () -> Unit
 ) {
-    val permissions = listOf(
-        UserPermission.USER,
-        UserPermission.MODERATOR,
-        UserPermission.SUPER_USER
-    )
-
-    Box {
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = if (enabled) ColorNeutralWhite else ColorNeutral20,
+    Surface(
+        color = AppTheme.colors.neutral.white,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = enabled) { onExpandedChange(!expanded) },
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                if (expanded) ColorPrimaryDefault else ColorNeutral40
-            )
+                .navigationBarsPadding()
+                .padding(horizontal = AppTheme.spacing.s4)
+                .padding(vertical = AppTheme.spacing.s3),
+            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.s3)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = selectedPermission.label,
-                    fontSize = 16.sp,
-                    color = if (enabled) ColorNeutralBlack else ColorNeutral60
+            if (snackbarMessage != null) {
+                LogFlareSnackbar(
+                    message = snackbarMessage,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDismissSnackbar() }
                 )
-                Icon(
-                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = if (enabled) ColorNeutral70 else ColorNeutral60
+            } else {
+                LogFlareButton(
+                    text = "Delete Member",
+                    onClick = onDeleteClick,
+                    variant = ButtonVariant.Secondary,
+                    type = ButtonType.Text,
+                    enabled = !isLoading,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-            permissions.forEach { permission ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = permission.label,
-                            fontSize = 16.sp
-                        )
-                    },
-                    onClick = { onPermissionSelected(permission) }
-                )
-            }
+            LogFlareButton(
+                text = if (isLoading) "Saving..." else "Done",
+                onClick = onSaveClick,
+                enabled = canSubmit,
+                size = ButtonSize.Large,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -284,72 +291,34 @@ private fun DeleteMemberDialog(
         title = {
             Text(
                 text = "Delete Member",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                style = AppTheme.typography.bodyMdBold,
+                color = AppTheme.colors.neutral.black
             )
         },
         text = {
             Text(
                 text = "Are you sure you want to delete \"$username\"? This action cannot be undone.",
-                fontSize = 14.sp,
-                color = ColorNeutral70
+                style = AppTheme.typography.bodySmMedium,
+                color = AppTheme.colors.neutral.s70
             )
         },
         confirmButton = {
-            TextButton(
+            LogFlareButton(
+                text = "Delete",
                 onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = ColorDanger
-                )
-            ) {
-                Text("Delete", fontWeight = FontWeight.Bold)
-            }
+                variant = ButtonVariant.Secondary,
+                type = ButtonType.Text
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = ColorNeutral70)
-            }
+            LogFlareButton(
+                text = "Cancel",
+                onClick = onDismiss,
+                variant = ButtonVariant.Primary,
+                type = ButtonType.Text
+            )
         },
-        containerColor = ColorNeutralWhite,
-        shape = RoundedCornerShape(12.dp)
+        containerColor = AppTheme.colors.neutral.white,
+        tonalElevation = 2.dp
     )
-}
-
-@Composable
-private fun ErrorBannerEdit(
-    message: String,
-    onDismiss: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onDismiss() },
-        color = ColorDanger.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Text(
-            text = message,
-            color = ColorDanger,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
-    }
-}
-
-@Composable
-private fun SuccessBannerEdit(message: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = ColorPrimaryDefault.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Text(
-            text = message,
-            color = ColorPrimaryDefault,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
-    }
 }

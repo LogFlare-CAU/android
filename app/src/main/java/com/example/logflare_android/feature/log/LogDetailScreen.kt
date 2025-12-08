@@ -10,20 +10,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import com.example.logflare_android.R
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.ui.common.CardGray
+import com.example.logflare_android.R
+import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare_android.ui.common.EmptyState
 import com.example.logflare_android.ui.common.GlobalLogCard
 import com.example.logflare_android.ui.common.LogCardInfo
@@ -51,7 +49,7 @@ fun LogDetailScreenContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(AppTheme.colors.neutral.white)
             .padding(bottom = 16.dp)
     ) {
         TopTitle("Log Details", onBack = onBack)
@@ -80,7 +78,7 @@ fun LogDetailScreenContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(color = CardGray)
+                    .background(color = AppTheme.colors.neutral.s20)
                     .padding(24.dp),
                 text = log.message,
                 fontFamily = Cascadia,
