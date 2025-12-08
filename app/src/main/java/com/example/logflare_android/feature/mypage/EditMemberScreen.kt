@@ -91,7 +91,8 @@ fun EditMemberScreen(
                 canSubmit = canSubmit,
                 onDismissSnackbar = viewModel::dismissSnackbar,
                 onDeleteClick = viewModel::showDeleteDialog,
-                onSaveClick = { viewModel.saveChanges() }
+                onSaveClick = { viewModel.saveChanges() },
+                disabled = uiState.disabled
             )
         }
     ) { innerPadding ->
@@ -173,7 +174,8 @@ private fun EditMemberContent(
                 autoCorrectEnabled = false
             ),
             onActionClick = onRequestUsernameValidation,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            disabled = uiState.disabled
         )
 
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
@@ -201,7 +203,8 @@ private fun EditMemberContent(
             ),
             visualTransformation = PasswordVisualTransformation(),
             onActionClick = onRequestPasswordValidation,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            disabled = uiState.disabled
         )
 
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
@@ -218,12 +221,13 @@ private fun EditMemberContent(
             )
 
             LogFlareDropdown(
-                items = UserPermission.entries,
+                items = UserPermission.entries.filter { it != UserPermission.SUPER_USER },
                 selectedItem = uiState.selectedPermission,
                 onItemSelected = onPermissionSelect,
                 itemLabelMapper = { it.label },
                 size = DropdownSize.Large,
-                modifier = Modifier.width(140.dp)
+                modifier = Modifier.width(140.dp),
+                disabled = uiState.disabled
             )
         }
     }
@@ -236,7 +240,8 @@ private fun EditMemberBottomBar(
     canSubmit: Boolean,
     onDismissSnackbar: () -> Unit,
     onDeleteClick: () -> Unit,
-    onSaveClick: () -> Unit
+    onSaveClick: () -> Unit,
+    disabled: Boolean = false
 ) {
     Surface(
         color = AppTheme.colors.neutral.white,
@@ -264,15 +269,15 @@ private fun EditMemberBottomBar(
                     onClick = onDeleteClick,
                     variant = ButtonVariant.Secondary,
                     type = ButtonType.Text,
-                    enabled = !isLoading,
-                    modifier = Modifier.fillMaxWidth()
+                    enabled = !isLoading && !disabled,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
             LogFlareButton(
                 text = if (isLoading) "Saving..." else "Done",
                 onClick = onSaveClick,
-                enabled = canSubmit,
+                enabled = canSubmit && !disabled,
                 size = ButtonSize.Large,
                 modifier = Modifier.fillMaxWidth()
             )

@@ -3,7 +3,12 @@ package com.example.logflare_android.feature.mypage
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.logflare.core.model.UserDTO
 import com.example.logflare_android.enums.UserPermission
+import com.example.logflare_android.feature.usecase.AuthMeUseCase
+import com.example.logflare_android.feature.usecase.DeleteUserUseCase
+import com.example.logflare_android.feature.usecase.GetUserUseCase
+import com.example.logflare_android.feature.usecase.UpdateUserUseCase
 import com.example.logflare_android.ui.component.common.MemberFieldStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -27,16 +32,22 @@ data class EditMemberUiState(
     val originalPermission: UserPermission = UserPermission.USER,
     val isLoading: Boolean = false,
     val snackbarMessage: String? = null,
-    val showDeleteDialog: Boolean = false
+    val showDeleteDialog: Boolean = false,
+    val disabled: Boolean = false
 )
 
 @HiltViewModel
 class EditMemberViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val authMeUseCase: AuthMeUseCase,
+    private val getUserUseCase: GetUserUseCase,
+    private val updateUserUseCase: UpdateUserUseCase,
+    private val deleteUserUseCase: DeleteUserUseCase
 ) : ViewModel() {
 
     private val requestedUsername: String = savedStateHandle.get<String>("username") ?: ""
-
+    private var requestedUser: UserDTO? = null
+    private var me: UserDTO? = null
     private val _ui = MutableStateFlow(EditMemberUiState(originalUsername = requestedUsername))
     val ui: StateFlow<EditMemberUiState> = _ui
 
@@ -44,32 +55,60 @@ class EditMemberViewModel @Inject constructor(
     private var passwordValidationJob: Job? = null
 
     init {
-        loadMemberData()
+        viewModelScope.launch {
+            initUsers()
+            loadMemberData()
+            checkPermissionToEdit()
+        }
     }
 
-    private fun loadMemberData() {
-        viewModelScope.launch {
-            _ui.update { it.copy(isLoading = true) }
-            delay(400)
-            val seedUsername = requestedUsername.ifBlank { MOCK_EDIT_MEMBER_USERNAME }
-            val initialPermission = when (seedUsername.lowercase()) {
-                "ops-monitor" -> UserPermission.MODERATOR
-                "super-observer" -> UserPermission.SUPER_USER
-                                else -> UserPermission.USER
+    private suspend fun initUsers() {
+        _ui.update { it.copy(isLoading = true) }
+        requestedUser = getUserUseCase(requestedUsername)
+        me = authMeUseCase()
+        _ui.update { it.copy(isLoading = false) }
+    }
+
+    private fun checkPermissionToEdit() {
+        val myPermission = UserPermission.fromCode(me?.permission ?: 0)
+        val targetPermission = UserPermission.fromCode(requestedUser?.permission ?: 0)
+        if ((myPermission <= targetPermission && me?.username != requestedUser?.username) || requestedUser?.permission == UserPermission.SUPER_USER.code) {
+            val message = if (requestedUser?.permission == UserPermission.SUPER_USER.code) {
+                "You cannot edit a Super User member"
+            } else {
+                "You do not have permission to edit this member"
             }
             _ui.update {
                 it.copy(
                     isLoading = false,
-                    originalUsername = seedUsername,
-                    username = seedUsername,
-                    selectedPermission = initialPermission,
-                    originalPermission = initialPermission,
+                    snackbarMessage = message,
+                    disabled = true,
                     usernameValidation = InputValidationUiState(
-                        helperText = "Looks good",
-                        status = MemberFieldStatus.Valid
-                    )
+                        status = MemberFieldStatus.Error,
+                        helperText = message
+                    ),
                 )
             }
+        }
+    }
+
+    private fun loadMemberData() {
+        _ui.update { it.copy(isLoading = true) }
+        val user = requestedUser ?: return
+        val seedUsername = user.username
+        val initialPermission = UserPermission.fromCode(user.permission)
+        _ui.update {
+            it.copy(
+                isLoading = false,
+                originalUsername = seedUsername,
+                username = seedUsername,
+                selectedPermission = initialPermission,
+                originalPermission = initialPermission,
+                usernameValidation = InputValidationUiState(
+                    helperText = "Looks good",
+                    status = MemberFieldStatus.Valid
+                )
+            )
         }
     }
 
@@ -118,7 +157,7 @@ class EditMemberViewModel @Inject constructor(
     fun saveChanges() {
         val current = _ui.value
         val usernameChanged = current.username != current.originalUsername &&
-            current.usernameValidation.status == MemberFieldStatus.Valid
+                current.usernameValidation.status == MemberFieldStatus.Valid
         val passwordReady = current.passwordValidation.status == MemberFieldStatus.Valid
         val roleChanged = current.selectedPermission != current.originalPermission
 
@@ -129,31 +168,46 @@ class EditMemberViewModel @Inject constructor(
 
         viewModelScope.launch {
             _ui.update { it.copy(isLoading = true) }
-            delay(600)
-            val snackbarText = when {
-                passwordReady -> "Member’s password updated successfully"
-                roleChanged -> "Member’s role updated successfully"
-                else -> "Member profile updated successfully"
-            }
-            _ui.update {
-                it.copy(
-                    isLoading = false,
-                    snackbarMessage = snackbarText,
-                    originalUsername = if (usernameChanged) it.username else it.originalUsername,
-                    originalPermission = if (roleChanged) it.selectedPermission else it.originalPermission,
-                    newPassword = if (passwordReady) "" else it.newPassword,
-                    passwordValidation = if (passwordReady) {
-                        InputValidationUiState(status = MemberFieldStatus.Completed)
-                    } else {
-                        it.passwordValidation
-                    },
-                    usernameValidation = if (usernameChanged) {
-                        InputValidationUiState(status = MemberFieldStatus.Completed)
-                    } else {
-                        it.usernameValidation
+            updateUserUseCase(
+                userId = requestedUser?.idx ?: return@launch,
+                username = if (usernameChanged) current.username.trim() else null,
+                password = if (passwordReady) current.newPassword else null,
+                permission = if (roleChanged) current.selectedPermission else null
+            )
+                .onSuccess {
+                    val snackbarText = when {
+                        passwordReady -> "Member’s password updated successfully"
+                        roleChanged -> "Member’s role updated successfully"
+                        else -> "Member profile updated successfully"
                     }
-                )
-            }
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            snackbarMessage = snackbarText,
+                            originalUsername = if (usernameChanged) it.username else it.originalUsername,
+                            originalPermission = if (roleChanged) it.selectedPermission else it.originalPermission,
+                            newPassword = if (passwordReady) "" else it.newPassword,
+                            passwordValidation = if (passwordReady) {
+                                InputValidationUiState(status = MemberFieldStatus.Completed)
+                            } else {
+                                it.passwordValidation
+                            },
+                            usernameValidation = if (usernameChanged) {
+                                InputValidationUiState(status = MemberFieldStatus.Completed)
+                            } else {
+                                it.usernameValidation
+                            }
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            snackbarMessage = "Failed to update member: ${error.message}"
+                        )
+                    }
+                }
         }
     }
 
@@ -168,16 +222,26 @@ class EditMemberViewModel @Inject constructor(
     fun deleteMember(onDeleted: () -> Unit) {
         viewModelScope.launch {
             _ui.update { it.copy(isLoading = true, showDeleteDialog = false) }
-            delay(600)
-            val username = _ui.value.originalUsername
-            _ui.update {
-                it.copy(
-                    isLoading = false,
-                    snackbarMessage = "${username.ifBlank { "Member" }} deleted successfully"
-                )
-            }
-            delay(600)
-            onDeleted()
+            deleteUserUseCase(requestedUser?.idx ?: return@launch)
+                .onSuccess {
+                    val username = _ui.value.originalUsername
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            snackbarMessage = "${username.ifBlank { "Member" }} deleted successfully"
+                        )
+                    }
+                    delay(600)
+                    onDeleted()
+                }
+                .onFailure { error ->
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            snackbarMessage = "Failed to delete member: ${error.message}"
+                        )
+                    }
+                }
         }
     }
 

@@ -196,7 +196,7 @@ private fun AddMemberContent(
                 color = AppTheme.colors.neutral.black
             )
             LogFlareDropdown(
-                items = UserPermission.entries,
+                items = UserPermission.entries.filter { it != UserPermission.SUPER_USER },
                 selectedItem = uiState.selectedPermission,
                 onItemSelected = onPermissionSelect,
                 itemLabelMapper = { it.label },

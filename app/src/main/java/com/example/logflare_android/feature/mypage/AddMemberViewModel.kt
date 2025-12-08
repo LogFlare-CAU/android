@@ -3,6 +3,7 @@ package com.example.logflare_android.feature.mypage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.logflare_android.enums.UserPermission
+import com.example.logflare_android.feature.usecase.AddUserUseCase
 import com.example.logflare_android.ui.component.common.MemberFieldStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -33,7 +34,9 @@ data class AddMemberUiState(
 )
 
 @HiltViewModel
-class AddMemberViewModel @Inject constructor() : ViewModel() {
+class AddMemberViewModel @Inject constructor(
+    private val adduserUseCase: AddUserUseCase,
+) : ViewModel() {
 
     private val _ui = MutableStateFlow(AddMemberUiState())
     val ui: StateFlow<AddMemberUiState> = _ui
@@ -98,28 +101,34 @@ class AddMemberViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _ui.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
 
-            try {
-                delay(1000)
+            adduserUseCase(
+                username = currentState.username.trim(),
+                password = currentState.temporaryPassword,
+                permission = currentState.selectedPermission
+            )
+                .onSuccess {
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            successMessage = "Member added successfully",
+                            usernameValidation = InputValidationUiState(status = MemberFieldStatus.Completed),
+                            passwordValidation = InputValidationUiState(status = MemberFieldStatus.Completed)
+                        )
+                    }
 
-                _ui.update {
-                    it.copy(
-                        isLoading = false,
-                        successMessage = "Member added successfully",
-                        usernameValidation = InputValidationUiState(status = MemberFieldStatus.Completed),
-                        passwordValidation = InputValidationUiState(status = MemberFieldStatus.Completed)
-                    )
+                    delay(500)
+                    onSuccess()
+                }
+                .onFailure { e ->
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "Failed to add member: ${e.message}"
+                        )
+                    }
                 }
 
-                delay(500)
-                onSuccess()
-            } catch (e: Exception) {
-                _ui.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Failed to add member: ${e.message}"
-                    )
-                }
-            }
+
         }
     }
 
