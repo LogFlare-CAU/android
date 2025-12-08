@@ -89,7 +89,9 @@ fun LogFlareActionTextField(
     label: String? = null,
     helperText: String? = null,
     helperTone: LogFlareActionTextFieldHelperTone = LogFlareActionTextFieldHelperTone.Info,
-    actionEnabled: Boolean = false,
+    actionText: String,
+    actionEnabled: Boolean,
+    showLoading: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     onActionClick: () -> Unit
@@ -110,16 +112,16 @@ fun LogFlareActionTextField(
         else -> colors.neutral.white
     }
 
-    val isButtonEnabled = actionEnabled && state != LogFlareActionTextFieldState.Saved && state != LogFlareActionTextFieldState.Validating
+    val isButtonEnabled = actionEnabled && !showLoading && state != LogFlareActionTextFieldState.Saved
 
     val buttonBackground = when {
-        state == LogFlareActionTextFieldState.Validating -> colors.primary.default
+        showLoading -> colors.primary.default
         isButtonEnabled -> colors.primary.default
         else -> colors.neutral.s30
     }
 
     val buttonContentColor = when {
-        state == LogFlareActionTextFieldState.Validating || isButtonEnabled -> colors.neutral.white
+        showLoading || isButtonEnabled -> colors.neutral.white
         else -> colors.neutral.s70
     }
 
@@ -187,7 +189,7 @@ fun LogFlareActionTextField(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (state == LogFlareActionTextFieldState.Validating) {
+                    if (showLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             color = colors.neutral.white,
@@ -195,7 +197,7 @@ fun LogFlareActionTextField(
                         )
                     } else {
                         Text(
-                            text = "Check",
+                            text = actionText,
                             style = AppTheme.typography.bodySmMedium,
                             color = buttonContentColor
                         )

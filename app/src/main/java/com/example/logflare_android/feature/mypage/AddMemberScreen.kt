@@ -131,6 +131,8 @@ private fun AddMemberContent(
     ) {
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
 
+        val canSaveUsername = uiState.usernameValidation.status == MemberFieldStatus.Valid && !uiState.isLoading
+
         LogFlareActionTextField(
             label = "Member name",
             value = uiState.username,
@@ -143,8 +145,8 @@ private fun AddMemberContent(
             } else {
                 LogFlareActionTextFieldHelperTone.Info
             },
-            actionEnabled = uiState.username.isNotBlank() && !uiState.isLoading &&
-                usernameFieldState != LogFlareActionTextFieldState.Saved,
+            actionText = if (uiState.usernameValidation.status == MemberFieldStatus.Completed) "Edit" else "Save",
+            actionEnabled = canSaveUsername,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
                 autoCorrectEnabled = false
@@ -154,6 +156,8 @@ private fun AddMemberContent(
         )
 
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
+
+        val canSavePassword = uiState.passwordValidation.status == MemberFieldStatus.Valid && !uiState.isLoading
 
         LogFlareActionTextField(
             label = "Password",
@@ -167,8 +171,8 @@ private fun AddMemberContent(
             } else {
                 LogFlareActionTextFieldHelperTone.Info
             },
-            actionEnabled = uiState.temporaryPassword.isNotBlank() && !uiState.isLoading &&
-                passwordFieldState != LogFlareActionTextFieldState.Saved,
+            actionText = if (uiState.passwordValidation.status == MemberFieldStatus.Completed) "Edit" else "Save",
+            actionEnabled = canSavePassword,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
                 autoCorrectEnabled = false,
