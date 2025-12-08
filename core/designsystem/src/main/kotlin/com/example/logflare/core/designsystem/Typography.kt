@@ -3,27 +3,25 @@ package com.example.logflare.core.designsystem
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.logflare.core.designsystem.R
 
 // -------------------------------------------------------------------
 // 1. Font Family Setup (Pretendard)
 // -------------------------------------------------------------------
 // NOTE:
-// - If you add actual font files under core/designsystem/src/main/res/font
-//   as pretendard_bold.otf, pretendard_medium.otf, pretendard_light.otf,
-//   you can replace the fallback with resource-based fonts.
-// - For now, we fallback to the default sans-serif family to avoid build errors
-//   when font resources are not present.
+// Pretendard variable font assets live in core/designsystem/src/main/res/font.
+// We expose common weights (Light/Medium/Bold) by referencing the same
+// variable font resource so text styles can lean on custom typography.
 
-val Pretendard = FontFamily.SansSerif
-// Example (uncomment after adding resources to this module):
-// val Pretendard = FontFamily(
-//     Font(R.font.pretendard_bold, FontWeight.Bold),
-//     Font(R.font.pretendard_medium, FontWeight.Medium),
-//     Font(R.font.pretendard_light, FontWeight.Light)
-// )
+val Pretendard = FontFamily(
+    Font(resId = R.font.pretendardvariable, weight = FontWeight.Light),
+    Font(resId = R.font.pretendardvariable, weight = FontWeight.Medium),
+    Font(resId = R.font.pretendardvariable, weight = FontWeight.Bold)
+)
 
 // -------------------------------------------------------------------
 // 2. Typography Definition (roleSizeWeight -> camelCase)
