@@ -61,7 +61,7 @@ interface LogflareApi {
     suspend fun deleteUser(
         @Header("Authorization") token: String,
         @Path("userid") userId: Int
-    ): StringResponse
+    ): UserResponse
 
     @GET("/fcm/data")
     suspend fun getFirebaseConfig(
