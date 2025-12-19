@@ -91,6 +91,12 @@ class LogflareMessagingService : FirebaseMessagingService() {
 
 
     fun filterLogs(projectId: Int, level: String, message: String): Boolean = runBlocking {
+        val globalAlertLevel = deviceRepository.getAlertLevel()
+        if (globalAlertLevel != null) {
+            if (LogLevel.fromLabel(level).code < LogLevel.fromLabel(globalAlertLevel).code) {
+                return@runBlocking true // 전역 레벨 미달로 필터링
+            }
+        }
         val project = projectRepository.get(projectId) ?: return@runBlocking true
         val alertLevel = project.alertLevel
         val ignoreKeywords = project.excludeKeywords
