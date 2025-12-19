@@ -62,7 +62,7 @@ class ProjectCommonViewModel @Inject constructor(
     }
 
     private val nameRegex = Regex("^[\\p{IsHangul}\\p{IsLatin}\\p{N}\\p{P}\\p{Zs}]+$")
-    private val keywordRegex = Regex("^[A-Za-z0-9 ]+$")
+    private val keywordRegex = "^[a-zA-Z0-9!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?\\s]+$".toRegex()
 
     private var projectId: Int? = null
 
@@ -193,12 +193,18 @@ class ProjectCommonViewModel @Inject constructor(
         }
     }
 
-    fun deleteProject() {
+    fun deleteProject(onSuccess: () -> Unit) {
         if (_ui.value.loading) return
         val projectId = projectId ?: return
         updateUi { copy(loading = true, error = null) }
+
         viewModelScope.launch {
-            repo.delete(projectId)
+            try {
+                repo.delete(projectId)
+                onSuccess()
+            } catch (e: Exception) {
+                updateUi { copy(loading = false, error = e.message) }
+            }
         }
     }
 

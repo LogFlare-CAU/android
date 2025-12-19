@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.logflare.core.designsystem.Black
 import com.example.logflare.core.model.ProjectDTO
 import com.example.logflare_android.enums.LogLevel
 
@@ -59,7 +60,8 @@ fun ProjectNameSection(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentGreen,
                     unfocusedBorderColor = BorderGray,
-                    errorBorderColor = ErrorRed
+                    errorBorderColor = ErrorRed,
+                    cursorColor = Black
                 )
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -193,8 +195,15 @@ private fun PermissionRow(state: PermissionToggleState, onToggle: (Boolean) -> U
         Switch(
             checked = state.active,
             onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(checkedTrackColor = AccentGreen),
-            enabled = enabled
+            enabled = enabled,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = AccentGreen,
+                checkedThumbColor = Color.White,
+                uncheckedTrackColor = Color(0xFFE0E0E0),
+                uncheckedThumbColor = Color.White,
+                disabledCheckedTrackColor = AccentGreen.copy(alpha = 0.5f),
+                disabledCheckedThumbColor = Color.White.copy(alpha = 0.5f)
+            )
         )
     }
 }
@@ -230,7 +239,8 @@ fun KeywordSection(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentGreen,
                     unfocusedBorderColor = BorderGray,
-                    errorBorderColor = ErrorRed
+                    errorBorderColor = ErrorRed,
+                    cursorColor = Black
                 )
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -251,7 +261,7 @@ fun KeywordSection(
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = error ?: "Use English Only",
+            text = error ?: "Use English, number, and symbols only",
             color = if (error != null) ErrorRed else Color(0xFF6D6D6D),
             style = MaterialTheme.typography.bodySmall
         )
@@ -299,10 +309,15 @@ fun BottomActionBar(
     onDone: () -> Unit,
     enabled: Boolean,
 ) {
-    Surface(shadowElevation = 8.dp) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.White,
+        shadowElevation = 16.dp
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
@@ -310,15 +325,21 @@ fun BottomActionBar(
             Button(
                 onClick = onDone,
                 enabled = enabled,
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (enabled) AccentGreen else DisabledGray,
-                    contentColor = Color.White
+                    contentColor = Color.White,
+                    disabledContainerColor = DisabledGray,
+                    disabledContentColor = Color.White
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
-                Text("Done")
+                Text(
+                    text = "Done",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
             }
         }
     }

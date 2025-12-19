@@ -16,9 +16,9 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare_android.ui.common.TopTitle
 import kotlinx.coroutines.launch
 
+// 파일 내부에 컬러 정의가 없을 경우를 대비해 기본값 지정 (필요시 수정)
 
 @Composable
 fun ProjectCreateScreen(
@@ -36,92 +36,98 @@ fun ProjectCreateScreen(
             vm.clearSnackbar()
         }
     }
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopTitle(title = "Create Project")
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 88.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                item {
-                    if (ui.error != null) {
-                        Text(
-                            text = ui.error ?: "",
-                            color = ErrorRed,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-                }
 
-                item {
-                    ProjectNameSection(
-                        name = ui.name,
-                        isValid = ui.nameValid,
-                        loading = ui.loading,
-                        saved = ui.saved,
-                        onChange = vm::onNameChanged,
-                        onSave = { if (ui.saved) vm.editProject() else vm.saveProject() }
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Color(0xFF323232),
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(8.dp),
+                )
+            }
+        },
+        bottomBar = {
+            BottomActionBar(
+                onDone = {
+                    vm.savePerms()
+                    onCreated()
+                },
+                enabled = ui.token != null
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentPadding = PaddingValues(vertical = 12.dp)
+        ) {
+            item {
+                if (ui.error != null) {
+                    Text(
+                        text = ui.error ?: "",
+                        color = ErrorRed,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
-                }
-
-                item {
-                    TokenSection(
-                        token = ui.token,
-                        onCopy = {
-                            ui.token?.let { token ->
-                                scope.launch {
-                                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(ui.token, token)))
-                                    snackbarHostState.showSnackbar("Token copied")
-                                }
-                            }
-                        }
-                    )
-                }
-
-                item {
-                    KeywordSection(
-                        value = ui.keywordInput,
-                        error = ui.keywordError,
-                        onValueChange = vm::onKeywordInputChanged,
-                        onSave = vm::addKeyword,
-                        enabled = ui.saved
-                    )
-                }
-
-                item {
-                    KeywordList(keywords = ui.keywords, onRemove = vm::removeKeyword)
-                }
-
-                item {
-                    LogLevelSection(
-                        selected = ui.alertLevels,
-                        onToggle = vm::toggleAlertLevel,
-                        enabled = ui.saved
-                    )
-                }
-
-                item {
-                    PermissionsSection(ui.permissions, onToggle = vm::onPermissionToggle, enabled = ui.saved)
                 }
             }
 
-            Column(modifier = Modifier.align(Alignment.BottomCenter)) {
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 72.dp)
+            item {
+                ProjectNameSection(
+                    name = ui.name,
+                    isValid = ui.nameValid,
+                    loading = ui.loading,
+                    saved = ui.saved,
+                    onChange = vm::onNameChanged,
+                    onSave = { if (ui.saved) vm.editProject() else vm.saveProject() }
                 )
+            }
 
-                BottomActionBar(
-                    onDone = {
-                        vm.savePerms()
-                        onCreated()
-                    },
-                    enabled = ui.token != null
+            item {
+                TokenSection(
+                    token = ui.token,
+                    onCopy = {
+                        ui.token?.let { token ->
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Project Token", token)))
+                                snackbarHostState.showSnackbar("Token copied")
+                            }
+                        }
+                    }
+                )
+            }
+
+            item {
+                KeywordSection(
+                    value = ui.keywordInput,
+                    error = ui.keywordError,
+                    onValueChange = vm::onKeywordInputChanged,
+                    onSave = vm::addKeyword,
+                    enabled = ui.saved
+                )
+            }
+
+            item {
+                KeywordList(keywords = ui.keywords, onRemove = vm::removeKeyword)
+            }
+
+            item {
+                LogLevelSection(
+                    selected = ui.alertLevels,
+                    onToggle = vm::toggleAlertLevel,
+                    enabled = ui.saved
+                )
+            }
+
+            item {
+                PermissionsSection(
+                    permissions = ui.permissions,
+                    onToggle = vm::onPermissionToggle,
+                    enabled = ui.saved
                 )
             }
         }
@@ -131,7 +137,10 @@ fun ProjectCreateScreen(
 @Composable
 private fun TokenSection(token: String?, onCopy: () -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = "Project Token", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+        Text(
+            text = "Project Token",
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Surface(
             shape = RoundedCornerShape(8.dp),
@@ -139,12 +148,11 @@ private fun TokenSection(token: String?, onCopy: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(enabled = token != null) { onCopy() }
-                .padding(end = 0.dp)
         ) {
             Row(
                 modifier = Modifier
                     .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .height(50.dp),
+                    .heightIn(min = 50.dp), // 고정 높이 대신 최소 높이 권장
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -162,7 +170,8 @@ private fun TokenSection(token: String?, onCopy: () -> Unit) {
                         disabledContainerColor = DisabledGray,
                         disabledContentColor = Color.White
                     ),
-                    modifier = Modifier.height(40.dp)
+                    modifier = Modifier.height(40.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
                 ) {
                     Text("Copy")
                 }

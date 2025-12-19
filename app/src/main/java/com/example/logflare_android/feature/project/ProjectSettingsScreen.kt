@@ -26,6 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.designsystem.components.button.ButtonType
+import com.example.logflare.core.designsystem.components.button.ButtonVariant
+import com.example.logflare.core.designsystem.components.button.LogFlareButton
 import com.example.logflare_android.ui.common.TopTitle
 
 
@@ -52,7 +55,7 @@ fun ProjectSettingsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopTitle(title = "Project Settings", onBack = onBack)
+//        TopTitle(title = "Project Settings", onBack = onBack)
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier
@@ -112,8 +115,7 @@ fun ProjectSettingsScreen(
                 item {
                     DeleteProject(
                         onClick = {
-                            vm.deleteProject()
-                            onDelete()
+                            vm.deleteProject { onDelete() }
                         },
                         enabled = !ui.loading
                     )
@@ -146,24 +148,18 @@ private fun DeleteProject(
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(vertical = 32.dp), // 주변 여백을 줘서 다른 요소와 분리
+        contentAlignment = Alignment.Center
     ) {
-        Button(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
+        LogFlareButton(
+            text = "Delete Project",
             onClick = onClick,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = ErrorRed,
-                contentColor = Color.White
-            ),
-            enabled = enabled
-        ) {
-            Text("Delete project")
-        }
+            type = ButtonType.Text,
+            variant = ButtonVariant.Secondary,
+            enabled = enabled,
+        )
     }
-
 }
