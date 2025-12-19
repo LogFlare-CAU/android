@@ -4,8 +4,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -15,6 +19,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
+import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.navigation.LogFlareGnbItem
 import com.example.logflare_android.feature.home.HomeScreen
 import com.example.logflare_android.feature.log.LogDetailScreen
 import com.example.logflare_android.feature.log.LogListScreen
@@ -24,15 +30,25 @@ import com.example.logflare_android.feature.mypage.EditMemberScreen
 import com.example.logflare_android.feature.mypage.LogoutScreen
 import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.project.ProjectCreateScreen
-import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.projectdetail.ProjectDetailScreen
 import com.example.logflare_android.feature.project.ProjectSettingsScreen
 import com.example.logflare_android.ui.navigation.Route
+import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
+import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
+import com.example.logflare.core.designsystem.R as DesignSystemR
 
 /**
  * Main app scaffold with bottom navigation.
  * Contains the MainGraph with Home, Logs, Projects, and MyPage tabs.
  */
+
+data class GnbItem(
+    val route: Route,
+    @androidx.annotation.DrawableRes val iconRes: Int,
+    val label: String
+)
+
+
 @Composable
 fun MainScaffold(
     onLogout: () -> Unit
@@ -42,11 +58,9 @@ fun MainScaffold(
     val currentRoute = navBackStackEntry?.destination?.route
     val currentEntry = navBackStackEntry
 
-    val projectDetailTitle: String? = if (currentRoute == Route.ProjectDetail.path) {
-        currentEntry?.savedStateHandle?.get<String>("projectName")
-    } else {
-        null
-    }
+    val projectDetailTitle by navBackStackEntry?.savedStateHandle
+        ?.getStateFlow<String?>("projectName", null)
+        ?.collectAsState() ?: remember { mutableStateOf(null) }
 
     Scaffold(
         topBar = {
@@ -83,8 +97,11 @@ fun MainScaffold(
                     Route.Logs.path,
                     Route.Projects.path,
                     Route.MyPage.path -> null
+
                     null -> null
-                    else -> { { navController.popBackStack() } }
+                    else -> {
+                        { navController.popBackStack() }
+                    }
                 },
                 onClose = null
             )
@@ -95,7 +112,7 @@ fun MainScaffold(
     ) { paddingValues ->
         MainNavHost(
             navController = navController,
-            modifier = Modifier.padding(paddingValues),
+            modifier = Modifier.padding(paddingValues).padding(top = 16.dp),
             onLogout = onLogout
         )
     }
