@@ -44,7 +44,6 @@ fun LogListScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        TopTitle("Logs")
         FilterDropdownRow(
             selectedLevels = uiState.filter,
             onLevelSelected = viewModel::setFilter,
