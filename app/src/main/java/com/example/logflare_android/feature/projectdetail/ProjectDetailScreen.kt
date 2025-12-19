@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -63,13 +64,15 @@ fun ProjectDetailScreen(
     val uiState by viewModel.ui.collectAsState()
 
     // Propagate the resolved project name upward so the main top bar can display it.
-    if (uiState.projectName.isNotBlank()) {
-        onProjectNameResolved(uiState.projectName)
+    LaunchedEffect(uiState.projectName) {
+        if (uiState.projectName.isNotBlank()) {
+            onProjectNameResolved(uiState.projectName)
+        }
     }
 
     Surface(
         modifier = modifier.fillMaxSize(),
-    color = AppTheme.colors.neutral.white
+        color = AppTheme.colors.neutral.white
     ) {
         when {
             uiState.loading -> Box(
@@ -109,7 +112,7 @@ private fun ProjectDetailContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        BackHeader(title = uiState.projectName, onBack = onBack)
+//        BackHeader(title = uiState.projectName, onBack = onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
             onClick = { onOpenProjectSettings(uiState.projectId) }
@@ -148,7 +151,7 @@ private fun ProjectSettingsCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-    color = AppTheme.colors.neutral.s20
+        color = AppTheme.colors.neutral.s20
     ) {
         Row(
             modifier = Modifier
@@ -243,57 +246,57 @@ private fun FilterPanel(
             .padding(top = 16.dp)
             .padding(horizontal = 16.dp)
     ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Log Level 필터
-                    CommonFilterDropdown(
-                        title = "Log Level",
-                        isActive = filterState.selectedLevel.isNotEmpty(),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        LogLevel.entries.forEach { level ->
-                            CommonCheckRow(
-                                label = level.label,
-                                selected = filterState.selectedLevel.contains(level),
-                                highlightColor = AppTheme.colors.primary.default,
-                                onClick = { onLevelSelected(level) }
-                            )
-                        }
-                    }
-
-                    // Log File 필터
-                    CommonFilterDropdown(
-                        title = "Log File",
-                        isActive = filterState.logfileOptions.any { it.selected },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        filterState.logfileOptions.forEach { option ->
-                            CommonRadioRow(
-                                label = option.fileName,
-                                selected = option.selected,
-                                onClick = { onLogfileSelected(option.id) }
-                            )
-                        }
-                    }
-                    // Sort By 필터
-                    CommonFilterDropdown(
-                        title = "Sort By",
-                        isActive = filterState.sortBy != LogSort.NEWEST,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        CommonRadioRow(
-                            label = "Newest",
-                            selected = filterState.sortBy == LogSort.NEWEST,
-                            onClick = { onSortSelected(LogSort.NEWEST) }
-                        )
-                        CommonRadioRow(
-                            label = "Oldest",
-                            selected = filterState.sortBy == LogSort.OLDEST,
-                            onClick = { onSortSelected(LogSort.OLDEST) }
-                        )
-                    }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Log Level 필터
+            CommonFilterDropdown(
+                title = "Log Level",
+                isActive = filterState.selectedLevel.isNotEmpty(),
+                modifier = Modifier.weight(1f)
+            ) {
+                LogLevel.entries.forEach { level ->
+                    CommonCheckRow(
+                        label = level.label,
+                        selected = filterState.selectedLevel.contains(level),
+                        highlightColor = AppTheme.colors.primary.default,
+                        onClick = { onLevelSelected(level) }
+                    )
                 }
             }
+
+            // Log File 필터
+            CommonFilterDropdown(
+                title = "Log File",
+                isActive = filterState.logfileOptions.any { it.selected },
+                modifier = Modifier.weight(1f)
+            ) {
+                filterState.logfileOptions.forEach { option ->
+                    CommonRadioRow(
+                        label = option.fileName,
+                        selected = option.selected,
+                        onClick = { onLogfileSelected(option.id) }
+                    )
+                }
+            }
+            // Sort By 필터
+            CommonFilterDropdown(
+                title = "Sort By",
+                isActive = filterState.sortBy != LogSort.NEWEST,
+                modifier = Modifier.weight(1f)
+            ) {
+                CommonRadioRow(
+                    label = "Newest",
+                    selected = filterState.sortBy == LogSort.NEWEST,
+                    onClick = { onSortSelected(LogSort.NEWEST) }
+                )
+                CommonRadioRow(
+                    label = "Oldest",
+                    selected = filterState.sortBy == LogSort.OLDEST,
+                    onClick = { onSortSelected(LogSort.OLDEST) }
+                )
+            }
         }
+    }
+}
