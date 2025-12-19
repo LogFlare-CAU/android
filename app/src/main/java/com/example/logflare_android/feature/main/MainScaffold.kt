@@ -28,15 +28,6 @@ import com.example.logflare_android.feature.project.ProjectListScreen
 import com.example.logflare_android.feature.projectdetail.ProjectDetailScreen
 import com.example.logflare_android.feature.project.ProjectSettingsScreen
 import com.example.logflare_android.ui.navigation.Route
-import com.example.logflare.core.designsystem.AppTheme
-import com.example.logflare.core.designsystem.components.navigation.LogFlareGnbItem
-import com.example.logflare.core.designsystem.R as DesignSystemR
-
-data class GnbItem(
-    val route: Route,
-    @androidx.annotation.DrawableRes val iconRes: Int,
-    val label: String
-)
 
 /**
  * Main app scaffold with bottom navigation.
@@ -47,8 +38,57 @@ fun MainScaffold(
     onLogout: () -> Unit
 ) {
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val currentEntry = navBackStackEntry
+
+    val projectDetailTitle: String? = if (currentRoute == Route.ProjectDetail.path) {
+        currentEntry?.savedStateHandle?.get<String>("projectName")
+    } else {
+        null
+    }
 
     Scaffold(
+        topBar = {
+            LogFlareTopAppBar(
+                titleType = when (currentRoute) {
+                    Route.Home.path -> TopAppBarTitleType.Default
+                    Route.Logs.path -> TopAppBarTitleType.Title
+                    Route.Projects.path -> TopAppBarTitleType.Title
+                    Route.MyPage.path -> TopAppBarTitleType.Title
+                    Route.ProjectCreate.path -> TopAppBarTitleType.Title
+                    Route.ProjectDetail.path -> TopAppBarTitleType.Title
+                    Route.ProjectSettings.path -> TopAppBarTitleType.Title
+                    Route.MyPageAddMember.path -> TopAppBarTitleType.Title
+                    Route.MyPageEditMember.path -> TopAppBarTitleType.Title
+                    Route.MyPageLogout.path -> TopAppBarTitleType.Title
+                    Route.LogDetail.path -> TopAppBarTitleType.Title
+                    else -> TopAppBarTitleType.Default
+                },
+                titleText = when (currentRoute) {
+                    Route.Logs.path -> "LOGS"
+                    Route.Projects.path -> "PROJECTS"
+                    Route.MyPage.path -> "MYPAGE"
+                    Route.ProjectCreate.path -> "CREATE PROJECT"
+                    Route.ProjectDetail.path -> projectDetailTitle ?: "PROJECT DETAIL"
+                    Route.ProjectSettings.path -> "PROJECT SETTINGS"
+                    Route.MyPageAddMember.path -> "ADD MEMBER"
+                    Route.MyPageEditMember.path -> "EDIT MEMBER"
+                    Route.MyPageLogout.path -> "LOG OUT"
+                    Route.LogDetail.path -> "LOG DETAILS"
+                    else -> null
+                },
+                onBack = when (currentRoute) {
+                    Route.Home.path,
+                    Route.Logs.path,
+                    Route.Projects.path,
+                    Route.MyPage.path -> null
+                    null -> null
+                    else -> { { navController.popBackStack() } }
+                },
+                onClose = null
+            )
+        },
         bottomBar = {
             BottomNavigationBar(navController = navController)
         }
@@ -182,13 +222,16 @@ private fun MainNavHost(
         composable(
             route = Route.ProjectDetail.path,
             arguments = listOf(navArgument("projectId") { type = NavType.IntType })
-        ) {
+        ) { backStackEntry ->
             ProjectDetailScreen(
                 onBack = { navController.popBackStack() },
                 onOpenProjectSettings = { projectId ->
                     navController.navigate(Route.ProjectSettings.createRoute(projectId))
                 },
-                onLogClick = { navController.navigate(Route.LogDetail.path) }
+                onLogClick = { navController.navigate(Route.LogDetail.path) },
+                onProjectNameResolved = { name ->
+                    backStackEntry.savedStateHandle["projectName"] = name
+                }
             )
         }
         composable(
