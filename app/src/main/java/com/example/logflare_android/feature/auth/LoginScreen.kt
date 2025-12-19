@@ -86,7 +86,7 @@ fun LoginScreen(
             value = serverUrl,
             onValueChange = { serverUrl = it },
             isError = serverUrlError != null,
-            label = { Text("Server URL (optional)") },
+            label = { Text("Server URL") },
             placeholder = { Text("http://your-server:port") },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(

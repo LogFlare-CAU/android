@@ -1,7 +1,6 @@
 package com.example.logflare_android.fcm
 
 import android.Manifest
-import android.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.util.Log
@@ -19,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
+import com.example.logflare_android.R
 
 @AndroidEntryPoint
 class LogflareMessagingService : FirebaseMessagingService() {
@@ -50,8 +50,8 @@ class LogflareMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         deviceRepository.ensureFirebaseInitializedFromCacheAsync()
-        val title = message.notification?.title ?: message.data["title"] ?: "알림"
-        val body = message.notification?.body ?: message.data["body"] ?: ""
+//        val title = message.notification?.title ?: message.data["title"] ?: "알림"
+//        val body = message.notification?.body ?: message.data["body"] ?: ""
         val errorid = message.data["errorid"]?.toIntOrNull() ?: 0
         val type = message.data["type"] ?: "Unknown"
         val level = message.data["level"]                    // 예: "ERROR"
@@ -60,13 +60,13 @@ class LogflareMessagingService : FirebaseMessagingService() {
         val projectid = message.data["projectid"]?.toIntOrNull()
         val isTest = message.data["test"]?.toBoolean() ?: false
         if (!isTest && filterLogs(projectid ?: 0, level ?: "INFO", messageText ?: "")) {
-            Log.i(TAG, "Log filtered out: projectId=$projectid, level=$level, message=$messageText")
+            Log.i(TAG, "Log filtered out: projectId=$projectid, level=$level, message=$messageText, isTest=$isTest")
             return
         }
-        Log.i(TAG, "Received FCM message: title=$title, body=$body")
-        val message = "$level Error: $type\n$messageText\n at $timestamp"
+        val message = "$level: $type\n$messageText\n at $timestamp"
+        val title = "Error: $type"
         val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_dialog_info) //TODO: 이거 실제 아이콘으로 교체
+            .setSmallIcon(R.drawable.ic_action_error) //TODO: 이거 실제 아이콘으로 교체
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
