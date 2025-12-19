@@ -101,11 +101,11 @@ private fun MyPageContent(
         color = AppTheme.colors.neutral.white
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            LogFlareTopAppBar(
-                titleType = TopAppBarTitleType.Title,
-                titleText = "MYPAGE",
-                onBack = onBack
-            )
+//            LogFlareTopAppBar(
+//                titleType = TopAppBarTitleType.Title,
+//                titleText = "MYPAGE",
+//                onBack = onBack
+//            )
 
             LazyColumn(
                 modifier = Modifier
