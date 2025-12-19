@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -44,6 +45,7 @@ fun LogFlareTopAppBar(
             .fillMaxWidth()
             .height(56.dp)
             .background(AppTheme.colors.neutral.white)
+            .statusBarsPadding()
             .padding(horizontal = AppTheme.spacing.s4),
         contentAlignment = Alignment.Center
     ) {
