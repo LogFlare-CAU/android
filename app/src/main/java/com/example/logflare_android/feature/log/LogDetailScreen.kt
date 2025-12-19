@@ -52,7 +52,6 @@ fun LogDetailScreenContent(
             .background(AppTheme.colors.neutral.white)
             .padding(bottom = 16.dp)
     ) {
-        TopTitle("Log Details", onBack = onBack)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
