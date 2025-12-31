@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,12 +52,25 @@ data class GnbItem(
 
 @Composable
 fun MainScaffold(
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    intentProjectId: Int? = null,
+    intentErrorId: Int? = null
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val currentEntry = navBackStackEntry
+
+    LaunchedEffect(Unit) {
+        if (intentProjectId != null || intentErrorId != null) {
+            navController.navigate(Route.Logs.path) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
 
     val projectDetailTitle by navBackStackEntry?.savedStateHandle
         ?.getStateFlow<String?>("projectName", null)

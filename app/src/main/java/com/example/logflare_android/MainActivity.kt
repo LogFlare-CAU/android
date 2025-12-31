@@ -35,6 +35,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val projectId = intent.getIntExtra("projectid", -1).takeIf { it != -1 }
+        val errorId = intent.getIntExtra("errorid", -1).takeIf { it != -1 }
         enableEdgeToEdge()
 
         // Request notification permission on Android 13+
@@ -57,7 +59,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun App(vm: AppViewModel = hiltViewModel()) {
+fun App(
+    vm: AppViewModel = hiltViewModel(),
+    intentProjectId: Int? = null,
+    intentErrorId: Int? = null
+) {
     val token by vm.token.collectAsState()
     val navController = rememberNavController()
     val backEntry by navController.currentBackStackEntryAsState()
@@ -92,7 +98,9 @@ fun App(vm: AppViewModel = hiltViewModel()) {
                     navController.navigate(Route.Auth.path) {
                         popUpTo(Route.Main.path) { inclusive = true }
                     }
-                }
+                },
+                intentProjectId = intentProjectId,
+                intentErrorId = intentErrorId
             )
         }
     }

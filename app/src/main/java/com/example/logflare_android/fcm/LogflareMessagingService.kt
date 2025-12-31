@@ -50,12 +50,10 @@ class LogflareMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         deviceRepository.ensureFirebaseInitializedFromCacheAsync()
-//        val title = message.notification?.title ?: message.data["title"] ?: "알림"
-//        val body = message.notification?.body ?: message.data["body"] ?: ""
         val errorid = message.data["errorid"]?.toIntOrNull() ?: 0
         val type = message.data["type"] ?: "Unknown"
-        val level = message.data["level"]                    // 예: "ERROR"
-        val timestamp = message.data["timestamp"]            // ISO8601 문자열
+        val level = message.data["level"]
+        val timestamp = message.data["timestamp"]
         val messageText = message.data["message"]
         val projectid = message.data["projectid"]?.toIntOrNull()
         val isTest = message.data["test"]?.toBoolean() ?: false
@@ -63,20 +61,30 @@ class LogflareMessagingService : FirebaseMessagingService() {
             Log.i(TAG, "Log filtered out: projectId=$projectid, level=$level, message=$messageText, isTest=$isTest")
             return
         }
-        val message = "$level: $type\n$messageText\n at $timestamp"
+        val contentMessage = "$level: $type\n$messageText\n at $timestamp"
         val title = "Error: $type"
+        val intent = android.content.Intent(this, com.example.logflare_android.MainActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("projectid", projectid)
+            putExtra("errorid", errorid)
+        }
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
         val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_action_error) //TODO: 이거 실제 아이콘으로 교체
+            .setSmallIcon(R.drawable.ic_action_error)
             .setContentTitle(title)
-            .setContentText(message)
+            .setContentText(contentMessage)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
-
         val manager = NotificationManagerCompat.from(this)
         manager.notify(System.currentTimeMillis().toInt(), notification)
     }
-
 
     override fun onCreate() {
         super.onCreate()
