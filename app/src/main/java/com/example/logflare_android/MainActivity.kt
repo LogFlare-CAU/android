@@ -26,8 +26,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.core.content.ContextCompat
 
-@AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+@AndroidEntryPoint(ComponentActivity::class)
+class MainActivity : Hilt_MainActivity() {
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
             // no-op; optional: show rationale or toast

@@ -20,8 +20,8 @@ import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import com.example.logflare_android.R
 
-@AndroidEntryPoint
-class LogflareMessagingService : FirebaseMessagingService() {
+@AndroidEntryPoint(FirebaseMessagingService::class)
+class LogflareMessagingService : Hilt_LogflareMessagingService() {
 
     private val channelId = "logflare_channel"
 
