@@ -11,7 +11,6 @@ android {
 
     defaultConfig {
         minSdk = 21
-    targetSdk = 36
         buildConfigField(
             "String",
             "BASE_URL",
@@ -29,6 +28,12 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+    }
+    lint {
+        targetSdk = 36
+    }
+    testOptions {
+        targetSdk = 36
     }
 }
 

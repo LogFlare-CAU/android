@@ -1,0 +1,4 @@
+{
+  "java.import.gradle.java.home": "${env:JAVA_HOME}",
+  "java.jdt.ls.java.home": "${env:JAVA_HOME}"
+}
