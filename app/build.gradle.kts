@@ -11,11 +11,11 @@ kapt {
 }
 
 android {
-    namespace = "com.example.logflare_android"
+    namespace = "com.logflare.android"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.logflare_android"
+        applicationId = "com.logflare.android"
         minSdk = 26
     targetSdk = 36
         versionCode = 1
