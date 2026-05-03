@@ -35,6 +35,8 @@ class GetProjectLogsUseCase @Inject constructor(
             )
         }.getOrElse { return null }
 
+        if (!res.success) return null
+
         val rawLogs = res.data ?: return null
 
         return rawLogs.mapIndexed { idx, raw ->

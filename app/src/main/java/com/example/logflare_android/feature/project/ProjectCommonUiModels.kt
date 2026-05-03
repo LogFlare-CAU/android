@@ -351,7 +351,8 @@ fun ProjectCard(
     project: ProjectDTO,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isConnected: Boolean = true // TODO: Determine connection status from actual data
+    /** When null, no live/connection dot is shown (API does not expose this yet). */
+    connectionHealthy: Boolean? = null,
 ) {
     Card(
         modifier = modifier
@@ -384,14 +385,15 @@ fun ProjectCard(
                 }
             }
 
-            // Connection status indicator (green/red dot)
-            Surface(
-                modifier = Modifier
-                    .size(12.dp)
-                    .padding(start = 8.dp),
-                shape = CircleShape,
-                color = if (isConnected) Color.Green else Color.Red
-            ) {}
+            if (connectionHealthy != null) {
+                Surface(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .padding(start = 8.dp),
+                    shape = CircleShape,
+                    color = if (connectionHealthy) Color(0xFF4CAF50) else Color(0xFFE53935)
+                ) {}
+            }
         }
     }
 }

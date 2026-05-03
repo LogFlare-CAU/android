@@ -35,3 +35,6 @@ output.json
 .DS_Store
 docs/*
 .config/
+
+# Cursor — local agent context and editor state
+.cursor/

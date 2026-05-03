@@ -94,6 +94,14 @@ fun HomeScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
+                    userState.profileError?.let { err ->
+                        Text(
+                            text = err,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
                 Surface(
                     color = perm.color,

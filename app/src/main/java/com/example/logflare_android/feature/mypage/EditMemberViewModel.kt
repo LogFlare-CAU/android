@@ -65,7 +65,7 @@ class EditMemberViewModel @Inject constructor(
     private suspend fun initUsers() {
         _ui.update { it.copy(isLoading = true) }
         requestedUser = getUserUseCase(requestedUsername)
-        me = authMeUseCase()
+        me = authMeUseCase().getOrNull()
         _ui.update { it.copy(isLoading = false) }
     }
 

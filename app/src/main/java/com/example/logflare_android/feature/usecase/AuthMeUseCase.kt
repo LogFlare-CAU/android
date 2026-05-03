@@ -12,17 +12,30 @@ class AuthMeUseCase @Inject constructor(
     private val api: LogflareApi,
     private val authRepository: AuthRepository,
     private val deviceRepository: DeviceRepository
-){
-    suspend operator fun invoke(): UserDTO?{
-        val token = authRepository.getToken()
-        val result = runCatching {
-            api.getme(token)
-        }.getOrElse {
-            return null
-            // TODO: 실제 예외 처리
+) {
+    suspend operator fun invoke(): Result<UserDTO> {
+        val token = runCatching { authRepository.getToken() }
+            .getOrElse { return Result.failure(it) }
+
+        val response = runCatching { api.getme(token) }
+            .getOrElse { return Result.failure(it) }
+
+        if (!response.success) {
+            val msg = response.message.ifBlank { "Failed to load profile" }
+            return Result.failure(IllegalStateException(msg))
         }
-        deviceRepository.syncConfigAndRegister()
-        result.data?.username?.let { authRepository.setUsername(it) }
-        return result.data
+
+        val user = response.data ?: return Result.failure(IllegalStateException("Empty profile response"))
+
+        try {
+            deviceRepository.syncConfigAndRegister()
+        } catch (_: Exception) {
+        }
+        try {
+            authRepository.setUsername(user.username)
+        } catch (_: Exception) {
+        }
+
+        return Result.success(user)
     }
 }

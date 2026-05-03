@@ -1,6 +1,5 @@
 package com.example.logflare_android.feature.log
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.logflare.core.model.ErrorlogDTO
@@ -149,12 +148,7 @@ class LogViewModel @Inject constructor(
     fun getProjectOptions() {
         viewModelScope.launch {
             val projects = projectsRepo.getAll()
-            Log.d("LogViewModel", "Currently selected project: ${_ui.value.selectedProject}")
             val options = projects.map {
-                Log.d(
-                    "LogViewModel",
-                    "Adding project option: ${it.dto.id} - ${it.dto.name}, selected=${_ui.value.selectedProject == it.dto.id}"
-                )
                 ProjectToggleOption(
                     id = it.dto.id,
                     label = it.dto.name,
@@ -169,10 +163,8 @@ class LogViewModel @Inject constructor(
     fun toggleProjectOption(projectId: Int) {
         if (_ui.value.selectedProject == projectId) {
             _ui.value = _ui.value.copy(selectedProject = null)
-            Log.d("LogViewModel", "Clearing selected project filter")
             getLogs()
         } else {
-            Log.d("LogViewModel", "Setting selected project filter to $projectId")
             _ui.value = _ui.value.copy(selectedProject = projectId)
             getLogs(projectid = projectId)
         }
