@@ -38,7 +38,7 @@ data class PermissionToggleState(
     val username: String,
     val role: String,
     val rolenum: Int = 0,
-    val roleColor: Color, // TODO: 이거 안쓰는데 왜 있는건지요?
+    val roleColor: Color,
     val activeColor: Color,
     val inactiveColor: Color,
     val active: Boolean
@@ -84,7 +84,7 @@ class ProjectCommonViewModel @Inject constructor(
                     keywords = proj.excludeKeywords.toList(),
                     alertLevels = LogLevel.getAboveLevel(proj.alertLevel).map { it.label }.toSet(),
                     saved = true,
-                    token = "0" // 이건 더미값입니다. 실제 토큰은 가져올 수 없습니다. 단지 UI 용도일 뿐입니다.
+                    token = null,
                 )
             }
             getPermissions()?.let { perms ->

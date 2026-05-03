@@ -15,6 +15,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
+        // Store / deep links: plan a move off com.example before public release.
         applicationId = "com.example.logflare_android"
         minSdk = 26
     targetSdk = 36

@@ -16,7 +16,9 @@ data class AuthUiState(
     val loading: Boolean = false,
     val username: String? = null,
     val permission: Int = 0,
-    val loginError: String? = null
+    val loginError: String? = null,
+    /** Shown when /user/me fails after login (e.g. expired session). */
+    val profileError: String? = null,
 )
 
 
@@ -55,16 +57,22 @@ class AuthViewModel @Inject constructor(
 
     fun getMe() {
         viewModelScope.launch {
-            val me = authMeUseCase()
-            if (me != null) {
-                _ui.value = _ui.value.copy(
-                    loading = false,
-                    username = me.username,
-                    permission = me.permission
-                )
-            } else {
-                // TODO: 재 로그인
-            }
+            _ui.value = _ui.value.copy(loading = true, profileError = null)
+            authMeUseCase()
+                .onSuccess { me ->
+                    _ui.value = _ui.value.copy(
+                        loading = false,
+                        username = me.username,
+                        permission = me.permission,
+                        profileError = null,
+                    )
+                }
+                .onFailure { e ->
+                    _ui.value = _ui.value.copy(
+                        loading = false,
+                        profileError = e.message ?: "Could not verify session",
+                    )
+                }
         }
     }
 

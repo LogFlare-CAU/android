@@ -1,7 +1,6 @@
 package com.example.logflare_android.feature.mypage
 
 import android.Manifest
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.logflare.core.model.UserDTO
@@ -57,32 +56,36 @@ class MyPageViewModel @Inject constructor(
     }
 
     fun refresh() {
-        _ui.update { it.copy(loading = true, errorMessage = null) }
         viewModelScope.launch {
+            _ui.update { it.copy(loading = true, errorMessage = null) }
             getme()
-            refreshAccountInfo()
-            loadMembers()
+            if (me != null) {
+                refreshAccountInfo()
+                loadMembers()
+                getLogLevelFromStorage()
+            }
+            _ui.update { it.copy(loading = false) }
         }
-        _ui.update { it.copy(loading = false) }
     }
 
     private suspend fun getme() {
-        me = authMeUseCase()
-        if (me == null) {
-            _ui.update {
-                it.copy(
-                    loading = false,
-                    errorMessage = "Failed to load account info"
-                )
+        authMeUseCase()
+            .onSuccess { user -> me = user }
+            .onFailure { e ->
+                me = null
+                _ui.update {
+                    it.copy(
+                        loading = false,
+                        errorMessage = e.message ?: "Failed to load account info"
+                    )
+                }
             }
-        }
     }
 
     private fun refreshAccountInfo() {
         _ui.update { it.copy(loading = true, errorMessage = null) }
         me?.let { user ->
             val permission = UserPermission.fromCode(user.permission)
-            Log.d("MyPageViewModel", "User permission: $permission")
             _ui.update { it ->
                 it.copy(
                     loading = false,

@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -25,11 +27,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 
 /**
  * Project list screen showing all user projects.
- * Features:
- * - Pull-to-refresh (TODO)
- * - Project cards with connection status
- * - Navigate to project detail on click
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectListScreen(
     onProjectClick: (Int) -> Unit,
@@ -96,19 +95,28 @@ fun ProjectListScreen(
         }
 
         else -> {
-            LazyColumn(
+            val pullState = rememberPullToRefreshState()
+            PullToRefreshBox(
+                isRefreshing = uiState.refreshing,
+                onRefresh = { viewModel.refresh(fromPull = true) },
+                state = pullState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(
-                    items = uiState.items,
-                    key = { it.id }
-                ) { project ->
-                    ProjectCard(
-                        project = project,
-                        onClick = { onProjectClick(project.id) }
-                    )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = uiState.items,
+                        key = { it.id }
+                    ) { project ->
+                        ProjectCard(
+                            project = project,
+                            onClick = { onProjectClick(project.id) },
+                            connectionHealthy = null,
+                        )
+                    }
                 }
             }
         }
