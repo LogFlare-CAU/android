@@ -3,7 +3,6 @@ package com.example.logflare_android.feature.log
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.compose.rememberNavController
 import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare_android.data.LogsRepository
 import com.example.logflare_android.data.ProjectsRepository
