@@ -1,0 +1,2 @@
+# Unix shell scripts must use LF so GitHub Actions (Linux) can run ./gradlew
+gradlew text eol=lf
