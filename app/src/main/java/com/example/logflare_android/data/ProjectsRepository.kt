@@ -169,7 +169,7 @@ class ProjectsRepository @Inject constructor(
     suspend fun create(name: String): Result<ProjectDTOWithToken> = runCatching {
         val token = auth.token.first() ?: throw IllegalStateException("No token")
         val res = api.createProject(token, ProjectCreateParams(name = name))
-        if (!res.success) throw IllegalStateException("createProject failed: ${'$'}{res.message}")
+        if (!res.success) throw IllegalStateException("createProject failed: ${res.message}")
         val dto = res.data ?: throw IllegalStateException("Empty project returned")
         val projectData = ProjectData(
             dto = ProjectDTO(
