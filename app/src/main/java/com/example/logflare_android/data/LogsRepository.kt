@@ -34,7 +34,6 @@ class LogsRepository @Inject constructor(
         res.data ?: emptyList()
     }.recoverCatching { e ->
         if (e is HttpException && e.code() == 401) {
-            auth.clearToken()
             throw IllegalStateException("Unauthorized")
         } else throw e
     }

@@ -119,7 +119,6 @@ class ProjectsRepository @Inject constructor(
             Result.success(finalList)
         } catch (e: HttpException) {
             if (e.code() == 401) {
-                auth.clearToken()
                 Result.failure(IllegalStateException("Unauthorized", e))
             } else {
                 Result.failure(e)
@@ -143,7 +142,6 @@ class ProjectsRepository @Inject constructor(
         true
     }.recoverCatching { e ->
         if (e is HttpException && e.code() == 401) {
-            auth.clearToken()
             throw IllegalStateException("Unauthorized")
         } else throw e
     }
@@ -167,7 +165,6 @@ class ProjectsRepository @Inject constructor(
         dto
     }.recoverCatching { e ->
         if (e is HttpException && e.code() == 401) {
-            auth.clearToken()
             throw IllegalStateException("Unauthorized")
         } else throw e
     }
