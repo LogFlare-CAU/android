@@ -8,7 +8,6 @@ import com.example.logflare_android.data.LogsRepository
 import com.example.logflare_android.data.ProjectsRepository
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
-import com.example.logflare_android.feature.usecase.GetLogsUseCase
 import com.example.logflare_android.ui.common.LogCardInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -37,7 +36,6 @@ data class LogsUiState(
 class LogViewModel @Inject constructor(
     private val repo: LogsRepository,
     private val projectsRepo: ProjectsRepository,
-    private val getlogsUseCase: GetLogsUseCase,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(LogsUiState())
     val ui: StateFlow<LogsUiState> = _ui
@@ -83,11 +81,11 @@ class LogViewModel @Inject constructor(
                     )
                 }
             }
-            getlogsUseCase(
+            repo.getErrors(
+                projectId = projectid,
                 limit = limit,
                 offset = offset,
-                projectId = projectid,
-                sortBy = sortBy
+                sortBy = sortBy,
             )
                 .onSuccess { newItems ->
                     allLogs = if (isLoadMore) {

@@ -1,8 +1,8 @@
 package com.example.logflare_android.data
 
-import com.example.logflare.core.model.ErrorSequenceResponse
 import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare.core.network.LogflareApi
+import com.example.logflare_android.enums.LogSort
 import com.example.logflare_android.ui.common.LogCardInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
@@ -15,10 +15,24 @@ class LogsRepository @Inject constructor(
     private val api: LogflareApi,
     private val auth: AuthRepository
 ) {
-    suspend fun getErrors(projectId: Int, limit: Int = 50, offset: Int = 0): Result<List<ErrorlogDTO>> = runCatching {
+    suspend fun getErrors(
+        projectId: Int? = null,
+        limit: Int = 50,
+        offset: Int = 0,
+        sortBy: LogSort = LogSort.NEWEST,
+    ): Result<List<ErrorlogDTO>> = runCatching {
         val token = auth.token.first() ?: throw IllegalStateException("No token")
-        val res: ErrorSequenceResponse = api.getErrors(token, projectId, limit, offset)
-        if (!res.success) throw IllegalStateException("getErrors failed")
+        val res = api.getErrors(
+            bearer = token,
+            projectId = projectId,
+            limit = limit,
+            offset = offset,
+            sortby = sortBy.label,
+        )
+        if (!res.success) {
+            val detail = res.message.ifBlank { "getErrors failed" }
+            throw IllegalStateException(detail)
+        }
         res.data ?: emptyList()
     }.recoverCatching { e ->
         if (e is HttpException && e.code() == 401) {
