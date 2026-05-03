@@ -1,6 +1,8 @@
 package com.example.logflare_android.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -12,17 +14,25 @@ import com.example.logflare.core.model.ProjectSequenceResponse
 import com.example.logflare.core.network.LogflareApi
 import com.example.logflare_android.enums.LogLevel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 
 private val Context.dataStore by preferencesDataStore(name = "projects")
 
+private val projectListKey = stringPreferencesKey("projects")
+
+private fun Preferences.readProjectList(): List<ProjectData> =
+    this[projectListKey]?.let { raw ->
+        runCatching { Json.decodeFromString<List<ProjectData>>(raw) }.getOrDefault(emptyList())
+    } ?: emptyList()
+
+private fun MutablePreferences.writeProjectList(list: List<ProjectData>) {
+    this[projectListKey] = Json.encodeToString(list)
+}
 
 @Singleton
 class ProjectsRepository @Inject constructor(
@@ -30,25 +40,10 @@ class ProjectsRepository @Inject constructor(
     private val auth: AuthRepository,
     @ApplicationContext private val context: Context
 ) {
-    companion object {
-        private val KEY_PROJECTS = stringPreferencesKey("projects")
-    }
-
-    private val projects: Flow<List<ProjectData>> = context.dataStore.data.map { prefs ->
-        prefs[KEY_PROJECTS]?.let { rawJson ->
-            runCatching { Json.decodeFromString<List<ProjectData>>(rawJson) }
-                .getOrDefault(emptyList())
-        } ?: emptyList()
-    }
 
     suspend fun add(project: ProjectData) {
         context.dataStore.edit { prefs ->
-            val oldList: List<ProjectData> = prefs[KEY_PROJECTS]
-                ?.let { json ->
-                    runCatching { Json.decodeFromString<List<ProjectData>>(json) }
-                        .getOrElse { emptyList() }
-                }
-                ?: emptyList()
+            val oldList = prefs.readProjectList()
             val index = oldList.indexOfFirst { it.dto.id == project.dto.id }
             val newList = if (index >= 0) {
                 oldList.toMutableList().apply {
@@ -57,18 +52,14 @@ class ProjectsRepository @Inject constructor(
             } else {
                 oldList + project
             }
-            prefs[KEY_PROJECTS] = Json.encodeToString(newList)
+            prefs.writeProjectList(newList)
         }
     }
 
 
     suspend fun getAll(): List<ProjectData> {
         val prefs = context.dataStore.data.first()
-        val raw = prefs[KEY_PROJECTS] ?: return emptyList()
-
-        return runCatching {
-            Json.decodeFromString<List<ProjectData>>(raw)
-        }.getOrDefault(emptyList())
+        return prefs.readProjectList()
     }
 
     suspend fun get(projectId: Int): ProjectData? {
@@ -77,12 +68,9 @@ class ProjectsRepository @Inject constructor(
 
     suspend fun delete(projectId: Int) {
         context.dataStore.edit { prefs ->
-            val oldList = prefs[KEY_PROJECTS]?.let {
-                runCatching { Json.decodeFromString<List<ProjectData>>(it) }
-                    .getOrDefault(emptyList())
-            } ?: emptyList()
+            val oldList = prefs.readProjectList()
             val newList = oldList.filter { it.dto.id != projectId }
-            prefs[KEY_PROJECTS] = Json.encodeToString(newList)
+            prefs.writeProjectList(newList)
         }
         val token = auth.getToken()
         api.deleteProject(token, projectId)
@@ -90,10 +78,7 @@ class ProjectsRepository @Inject constructor(
 
     suspend fun setAlertLevel(projectId: Int, level: String) {
         context.dataStore.edit { prefs ->
-            val oldList = prefs[KEY_PROJECTS]?.let {
-                runCatching { Json.decodeFromString<List<ProjectData>>(it) }
-                    .getOrDefault(emptyList())
-            } ?: emptyList()
+            val oldList = prefs.readProjectList()
             val newList = oldList.map { old ->
                 if (old.dto.id == projectId) {
                     old.copy(alertLevel = level)
@@ -101,7 +86,7 @@ class ProjectsRepository @Inject constructor(
                     old
                 }
             }
-            prefs[KEY_PROJECTS] = Json.encodeToString(newList)
+            prefs.writeProjectList(newList)
         }
     }
 
@@ -118,10 +103,7 @@ class ProjectsRepository @Inject constructor(
             }
             val remoteList: List<ProjectDTO> = res.data ?: emptyList()
             context.dataStore.edit { prefs ->
-                val oldList = prefs[KEY_PROJECTS]?.let {
-                    runCatching { Json.decodeFromString<List<ProjectData>>(it) }
-                        .getOrDefault(emptyList())
-                } ?: emptyList()
+                val oldList = prefs.readProjectList()
                 val oldById = oldList.associateBy { it.dto.id }
                 val merged: List<ProjectData> = remoteList.map { dto ->
                     val existing = oldById[dto.id]
@@ -131,7 +113,7 @@ class ProjectsRepository @Inject constructor(
                             alertLevel = LogLevel.WARNING.label
                         )
                 }
-                prefs[KEY_PROJECTS] = Json.encodeToString(merged)
+                prefs.writeProjectList(merged)
             }
             val finalList = getAll()
             Result.success(finalList)
