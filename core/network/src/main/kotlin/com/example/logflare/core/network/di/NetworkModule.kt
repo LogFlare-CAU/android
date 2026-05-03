@@ -1,7 +1,9 @@
 package com.example.logflare.core.network.di
 
 import com.example.logflare.core.network.BuildConfig
+import com.example.logflare.core.network.HttpUnauthorizedAction
 import com.example.logflare.core.network.LogflareApi
+import com.example.logflare.core.network.UnauthorizedResponseInterceptor
 import com.example.logflare.core.network.host.BaseUrlProvider
 import com.example.logflare.core.network.host.HostSelectionInterceptor
 import dagger.Module
@@ -29,7 +31,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttp(baseUrlProvider: BaseUrlProvider): OkHttpClient =
+    fun provideOkHttp(
+        baseUrlProvider: BaseUrlProvider,
+        httpUnauthorizedAction: HttpUnauthorizedAction,
+    ): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
@@ -41,6 +46,7 @@ object NetworkModule {
                 }
             )
             .addInterceptor(HostSelectionInterceptor(baseUrlProvider))
+            .addInterceptor(UnauthorizedResponseInterceptor(httpUnauthorizedAction))
             .build()
 
     @Provides
