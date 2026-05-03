@@ -36,6 +36,7 @@ data class LogsUiState(
 class LogViewModel @Inject constructor(
     private val repo: LogsRepository,
     private val projectsRepo: ProjectsRepository,
+    private val pendingLogDetailStore: PendingLogDetailStore,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(LogsUiState())
     val ui: StateFlow<LogsUiState> = _ui
@@ -187,7 +188,7 @@ class LogViewModel @Inject constructor(
     }
 
     fun onLogClick(log: ErrorlogDTO) {
-        repo.selectLog(
+        pendingLogDetailStore.setPending(
             LogCardInfo(
                 level = log.level,
                 timestamp = log.timestamp,

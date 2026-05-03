@@ -40,7 +40,6 @@ import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare_android.enums.LogLevel
 import com.example.logflare_android.enums.LogSort
 import com.example.logflare_android.ui.common.*
-import java.nio.channels.Selector
 import com.example.logflare_android.ui.components.BackHeader
 
 private val CardGray = Color(0xFFEEEEEE)
