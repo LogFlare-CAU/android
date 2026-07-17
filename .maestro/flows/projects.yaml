@@ -1,0 +1,27 @@
+appId: com.logflare.android
+---
+- runFlow: _login.yaml
+- tapOn:
+    id: "nav_projects"
+- assertVisible:
+    id: "projects_list"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/projects_list_${QA_THEME}
+    cropOn:
+      id: "app_root"
+- tapOn:
+    id: "project_card_101"
+- assertVisible:
+    id: "project_detail"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/project_detail_${QA_THEME}
+    cropOn:
+      id: "app_root"
+- tapOn:
+    id: "open_project_settings"
+- assertVisible:
+    id: "project_settings"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/project_settings_${QA_THEME}
+    cropOn:
+      id: "app_root"

@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,7 +34,8 @@ fun LogFlareTopAppBar(
     onClose: (() -> Unit)? = null,
     actionIcon: ImageVector? = null,
     onActionClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backTestTag: String? = null,
 ) {
     if (titleType == TopAppBarTitleType.Title) {
         require(!titleText.isNullOrBlank()) { "titleText is required when titleType is Title" }
@@ -50,7 +52,10 @@ fun LogFlareTopAppBar(
         contentAlignment = Alignment.Center
     ) {
         onBack?.let {
-            IconButton(onClick = it, modifier = Modifier.align(Alignment.CenterStart)) {
+            val backModifier = Modifier
+                .align(Alignment.CenterStart)
+                .then(if (backTestTag != null) Modifier.testTag(backTestTag) else Modifier)
+            IconButton(onClick = it, modifier = backModifier) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",

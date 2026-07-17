@@ -6,6 +6,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.logflare.core.designsystem.AppTheme
@@ -16,7 +17,8 @@ fun RowScope.LogFlareGnbItem(
     onClick: () -> Unit,
     @DrawableRes iconRes: Int,
     label: String,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val selectedColor = AppTheme.colors.primary.default
     val unselectedColor = AppTheme.colors.secondary.default
@@ -26,6 +28,7 @@ fun RowScope.LogFlareGnbItem(
         selected = selected,
         onClick = onClick,
         enabled = enabled,
+        modifier = modifier,
         icon = {
             androidx.compose.material3.Icon(
                 painter = painterResource(id = iconRes),

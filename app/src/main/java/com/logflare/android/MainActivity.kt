@@ -10,21 +10,22 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.logflare.android.feature.auth.LoginScreen
-import com.logflare.android.feature.main.MainScaffold
-import com.logflare.android.ui.theme.LogflareandroidTheme
-import dagger.hilt.android.AndroidEntryPoint
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.logflare.android.ui.navigation.Route
-import com.logflare.android.viewmodel.AppViewModel
-import androidx.compose.runtime.collectAsState
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.core.content.ContextCompat
+import androidx.navigation.compose.rememberNavController
+import com.logflare.android.feature.auth.LoginScreen
+import com.logflare.android.feature.main.MainScaffold
+import com.logflare.android.ui.VisualQaAppRoot
+import com.logflare.android.ui.navigation.Route
+import com.logflare.android.ui.theme.LogflareandroidTheme
+import com.logflare.android.viewmodel.AppViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint(ComponentActivity::class)
 class MainActivity : Hilt_MainActivity() {
@@ -52,7 +53,12 @@ class MainActivity : Hilt_MainActivity() {
 
         setContent {
             LogflareandroidTheme {
-                App()
+                VisualQaAppRoot {
+                    App(
+                        intentProjectId = projectId,
+                        intentErrorId = errorId,
+                    )
+                }
             }
         }
     }

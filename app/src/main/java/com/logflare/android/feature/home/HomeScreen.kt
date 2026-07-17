@@ -195,7 +195,8 @@ fun HomeScreenContent(
             AssistChip(
                 onClick = onCreateProject,
                 label = { Text("Create Project") },
-                colors = AssistChipDefaults.assistChipColors(containerColor = Color.Transparent)
+                colors = AssistChipDefaults.assistChipColors(containerColor = Color.Transparent),
+                modifier = Modifier.testTag(VisualQaTags.CreateProject),
             )
         }
         when {

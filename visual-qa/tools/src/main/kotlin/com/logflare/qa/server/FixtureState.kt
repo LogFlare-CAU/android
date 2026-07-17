@@ -46,7 +46,7 @@ class FixtureState {
     private var nextProjectId = 303
     private var nextLogFileId = 3001
     private var nextPermId = 1
-    private var nextErrorId = 1
+    private var nextErrorId = 5003
     private var nextFcmTokenIdx = 1
 
     init {
@@ -80,7 +80,7 @@ class FixtureState {
         perms[2] = QaProjectPerm(2, 101, 2, true)
         perms[3] = QaProjectPerm(3, 202, 1, true)
         errorLogs += QaErrorLog(
-            id = 1,
+            id = 5001,
             project_id = 101,
             errortype = "Timeout",
             message = "payment gateway timeout",
@@ -88,7 +88,7 @@ class FixtureState {
             timestamp = "2026-01-01T00:00:00Z",
         )
         errorLogs += QaErrorLog(
-            id = 2,
+            id = 5002,
             project_id = 202,
             errortype = "NullPointer",
             message = "checkout null cart",
@@ -107,7 +107,7 @@ class FixtureState {
         nextProjectId = 303
         nextLogFileId = 3001
         nextPermId = 4
-        nextErrorId = 3
+        nextErrorId = 5003
         nextFcmTokenIdx = 1
     }
 

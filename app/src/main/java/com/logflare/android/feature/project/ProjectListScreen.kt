@@ -141,6 +141,7 @@ fun ProjectListScreenContent(
                                 project = project,
                                 onClick = { onProjectClick(project.id) },
                                 connectionHealthy = null,
+                                modifier = Modifier.testTag(VisualQaTags.projectCard(project.id)),
                             )
                         }
                     }

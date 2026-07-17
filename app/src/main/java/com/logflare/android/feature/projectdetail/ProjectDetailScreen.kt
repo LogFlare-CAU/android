@@ -151,7 +151,8 @@ private fun ProjectDetailBody(
     ) {
         ProjectSettingsCard(
             label = uiState.settingsLabel,
-            onClick = { onOpenProjectSettings(uiState.projectId) }
+            onClick = { onOpenProjectSettings(uiState.projectId) },
+            modifier = Modifier.testTag(VisualQaTags.OpenProjectSettings),
         )
         FilterPanel(
             filterState = uiState.filterState,
@@ -187,10 +188,11 @@ private fun ProjectDetailBody(
 @Composable
 private fun ProjectSettingsCard(
     label: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .clickable(onClick = onClick),
@@ -243,7 +245,8 @@ private fun LogsSection(
                     log.projectName,
                     log.fileName,
                 ),
-                onClick = { onLogClick(log) }
+                onClick = { onLogClick(log) },
+                modifier = Modifier.testTag(VisualQaTags.logCard(log.id)),
             )
         }
         if (showMoreHasMore) {
@@ -299,7 +302,9 @@ private fun FilterPanel(
             CommonFilterDropdown(
                 title = "Log Level",
                 isActive = filterState.selectedLevel.isNotEmpty(),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(VisualQaTags.FilterLogLevel),
             ) {
                 LogLevel.entries.forEach { level ->
                     CommonCheckRow(
@@ -327,7 +332,9 @@ private fun FilterPanel(
             CommonFilterDropdown(
                 title = "Sort By",
                 isActive = filterState.sortBy != LogSort.NEWEST,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(VisualQaTags.FilterSort),
             ) {
                 CommonRadioRow(
                     label = "Newest",

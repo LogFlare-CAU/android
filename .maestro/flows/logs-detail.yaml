@@ -1,0 +1,15 @@
+appId: com.logflare.android
+---
+- runFlow: _login.yaml
+- tapOn:
+    id: "nav_logs"
+- assertVisible:
+    id: "logs_list"
+- tapOn:
+    id: "log_card_5001"
+- assertVisible:
+    id: "log_detail"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/logs_detail_${QA_THEME}
+    cropOn:
+      id: "app_root"
