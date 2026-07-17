@@ -13,13 +13,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
+import com.logflare.android.ui.VisualQaTags
 import kotlinx.coroutines.launch
-
-// 파일 내부에 컬러 정의가 없을 경우를 대비해 기본값 지정 (필요시 수정)
 
 @Composable
 fun ProjectCreateScreen(
@@ -50,48 +50,27 @@ fun ProjectCreateScreen(
                 )
             }
         },
-        bottomBar = {
-            BottomActionBar(
-                onDone = {
-                    vm.savePerms()
-                    onCreated()
-                },
-                enabled = ui.token != null
-            )
-        }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(vertical = 12.dp)
-        ) {
-            item {
-                if (ui.error != null) {
-                    Text(
-                        text = ui.error ?: "",
-                        color = AppTheme.colors.red.default,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            item {
-                ProjectNameSection(
-                    name = ui.name,
-                    isValid = ui.nameValid,
-                    loading = ui.loading,
-                    saved = ui.saved,
-                    onChange = vm::onNameChanged,
-                    onSave = { if (ui.saved) vm.editProject() else vm.saveProject() }
-                )
-            }
-
-            item {
-                TokenSection(
-                    token = ui.token,
-                    onCopy = {
+        ProjectCreateScreenContent(
+            uiState = ui,
+            onAction = { action ->
+                when (action) {
+                    is ProjectEditorAction.NameChanged -> vm.onNameChanged(action.value)
+                    is ProjectEditorAction.KeywordChanged -> vm.onKeywordInputChanged(action.value)
+                    ProjectEditorAction.AddKeyword -> vm.addKeyword()
+                    is ProjectEditorAction.RemoveKeyword -> vm.removeKeyword(action.value)
+                    is ProjectEditorAction.ToggleLevel -> vm.toggleAlertLevel(action.value)
+                    is ProjectEditorAction.TogglePermission -> {
+                        val index = ui.permissions.indexOfFirst { it.username == action.username }
+                        if (index >= 0) {
+                            vm.onPermissionToggle(index, !ui.permissions[index].active)
+                        }
+                    }
+                    ProjectEditorAction.Submit -> {
+                        vm.savePerms()
+                        onCreated()
+                    }
+                    ProjectEditorAction.CopyToken -> {
                         ui.token?.let { token ->
                             scope.launch {
                                 clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Project Token", token)))
@@ -99,39 +78,116 @@ fun ProjectCreateScreen(
                             }
                         }
                     }
+                    ProjectEditorAction.Delete -> Unit
+                }
+            },
+            onNameSave = {
+                if (ui.saved) vm.editProject() else vm.saveProject()
+            },
+            modifier = Modifier.padding(paddingValues),
+        )
+    }
+}
+
+@Composable
+fun ProjectCreateScreenContent(
+    uiState: ProjectCreateUiState,
+    onAction: (ProjectEditorAction) -> Unit,
+) {
+    ProjectCreateScreenContent(
+        uiState = uiState,
+        onAction = onAction,
+        onNameSave = {},
+    )
+}
+
+@Composable
+private fun ProjectCreateScreenContent(
+    uiState: ProjectCreateUiState,
+    onAction: (ProjectEditorAction) -> Unit,
+    onNameSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(VisualQaTags.ProjectCreate),
+    ) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(vertical = 12.dp),
+        ) {
+            item {
+                if (uiState.error != null) {
+                    Text(
+                        text = uiState.error ?: "",
+                        color = AppTheme.colors.red.default,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+            }
+
+            item {
+                ProjectNameSection(
+                    name = uiState.name,
+                    isValid = uiState.nameValid,
+                    loading = uiState.loading,
+                    saved = uiState.saved,
+                    onChange = { value -> onAction(ProjectEditorAction.NameChanged(value)) },
+                    onSave = onNameSave,
+                )
+            }
+
+            item {
+                TokenSection(
+                    token = uiState.token,
+                    onCopy = { onAction(ProjectEditorAction.CopyToken) },
                 )
             }
 
             item {
                 KeywordSection(
-                    value = ui.keywordInput,
-                    error = ui.keywordError,
-                    onValueChange = vm::onKeywordInputChanged,
-                    onSave = vm::addKeyword,
-                    enabled = ui.saved
+                    value = uiState.keywordInput,
+                    error = uiState.keywordError,
+                    onValueChange = { value -> onAction(ProjectEditorAction.KeywordChanged(value)) },
+                    onSave = { onAction(ProjectEditorAction.AddKeyword) },
+                    enabled = uiState.saved,
                 )
             }
 
             item {
-                KeywordList(keywords = ui.keywords, onRemove = vm::removeKeyword)
+                KeywordList(
+                    keywords = uiState.keywords,
+                    onRemove = { keyword -> onAction(ProjectEditorAction.RemoveKeyword(keyword)) },
+                )
             }
 
             item {
                 LogLevelSection(
-                    selected = ui.alertLevels,
-                    onToggle = vm::toggleAlertLevel,
-                    enabled = ui.saved
+                    selected = uiState.alertLevels,
+                    onToggle = { level -> onAction(ProjectEditorAction.ToggleLevel(level)) },
+                    enabled = uiState.saved,
                 )
             }
 
             item {
                 PermissionsSection(
-                    permissions = ui.permissions,
-                    onToggle = vm::onPermissionToggle,
-                    enabled = ui.saved
+                    permissions = uiState.permissions,
+                    onToggle = { index, _ ->
+                        uiState.permissions.getOrNull(index)?.username?.let { username ->
+                            onAction(ProjectEditorAction.TogglePermission(username))
+                        }
+                    },
+                    enabled = uiState.saved,
                 )
             }
         }
+
+        BottomActionBar(
+            onDone = { onAction(ProjectEditorAction.Submit) },
+            enabled = uiState.token != null,
+        )
     }
 }
 
@@ -140,7 +196,7 @@ private fun TokenSection(token: String?, onCopy: () -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
             text = "Project Token",
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
         )
         Spacer(modifier = Modifier.height(8.dp))
         Surface(
@@ -148,19 +204,19 @@ private fun TokenSection(token: String?, onCopy: () -> Unit) {
             color = AppTheme.colors.surfaceVariant,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = token != null) { onCopy() }
+                .clickable(enabled = token != null) { onCopy() },
         ) {
             Row(
                 modifier = Modifier
                     .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .heightIn(min = 50.dp), // 고정 높이 대신 최소 높이 권장
-                verticalAlignment = Alignment.CenterVertically
+                    .heightIn(min = 50.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = token ?: "Token will be generated when you save",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (token != null) Color(0xFF4C4C4C) else Color(0xFF9E9E9E)
+                    color = if (token != null) Color(0xFF4C4C4C) else Color(0xFF9E9E9E),
                 )
                 Button(
                     onClick = onCopy,
@@ -169,10 +225,10 @@ private fun TokenSection(token: String?, onCopy: () -> Unit) {
                         containerColor = Color(0xFF7B7B7B),
                         contentColor = Color.White,
                         disabledContainerColor = DisabledGray,
-                        disabledContentColor = Color.White
+                        disabledContentColor = Color.White,
                     ),
                     modifier = Modifier.height(40.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp)
+                    contentPadding = PaddingValues(horizontal = 12.dp),
                 ) {
                     Text("Copy")
                 }
