@@ -41,6 +41,7 @@ $QaPassword = 'qa-password'
 $QaBaseUrl = 'http://10.0.2.2:8000'
 
 $BaselinesDir = Join-Path $RepoRoot 'visual-qa\device-baselines'
+$StagingDir = Join-Path $RepoRoot 'visual-qa\device-baselines-staging'
 $DiffsDir = Join-Path $RepoRoot 'visual-qa\device-diffs'
 $CapturesRoot = Join-Path $RepoRoot 'visual-qa\device-captures'
 $ToolsBat = Join-Path $RepoRoot 'visual-qa\tools\build\install\tools\bin\tools.bat'
@@ -83,9 +84,19 @@ function Invoke-QaReset {
 
 function Deny-PostNotificationsIfPresent {
     param([string]$DeviceSerial)
-    $packages = & adb -s $DeviceSerial shell pm list permissions -g 2>$null | Out-String
-    if ($packages -match 'POST_NOTIFICATIONS' -or $true) {
-        & adb -s $DeviceSerial shell pm deny com.logflare.android android.permission.POST_NOTIFICATIONS 2>$null | Out-Null
+    $dump = & adb -s $DeviceSerial shell dumpsys package com.logflare.android 2>$null | Out-String
+    if ($dump -notmatch 'android\.permission\.POST_NOTIFICATIONS') {
+        Write-Info 'POST_NOTIFICATIONS not declared by package; skip deny'
+        return
+    }
+    $denyOut = & adb -s $DeviceSerial shell pm deny com.logflare.android android.permission.POST_NOTIFICATIONS 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        # Already denied / not granted is acceptable.
+        if ($denyOut -match '(?i)not\s+held|already|Unknown permission|Security exception') {
+            Write-Info ("POST_NOTIFICATIONS deny tolerated: {0}" -f $denyOut.Trim())
+            return
+        }
+        Write-Warning ("pm deny POST_NOTIFICATIONS returned {0}: {1}" -f $LASTEXITCODE, $denyOut.Trim())
     }
 }
 
@@ -96,6 +107,17 @@ function Get-CheckpointPath {
         [string]$Theme
     )
     return (Join-Path $Directory ("{0}_{1}.png" -f $Checkpoint, $Theme))
+}
+
+function ConvertTo-MaestroRelativePath {
+    param([string]$AbsolutePath)
+    $full = [System.IO.Path]::GetFullPath($AbsolutePath)
+    $root = [System.IO.Path]::GetFullPath($RepoRoot)
+    if (-not $full.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Path '$AbsolutePath' is outside repo root '$RepoRoot'"
+    }
+    $rel = $full.Substring($root.Length).TrimStart('\', '/')
+    return ($rel -replace '\\', '/')
 }
 
 function Assert-CaptureManifest {
@@ -157,20 +179,41 @@ function Invoke-CompareAll {
     }
 }
 
-function Invoke-RecordAll {
+function Invoke-StageRecordAll {
     param(
-        [string]$CaptureDir,
-        [string]$Theme
+        [hashtable]$ThemeCaptureDirs
     )
-    New-Item -ItemType Directory -Force -Path $BaselinesDir | Out-Null
-    foreach ($checkpoint in $ExpectedCheckpoints) {
-        $expected = Get-CheckpointPath -Directory $BaselinesDir -Checkpoint $checkpoint -Theme $Theme
-        $actual = Get-CheckpointPath -Directory $CaptureDir -Checkpoint $checkpoint -Theme $Theme
-        Write-Info ("record-device {0}" -f (Split-Path -Leaf $expected))
-        & $ToolsBat record-device --actual $actual --expected $expected
-        if ($LASTEXITCODE -ne 0) {
-            throw ("record-device failed for {0}" -f (Split-Path -Leaf $expected))
+    if (Test-Path -LiteralPath $StagingDir) {
+        Remove-Item -LiteralPath $StagingDir -Recurse -Force
+    }
+    New-Item -ItemType Directory -Force -Path $StagingDir | Out-Null
+
+    foreach ($theme in $Themes) {
+        $captureDir = $ThemeCaptureDirs[$theme]
+        foreach ($checkpoint in $ExpectedCheckpoints) {
+            $actual = Get-CheckpointPath -Directory $captureDir -Checkpoint $checkpoint -Theme $theme
+            $staged = Get-CheckpointPath -Directory $StagingDir -Checkpoint $checkpoint -Theme $theme
+            Write-Info ("record-device (stage) {0}" -f (Split-Path -Leaf $staged))
+            & $ToolsBat record-device --actual $actual --expected $staged
+            if ($LASTEXITCODE -ne 0) {
+                throw ("record-device staging failed for {0}; baselines left untouched" -f (Split-Path -Leaf $staged))
+            }
         }
+    }
+}
+
+function Promote-BaselineSet {
+    $expectedNames = @()
+    foreach ($theme in $Themes) {
+        foreach ($checkpoint in $ExpectedCheckpoints) {
+            $expectedNames += ("{0}_{1}.png" -f $checkpoint, $theme)
+        }
+    }
+    $csv = ($expectedNames -join ',')
+    Write-Info ("promote-baselines count={0}" -f $expectedNames.Count)
+    & $ToolsBat promote-baselines --staging $StagingDir --baselines $BaselinesDir --expected $csv
+    if ($LASTEXITCODE -ne 0) {
+        throw "promote-baselines failed; previous baselines restored if backup was available"
     }
 }
 
@@ -179,22 +222,31 @@ function Invoke-MaestroFlow {
         [string]$DeviceSerial,
         [string]$FlowName,
         [string]$Theme,
-        [string]$OutputDir
+        [string]$OutputDirAbsolute
     )
     $flowPath = Join-Path $FlowsDir $FlowName
     if (-not (Test-Path -LiteralPath $flowPath)) {
         throw "Missing Maestro flow: $flowPath"
     }
+    $relativeFlow = ConvertTo-MaestroRelativePath -AbsolutePath $flowPath
+    $relativeOutput = ConvertTo-MaestroRelativePath -AbsolutePath $OutputDirAbsolute
+
     $env:QA_BASE_URL = $QaBaseUrl
     $env:QA_USERNAME = $QaUsername
     $env:QA_PASSWORD = $QaPassword
     $env:QA_THEME = $Theme
-    $env:QA_OUTPUT_DIR = $OutputDir
+    $env:QA_OUTPUT_DIR = $relativeOutput
 
-    Write-Info ("maestro test {0} theme={1}" -f $FlowName, $Theme)
-    & maestro --device $DeviceSerial test $flowPath
-    if ($LASTEXITCODE -ne 0) {
-        throw ("Maestro flow failed: {0} (theme={1}, exit={2})" -f $FlowName, $Theme, $LASTEXITCODE)
+    Write-Info ("maestro test {0} theme={1} output={2}" -f $FlowName, $Theme, $relativeOutput)
+    Push-Location $RepoRoot
+    try {
+        & maestro --device $DeviceSerial test $relativeFlow
+        if ($LASTEXITCODE -ne 0) {
+            throw ("Maestro flow failed: {0} (theme={1}, exit={2})" -f $FlowName, $Theme, $LASTEXITCODE)
+        }
+    }
+    finally {
+        Pop-Location
     }
 }
 
@@ -235,8 +287,9 @@ try {
         throw "adb install failed with exit $LASTEXITCODE"
     }
 
-    $uiModePrevious = (& adb -s $resolvedSerial shell cmd uimode night).Trim()
-    Set-AnimationScales -Serial $resolvedSerial -Previous $animationPrevious
+    $uiModePrevious = (& adb -s $resolvedSerial shell cmd uimode night | Out-String).Trim()
+    Capture-AnimationScales -Serial $resolvedSerial -Previous $animationPrevious
+    Disable-AnimationScales -Serial $resolvedSerial
 
     Write-Info 'Starting mock server on 127.0.0.1:8000'
     $serverProc = Start-Process -FilePath $ToolsBat -ArgumentList @('server', '--host', '127.0.0.1', '--port', '8000') `
@@ -259,8 +312,8 @@ try {
             & adb -s $resolvedSerial shell pm clear com.logflare.android | Out-Null
             Deny-PostNotificationsIfPresent -DeviceSerial $resolvedSerial
             Set-UiMode -Serial $resolvedSerial -Theme $theme
-            Set-AnimationScales -Serial $resolvedSerial -Previous $animationPrevious
-            Invoke-MaestroFlow -DeviceSerial $resolvedSerial -FlowName $flow -Theme $theme -OutputDir $captureDir
+            Disable-AnimationScales -Serial $resolvedSerial
+            Invoke-MaestroFlow -DeviceSerial $resolvedSerial -FlowName $flow -Theme $theme -OutputDirAbsolute $captureDir
         }
 
         Assert-CaptureManifest -CaptureDir $captureDir -Theme $theme
@@ -274,10 +327,9 @@ try {
         Write-Info 'Verify completed: all checkpoints matched.'
     }
     else {
-        foreach ($theme in $Themes) {
-            Invoke-RecordAll -CaptureDir $themeCaptureDirs[$theme] -Theme $theme
-        }
-        Write-Info 'Record completed: baselines updated after full light+dark capture success.'
+        Invoke-StageRecordAll -ThemeCaptureDirs $themeCaptureDirs
+        Promote-BaselineSet
+        Write-Info 'Record completed: staged then promoted complete baseline set.'
     }
 
     $exitCode = 0
@@ -301,10 +353,11 @@ finally {
 
         if (-not [string]::IsNullOrWhiteSpace($uiModePrevious)) {
             try {
-                if ($uiModePrevious -match 'yes|true|night') {
+                $prev = Resolve-UiModeNightState -Raw $uiModePrevious
+                if ($prev -eq 'yes') {
                     & adb -s $resolvedSerial shell cmd uimode night yes | Out-Null
                 }
-                else {
+                elseif ($prev -eq 'no') {
                     & adb -s $resolvedSerial shell cmd uimode night no | Out-Null
                 }
             }

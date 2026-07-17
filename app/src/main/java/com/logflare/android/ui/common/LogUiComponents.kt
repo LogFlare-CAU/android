@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -54,6 +55,7 @@ fun CommonFilterDropdown(
     title: String,
     isActive: Boolean = true,
     modifier: Modifier = Modifier.Companion,
+    interactionTag: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -65,6 +67,7 @@ fun CommonFilterDropdown(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (interactionTag != null) Modifier.testTag(interactionTag) else Modifier)
                 .onGloballyPositioned { coords ->
                     buttonWidth = coords.size.width
                 }

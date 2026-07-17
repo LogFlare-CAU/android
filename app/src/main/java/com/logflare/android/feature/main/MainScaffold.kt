@@ -126,9 +126,14 @@ fun MainScaffold(
             BottomNavigationBar(navController = navController)
         }
     ) { paddingValues ->
+        val extraTop = mainNavHostExtraTopPaddingDp(currentRoute)
         MainNavHost(
             navController = navController,
-            modifier = Modifier.padding(paddingValues).padding(top = 16.dp),
+            modifier = Modifier
+                .padding(paddingValues)
+                .then(
+                    if (extraTop > 0) Modifier.padding(top = extraTop.dp) else Modifier,
+                ),
             onLogout = onLogout
         )
     }

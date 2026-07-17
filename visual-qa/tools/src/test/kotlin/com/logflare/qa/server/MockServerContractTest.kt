@@ -178,10 +178,10 @@ class MockServerContractTest {
         assertEquals(2, data.size)
         assertEquals(1, data[0].jsonObject["idx"]!!.jsonPrimitive.int)
         assertEquals("qa-admin", data[0].jsonObject["username"]!!.jsonPrimitive.content)
-        assertEquals(0, data[0].jsonObject["permission"]!!.jsonPrimitive.int)
+        assertEquals(100, data[0].jsonObject["permission"]!!.jsonPrimitive.int)
         assertEquals(2, data[1].jsonObject["idx"]!!.jsonPrimitive.int)
         assertEquals("qa-member", data[1].jsonObject["username"]!!.jsonPrimitive.content)
-        assertEquals(2, data[1].jsonObject["permission"]!!.jsonPrimitive.int)
+        assertEquals(0, data[1].jsonObject["permission"]!!.jsonPrimitive.int)
     }
 
     @Test
@@ -208,6 +208,7 @@ class MockServerContractTest {
         val meObj = parseObject(me.body)
         assertEnvelope(meObj)
         assertEquals("qa-admin", meObj["data"]!!.jsonObject["username"]!!.jsonPrimitive.content)
+        assertEquals(100, meObj["data"]!!.jsonObject["permission"]!!.jsonPrimitive.int)
 
         val byName = request("GET", "/user/name?username=qa-member", headers = authHeaders())
         assertEquals(200, byName.code)
@@ -215,6 +216,7 @@ class MockServerContractTest {
         assertEnvelope(nameObj)
         assertEquals(2, nameObj["data"]!!.jsonObject["idx"]!!.jsonPrimitive.int)
         assertEquals("qa-member", nameObj["data"]!!.jsonObject["username"]!!.jsonPrimitive.content)
+        assertEquals(0, nameObj["data"]!!.jsonObject["permission"]!!.jsonPrimitive.int)
     }
 
     @Test

@@ -48,4 +48,5 @@ app/build/reports/roborazzi/
 visual-qa/output/
 visual-qa/device-diffs/
 visual-qa/device-captures/
+visual-qa/device-baselines-staging/
 visual-qa/dev-captures/

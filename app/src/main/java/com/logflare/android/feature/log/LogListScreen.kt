@@ -138,9 +138,8 @@ private fun FilterDropdownRow(
         CommonFilterDropdown(
             title = "Log Level",
             isActive = selectedLevels.isNotEmpty(),
-            modifier = Modifier
-                .weight(1f)
-                .testTag(VisualQaTags.FilterLogLevel),
+            modifier = Modifier.weight(1f),
+            interactionTag = VisualQaTags.FilterLogLevel,
         ) {
             LogLevel.entries.forEach { level ->
                 CommonCheckRow(
@@ -156,9 +155,8 @@ private fun FilterDropdownRow(
         CommonFilterDropdown(
             title = "Projects",
             isActive = projectOptions.any { it.selected },
-            modifier = Modifier
-                .weight(1f)
-                .testTag(VisualQaTags.FilterProjects),
+            modifier = Modifier.weight(1f),
+            interactionTag = VisualQaTags.FilterProjects,
         ) {
             projectOptions.forEach { option ->
                 CommonRadioRow(
@@ -172,9 +170,8 @@ private fun FilterDropdownRow(
         CommonFilterDropdown(
             title = "Sort By",
             isActive = sortSelection != LogSort.NEWEST,
-            modifier = Modifier
-                .weight(1f)
-                .testTag(VisualQaTags.FilterSort),
+            modifier = Modifier.weight(1f),
+            interactionTag = VisualQaTags.FilterSort,
         ) {
             CommonRadioRow(
                 label = "Newest",

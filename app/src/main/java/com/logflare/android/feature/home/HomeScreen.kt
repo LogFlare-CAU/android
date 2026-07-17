@@ -226,6 +226,7 @@ fun HomeScreenContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .testTag(VisualQaTags.projectCard(p.id))
                             .clickable { onProjectSelected(p.id) }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically

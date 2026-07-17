@@ -62,8 +62,8 @@ class FixtureState {
         errorLogs.clear()
         logLines.clear()
 
-        users[1] = QaUser(1, "qa-admin", 0)
-        users[2] = QaUser(2, "qa-member", 2)
+        users[1] = QaUser(1, "qa-admin", 100)
+        users[2] = QaUser(2, "qa-member", 0)
         projects[101] = QaProject(
             101,
             "Payments",
