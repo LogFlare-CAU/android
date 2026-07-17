@@ -105,7 +105,7 @@ function Get-AnimationScaleValue {
     return $value
 }
 
-function Set-AnimationScales {
+function Capture-AnimationScales {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Serial,
@@ -116,7 +116,14 @@ function Set-AnimationScales {
     $Previous['window_animation_scale'] = Get-AnimationScaleValue -Serial $Serial -Key 'window_animation_scale'
     $Previous['transition_animation_scale'] = Get-AnimationScaleValue -Serial $Serial -Key 'transition_animation_scale'
     $Previous['animator_duration_scale'] = Get-AnimationScaleValue -Serial $Serial -Key 'animator_duration_scale'
+}
 
+function Disable-AnimationScales {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Serial
+    )
+    Assert-Command -Name 'adb'
     & adb -s $Serial shell settings put global window_animation_scale 0 | Out-Null
     & adb -s $Serial shell settings put global transition_animation_scale 0 | Out-Null
     & adb -s $Serial shell settings put global animator_duration_scale 0 | Out-Null
@@ -137,6 +144,20 @@ function Restore-AnimationScales {
     }
 }
 
+function Resolve-UiModeNightState {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]$Raw
+    )
+    $text = $Raw.Trim()
+    if ($text -match '(?i)Night mode:\s*yes\b') { return 'yes' }
+    if ($text -match '(?i)Night mode:\s*no\b') { return 'no' }
+    if ($text -eq 'yes') { return 'yes' }
+    if ($text -eq 'no') { return 'no' }
+    return $null
+}
+
 function Set-UiMode {
     param(
         [Parameter(Mandatory = $true)]
@@ -146,22 +167,23 @@ function Set-UiMode {
         [string]$Theme
     )
     Assert-Command -Name 'adb'
-    $nightMode = if ($Theme -eq 'dark') { 'yes' } else { 'no' }
-    & adb -s $Serial shell cmd uimode night $nightMode | Out-Null
+    $expected = if ($Theme -eq 'dark') { 'yes' } else { 'no' }
+    & adb -s $Serial shell cmd uimode night $expected | Out-Null
 
     $deadline = (Get-Date).AddSeconds(20)
+    $currentRaw = $null
+    $parsed = $null
     do {
         Start-Sleep -Milliseconds 250
-        $current = (& adb -s $Serial shell cmd uimode night).Trim()
-        if ($Theme -eq 'dark' -and $current -match 'yes|true|night') {
-            return
-        }
-        if ($Theme -eq 'light' -and $current -match 'no|false|notnight|not night') {
+        $currentRaw = (& adb -s $Serial shell cmd uimode night | Out-String).Trim()
+        $parsed = Resolve-UiModeNightState -Raw $currentRaw
+        if ($parsed -eq $expected) {
             return
         }
     } while ((Get-Date) -lt $deadline)
 
-    throw "Timed out waiting for UI mode '$Theme' on serial '$Serial'. Last value: '$current'"
+    throw ("Timed out waiting for UI mode '{0}' (expected Night mode: {1}) on serial '{2}'. Last raw='{3}' parsed='{4}'" -f `
+            $Theme, $expected, $Serial, $currentRaw, $parsed)
 }
 
 function Wait-HttpHealth {

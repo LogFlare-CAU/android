@@ -60,13 +60,35 @@ class MaestroMockContractTest {
             "Assert-Java17",
             "Resolve-EmulatorSerial",
             "Assert-Pixel7Api35Profile",
-            "Set-AnimationScales",
+            "Capture-AnimationScales",
+            "Disable-AnimationScales",
             "Restore-AnimationScales",
+            "Resolve-UiModeNightState",
             "Set-UiMode",
             "Wait-HttpHealth",
         ).forEach { fn ->
             assertTrue("common missing $fn", commonText.contains("function $fn"))
         }
+
+        assertFalse(
+            "Disable-AnimationScales must not reassign Previous originals",
+            Regex(
+                """function Disable-AnimationScales[\s\S]*?Previous\[['\"]window_animation_scale['\"]\]\s*=""",
+            ).containsMatchIn(commonText),
+        )
+        assertTrue(
+            "Capture-AnimationScales should read animation scales into Previous",
+            commonText.contains("function Capture-AnimationScales") &&
+                commonText.contains("Previous['window_animation_scale']"),
+        )
+        assertTrue(
+            "Resolve-UiModeNightState must exact-match Night mode: yes/no",
+            commonText.contains("Night mode:\\s*yes") && commonText.contains("Night mode:\\s*no"),
+        )
+        assertFalse(
+            "Set-UiMode must not use loose night|yes|true matching that accepts Night mode: no as dark",
+            commonText.contains("-match 'yes|true|night'") || commonText.contains("-match \"yes|true|night\""),
+        )
 
         val mockText = mock.readText()
         assertTrue(mockText.contains("param("))
@@ -80,8 +102,33 @@ class MaestroMockContractTest {
         assertTrue(mockText.contains("device-baselines"))
         assertTrue(mockText.contains("device-diffs"))
         assertTrue(mockText.contains("record-device"))
+        assertTrue(
+            mockText.contains("device-baselines-staging") ||
+                mockText.contains("Promote-BaselineSet") ||
+                mockText.contains("BaselineSetPromoter"),
+        )
+        assertTrue(mockText.contains("Push-Location") && mockText.contains("RepoRoot"))
+        assertTrue(
+            mockText.contains("visual-qa/device-captures") ||
+                mockText.contains("ConvertTo-MaestroRelativePath") ||
+                mockText.contains("-replace") ||
+                mockText.contains(".Replace('\\','/')"),
+        )
         assertFalse("scripts must never echo password literals in docs", mockText.contains("Write-Host \$QA_PASSWORD"))
+        assertFalse("notification probe must not force-deny via -or \$true", mockText.contains("-or \$true"))
         assertTrue(File(repoRoot, "visual-qa/device-baselines/.gitkeep").isFile)
+
+        assertTrue(mockText.contains("Capture-AnimationScales"))
+        assertTrue(mockText.contains("Disable-AnimationScales"))
+        val flowLoop = mockText.substringAfter("foreach (\$flow in \$Flows)", "")
+        assertFalse(
+            "flow loop must not re-capture animation originals",
+            flowLoop.contains("Capture-AnimationScales"),
+        )
+        assertTrue(
+            "flow loop may force-zero animations",
+            flowLoop.contains("Disable-AnimationScales"),
+        )
     }
 
     private fun locateRepoRoot(): File {

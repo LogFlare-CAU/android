@@ -302,9 +302,8 @@ private fun FilterPanel(
             CommonFilterDropdown(
                 title = "Log Level",
                 isActive = filterState.selectedLevel.isNotEmpty(),
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag(VisualQaTags.FilterLogLevel),
+                modifier = Modifier.weight(1f),
+                interactionTag = VisualQaTags.FilterLogLevel,
             ) {
                 LogLevel.entries.forEach { level ->
                     CommonCheckRow(
@@ -332,9 +331,8 @@ private fun FilterPanel(
             CommonFilterDropdown(
                 title = "Sort By",
                 isActive = filterState.sortBy != LogSort.NEWEST,
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag(VisualQaTags.FilterSort),
+                modifier = Modifier.weight(1f),
+                interactionTag = VisualQaTags.FilterSort,
             ) {
                 CommonRadioRow(
                     label = "Newest",

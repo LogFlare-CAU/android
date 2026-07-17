@@ -215,7 +215,12 @@ class VisualQaSemanticsTest {
             LogflareandroidTheme(false) {
                 HomeScreenContent(
                     authState = AuthUiState(username = "qa-admin"),
-                    projectsState = ProjectsUiState(),
+                    projectsState = ProjectsUiState(
+                        items = listOf(
+                            ProjectDTO(id = 101, name = "Payments", logfiles = emptyList()),
+                            ProjectDTO(id = 202, name = "Checkout", logfiles = emptyList()),
+                        ),
+                    ),
                     logsState = LogsUiState(hasMore = false),
                     onProjectSelected = {},
                     onViewMoreLogs = {},
@@ -224,8 +229,33 @@ class VisualQaSemanticsTest {
             }
         }
         compose.onNodeWithTag(VisualQaTags.Home).assertExists()
+        compose.onNodeWithTag(VisualQaTags.projectCard(101)).assertExists()
+        compose.onNodeWithTag(VisualQaTags.projectCard(202)).assertExists()
         compose.onNodeWithTag(VisualQaTags.CreateProject).performClick()
         assertTrue(created)
+    }
+
+    @Test
+    fun homeProjectCardTagReachesCallbackWithoutDuplicateHandlers() {
+        var selected: Int? = null
+        compose.setContent {
+            LogflareandroidTheme(false) {
+                HomeScreenContent(
+                    authState = AuthUiState(username = "qa-admin"),
+                    projectsState = ProjectsUiState(
+                        items = listOf(
+                            ProjectDTO(id = 101, name = "Payments", logfiles = emptyList()),
+                        ),
+                    ),
+                    logsState = LogsUiState(hasMore = false),
+                    onProjectSelected = { selected = it },
+                    onViewMoreLogs = {},
+                    onCreateProject = {},
+                )
+            }
+        }
+        compose.onNodeWithTag(VisualQaTags.projectCard(101)).performClick()
+        assertEquals(101, selected)
     }
 
     @Test

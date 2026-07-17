@@ -1,5 +1,6 @@
 package com.logflare.qa
 
+import com.logflare.qa.image.BaselineSetPromoter
 import com.logflare.qa.image.CompareResult
 import com.logflare.qa.image.DeviceImageComparator
 import com.logflare.qa.server.MockServer
@@ -22,6 +23,7 @@ class QaToolMain {
             "server" -> runServer(args.drop(1))
             "compare" -> runCompare(args.drop(1))
             "record-device" -> runRecordDevice(args.drop(1))
+            "promote-baselines" -> runPromoteBaselines(args.drop(1))
             else -> {
                 System.err.println("Unknown command: ${args[0]}")
                 printHelp()
@@ -143,6 +145,42 @@ class QaToolMain {
         }
     }
 
+    private fun runPromoteBaselines(args: List<String>): Int {
+        var staging: File? = null
+        var baselines: File? = null
+        var expectedCsv: String? = null
+        var i = 0
+        while (i < args.size) {
+            when (args[i]) {
+                "--staging" -> staging = File(args.getOrNull(++i) ?: return usageError("missing --staging"))
+                "--baselines" -> baselines = File(args.getOrNull(++i) ?: return usageError("missing --baselines"))
+                "--expected" -> expectedCsv = args.getOrNull(++i) ?: return usageError("missing --expected")
+                "--help", "-h" -> {
+                    printHelp()
+                    return 0
+                }
+                else -> return usageError("unknown promote-baselines argument: ${args[i]}")
+            }
+            i++
+        }
+        if (staging == null || baselines == null || expectedCsv.isNullOrBlank()) {
+            return usageError("promote-baselines requires --staging <dir> --baselines <dir> --expected <a.png,b.png>")
+        }
+        val expected = expectedCsv.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        return try {
+            BaselineSetPromoter.promote(
+                stagingDir = staging,
+                baselinesDir = baselines,
+                expectedNames = expected,
+            )
+            println("RESULT Promoted count=${expected.size} path=${baselines.path}")
+            0
+        } catch (e: Exception) {
+            println("RESULT PromoteFailed reason=${e.message}")
+            1
+        }
+    }
+
     private fun usageError(message: String): Int {
         System.err.println(message)
         printHelp()
@@ -163,15 +201,17 @@ class QaToolMain {
               tools server --host 127.0.0.1 --port 8000
               tools compare --expected <png> --actual <png> --diff <png>
               tools record-device --actual <png> --expected <png>
+              tools promote-baselines --staging <dir> --baselines <dir> --expected <a.png,b.png>
 
             Commands:
-              server         Start deterministic mock API (blocks until terminated)
-              compare        Compare device PNGs; exit 0 on Match, nonzero otherwise
-              record-device   Copy validated actual PNG bytes into expected path
+              server             Start deterministic mock API (blocks until terminated)
+              compare            Compare device PNGs; exit 0 on Match, nonzero otherwise
+              record-device       Copy validated actual PNG bytes into expected path
+              promote-baselines  Atomically promote a complete staged baseline set
 
             Exit codes:
-              0  success (server healthy start/normal stop, Match, record ok)
-              1  compare Changed / DimensionMismatch / InvalidImage
+              0  success (server healthy start/normal stop, Match, record ok, promote ok)
+              1  compare Changed / DimensionMismatch / InvalidImage / promote failed
               2  invalid arguments
             """.trimIndent(),
         )
