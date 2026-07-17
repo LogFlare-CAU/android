@@ -6,6 +6,7 @@ import com.example.logflare.core.network.host.BaseUrlProvider
 import com.example.logflare.core.network.host.MutableBaseUrlProvider
 import com.logflare.android.di.AppNetworkBindings
 import dagger.Binds
+import dagger.Provides
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -28,31 +29,34 @@ class BaseUrlSelectionTest {
     }
 
     @Test
-    fun baseUrlProviderBindingsResolveToSameImplementation() {
+    fun baseUrlProviderIsAliasOfMutableBinding() {
         val bindsMethods = AppNetworkBindings::class.java.declaredMethods.filter {
             it.isAnnotationPresent(Binds::class.java)
         }
-        val boundTypes = bindsMethods.map { it.returnType.name }.toSet()
-        assertTrue(
-            "BaseUrlProvider and MutableBaseUrlProvider must both be bound",
-            BaseUrlProvider::class.java.name in boundTypes &&
-                MutableBaseUrlProvider::class.java.name in boundTypes,
-        )
-        val implTypes = bindsMethods.map { it.parameterTypes.single().name }.toSet()
         assertEquals(
-            "Both bindings must target the same implementation class",
-            setOf(DataStoreBaseUrlProvider::class.java.name),
-            implTypes,
+            "Only MutableBaseUrlProvider should be @Binds to the singleton impl",
+            1,
+            bindsMethods.size,
         )
-    }
+        val binds = bindsMethods.single()
+        assertEquals(MutableBaseUrlProvider::class.java, binds.returnType)
+        assertEquals(DataStoreBaseUrlProvider::class.java, binds.parameterTypes.single())
 
-    @Test
-    fun mutableProviderIsSameInstanceAsBaseUrlProvider() = runBlocking {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val repository = ServerConfigRepository(context)
-        val provider = DataStoreBaseUrlProvider(repository)
+        val provideMethod = AppNetworkBindings.Companion::class.java.getDeclaredMethod(
+            "provideBaseUrlProvider",
+            MutableBaseUrlProvider::class.java,
+        )
+        assertTrue(provideMethod.isAnnotationPresent(Provides::class.java))
+        assertEquals(BaseUrlProvider::class.java, provideMethod.returnType)
 
-        assertSame(provider, provider as BaseUrlProvider)
-        assertSame(provider, provider as MutableBaseUrlProvider)
+        val fake = object : MutableBaseUrlProvider {
+            override fun getBaseUrl(): String? = "http://alias.test/"
+            override suspend fun setBaseUrl(url: String) = Unit
+        }
+        assertSame(
+            "Alias must return the exact MutableBaseUrlProvider instance OkHttp will use",
+            fake,
+            AppNetworkBindings.provideBaseUrlProvider(fake),
+        )
     }
 }
