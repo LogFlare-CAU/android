@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.roborazzi)
 }
 
 kapt {
@@ -50,6 +51,14 @@ android {
         buildConfig = true
     }
     buildToolsVersion = "36.1.0"
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+roborazzi {
+    outputDir.set(file("src/test/snapshots/images"))
 }
 
 dependencies {
@@ -82,6 +91,12 @@ dependencies {
     implementation(libs.firebase.messaging.ktx)
 
     testImplementation(libs.junit)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.robolectric)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

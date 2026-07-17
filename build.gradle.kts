@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.hilt.android) apply false
     alias(libs.plugins.kotlin.kapt) apply false
+    alias(libs.plugins.roborazzi) apply false
 }
 
 // Optionally configure common repos or buildscript settings here if needed.

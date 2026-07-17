@@ -38,3 +38,10 @@ docs/*
 
 # Cursor — local agent context and editor state
 .cursor/
+
+# Roborazzi generated outputs (reference PNGs under src/test/snapshots/images stay tracked)
+app/build/outputs/roborazzi/
+app/build/reports/roborazzi/
+visual-qa/output/
+visual-qa/device-diffs/
+visual-qa/dev-captures/
