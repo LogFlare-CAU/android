@@ -97,16 +97,23 @@ object SnapshotFixtures {
             loginError = loginError,
         )
 
-    fun loginForm(validationError: Boolean = false): LoginFormState =
-        if (validationError) {
-            LoginFormState(
+    fun loginForm(
+        validationError: Boolean = false,
+        populated: Boolean = false,
+    ): LoginFormState =
+        when {
+            validationError -> LoginFormState(
                 serverUrl = "not-a-url",
                 username = "qa-admin",
                 password = "Password1!",
                 serverUrlError = "Invalid URL format",
             )
-        } else {
-            LoginFormState()
+            populated -> LoginFormState(
+                serverUrl = "http://10.0.2.2:8000",
+                username = "qa-admin",
+                password = "qa-password",
+            )
+            else -> LoginFormState()
         }
 
     fun projects(
@@ -165,7 +172,11 @@ object SnapshotFixtures {
                 saved -> "QA Payments"
                 else -> ""
             },
-            nameValid = !invalid && (saved || nameBlankAllowed(invalid)),
+            nameValid = when {
+                invalid -> false
+                saved -> true
+                else -> false // blank initial / unsaved loading matches production default
+            },
             loading = loading,
             token = if (saved) "qa-token-101-abcdef" else null,
             error = error,
@@ -181,8 +192,6 @@ object SnapshotFixtures {
                 emptyList()
             },
         )
-
-    private fun nameBlankAllowed(invalid: Boolean): Boolean = !invalid
 
     fun projectDetail(
         empty: Boolean = false,

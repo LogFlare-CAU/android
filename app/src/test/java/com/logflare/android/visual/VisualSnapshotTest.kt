@@ -38,7 +38,8 @@ abstract class VisualSnapshotTest {
                 )
             }
         }
-        compose.mainClock.advanceTimeByFrame()
+        // Advance far enough for CircularProgressIndicator's indeterminate arc to be visible.
+        compose.mainClock.advanceTimeBy(250L)
         compose.onRoot().captureRoboImage(
             "${name}_${if (darkTheme) "dark" else "light"}.png",
         )

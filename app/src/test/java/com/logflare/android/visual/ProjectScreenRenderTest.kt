@@ -1,7 +1,10 @@
 package com.logflare.android.visual
 
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.feature.project.ProjectCreateScreenContent
 import com.logflare.android.feature.project.ProjectCreateUiState
@@ -12,6 +15,8 @@ import com.logflare.android.feature.projectdetail.ProjectDetailScreenContent
 import com.logflare.android.feature.projectdetail.ProjectDetailUiState
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.theme.LogflareandroidTheme
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,6 +52,24 @@ class ProjectScreenRenderTest {
             }
         }
         compose.onNodeWithTag(VisualQaTags.ProjectCreate).assertExists()
+    }
+
+    @Test fun projectCreateInitialSaveIsDisabled() {
+        val uiState = SnapshotFixtures.projectEditor()
+        assertFalse(uiState.nameValid)
+        assertFalse(uiState.saved)
+        assertTrue(uiState.name.isEmpty())
+
+        compose.setContent {
+            LogflareandroidTheme(false) {
+                ProjectCreateScreenContent(
+                    uiState = uiState,
+                    onAction = { _ -> },
+                )
+            }
+        }
+        // Project name Save is the first "Save" affordance; nameValid=false disables it.
+        compose.onAllNodesWithText("Save")[0].assertIsNotEnabled()
     }
 
     @Test fun projectSettingsRendersFromStateOnly() {

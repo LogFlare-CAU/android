@@ -52,7 +52,7 @@ class LoginSnapshots : VisualSnapshotTest() {
         capture("login_loading", darkTheme = false) {
             LoginScreenContent(
                 uiState = SnapshotFixtures.auth(loading = true),
-                form = SnapshotFixtures.loginForm(),
+                form = SnapshotFixtures.loginForm(populated = true),
                 onFormChange = { _ -> },
                 onSignIn = {},
             )
@@ -63,7 +63,7 @@ class LoginSnapshots : VisualSnapshotTest() {
         capture("login_loading", darkTheme = true) {
             LoginScreenContent(
                 uiState = SnapshotFixtures.auth(loading = true),
-                form = SnapshotFixtures.loginForm(),
+                form = SnapshotFixtures.loginForm(populated = true),
                 onFormChange = { _ -> },
                 onSignIn = {},
             )
