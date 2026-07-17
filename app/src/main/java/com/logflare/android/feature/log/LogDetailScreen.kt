@@ -1,6 +1,7 @@
 package com.logflare.android.feature.log
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,8 +14,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -22,33 +25,53 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.logflare.android.R
 import com.example.logflare.core.designsystem.AppTheme
+import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.common.EmptyState
 import com.logflare.android.ui.common.GlobalLogCard
 import com.logflare.android.ui.common.LogCardInfo
-import com.logflare.android.ui.common.TopTitle
 
 @Composable
 fun LogDetailScreen(
     onBack: () -> Unit,
     vm: LogDetailViewModel = hiltViewModel(),
 ) {
-    val log = vm.getLogDetail() ?: return EmptyState(true)
+    val log = vm.getLogDetail()
     LogDetailScreenContent(
         onBack = onBack,
-        log = log
+        log = log,
     )
 }
 
 @Composable
 fun LogDetailScreenContent(
     onBack: () -> Unit,
-    log: LogCardInfo,
+    log: LogCardInfo?,
     modifier: Modifier = Modifier
 ) {
+    if (log == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .testTag(VisualQaTags.LogDetail)
+                .background(AppTheme.colors.surface)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(VisualQaTags.Empty),
+                contentAlignment = Alignment.Center,
+            ) {
+                EmptyState(projectFiltered = true)
+            }
+        }
+        return
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .testTag(VisualQaTags.LogDetail)
             .background(AppTheme.colors.surface)
             .padding(bottom = 16.dp)
     ) {

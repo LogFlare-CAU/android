@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -32,10 +33,22 @@ import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.GreenDefault
 import com.example.logflare.core.designsystem.Neutral10
 import com.example.logflare.core.designsystem.Neutral20
-import com.example.logflare.core.designsystem.Neutral30
-import com.example.logflare.core.designsystem.Neutral50
-import com.example.logflare.core.designsystem.Neutral60
 import com.logflare.android.R
+import com.logflare.android.ui.VisualQaTags
+
+data class LoginFormState(
+    val serverUrl: String = "",
+    val username: String = "",
+    val password: String = "",
+    val serverUrlError: String? = null,
+)
+
+internal fun validateServerUrl(input: String): String? =
+    if (input.isBlank() || Regex("""^https?://[A-Za-z0-9.\-]+(:\d+)?(/.*)?$""").matches(input.trim())) {
+        null
+    } else {
+        "Invalid URL format"
+    }
 
 /**
  * Login screen following the design specifications.
@@ -50,24 +63,41 @@ fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.ui.collectAsState()
+    var form by remember { mutableStateOf(LoginFormState()) }
 
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var serverUrl by remember { mutableStateOf("") }
-    var serverUrlError by remember { mutableStateOf<String?>(null) }
+    LoginScreenContent(
+        uiState = uiState,
+        form = form,
+        onFormChange = { updated ->
+            form = if (updated.serverUrl != form.serverUrl) {
+                updated.copy(serverUrlError = validateServerUrl(updated.serverUrl))
+            } else {
+                updated
+            }
+        },
+        onSignIn = {
+            if (form.serverUrl.isNotBlank()) {
+                viewModel.login(form.serverUrl, form.username, form.password, onSuccess = onLoginSuccess)
+            } else {
+                viewModel.login(form.username, form.password, onSuccess = onLoginSuccess)
+            }
+        },
+    )
+}
 
-    fun isValidServerUrl(input: String): Boolean {
-        if (input.isBlank()) return true // optional
-        return Regex("""^https?://[A-Za-z0-9\.\-]+(:\d+)?(/.*)?$""")
-            .matches(input.trim())
-    }
-
-    val isServerValid = isValidServerUrl(serverUrl)
-    serverUrlError = if (isServerValid) null else "Invalid URL format"
+@Composable
+fun LoginScreenContent(
+    uiState: AuthUiState,
+    form: LoginFormState,
+    onFormChange: (LoginFormState) -> Unit,
+    onSignIn: () -> Unit,
+) {
+    val isServerValid = form.serverUrlError == null
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .testTag(VisualQaTags.Login)
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -80,28 +110,26 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Server URL input
         OutlinedTextField(
-            value = serverUrl,
-            onValueChange = { serverUrl = it },
-            isError = serverUrlError != null,
+            value = form.serverUrl,
+            onValueChange = { onFormChange(form.copy(serverUrl = it)) },
+            isError = form.serverUrlError != null,
             label = { Text("Server URL") },
             placeholder = { Text("http://your-server:port") },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = if (serverUrlError != null) AppTheme.colors.red.default else AppTheme.colors.onSurface,
-                unfocusedBorderColor = if (serverUrlError != null) AppTheme.colors.red.default else AppTheme.colors.outline,
+                focusedBorderColor = if (form.serverUrlError != null) AppTheme.colors.red.default else AppTheme.colors.onSurface,
+                unfocusedBorderColor = if (form.serverUrlError != null) AppTheme.colors.red.default else AppTheme.colors.outline,
                 errorBorderColor = AppTheme.colors.red.default,
                 cursorColor = AppTheme.colors.onSurface
             ),
             singleLine = true
         )
 
-        // 1) 에러가 없어도 공간 유지 + 2) 글자 작게
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = serverUrlError ?: " ",
-            color = if (serverUrlError != null) AppTheme.colors.red.default else Color.Transparent,
+            text = form.serverUrlError ?: " ",
+            color = if (form.serverUrlError != null) AppTheme.colors.red.default else Color.Transparent,
             fontSize = 11.sp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,10 +138,9 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Username input
         OutlinedTextField(
-            value = username,
-            onValueChange = { username = it },
+            value = form.username,
+            onValueChange = { onFormChange(form.copy(username = it)) },
             label = { Text("Username") },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
@@ -124,7 +151,6 @@ fun LoginScreen(
             singleLine = true
         )
 
-        // 3) 로그인 실패 시 username 밑에 에러 노출 (공간 고정 + 작은 글자)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = uiState.loginError ?: " ",
@@ -137,10 +163,9 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Password input
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
+            value = form.password,
+            onValueChange = { onFormChange(form.copy(password = it)) },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             colors = OutlinedTextFieldDefaults.colors(
@@ -152,7 +177,6 @@ fun LoginScreen(
             singleLine = true
         )
 
-        // 3) 로그인 실패 시 password 밑에도 같은 에러 노출
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = uiState.loginError ?: " ",
@@ -166,16 +190,10 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = {
-                if (serverUrl.isNotBlank()) {
-                    viewModel.login(serverUrl, username, password, onSuccess = onLoginSuccess)
-                } else {
-                    viewModel.login(username, password, onSuccess = onLoginSuccess)
-                }
-            },
+            onClick = onSignIn,
             modifier = Modifier.fillMaxWidth(),
-            enabled = username.isNotBlank() &&
-                    password.isNotBlank() &&
+            enabled = form.username.isNotBlank() &&
+                    form.password.isNotBlank() &&
                     isServerValid &&
                     !uiState.loading,
             colors = ButtonColors(

@@ -26,14 +26,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.model.ErrorlogDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
+import com.logflare.android.feature.auth.AuthUiState
 import com.logflare.android.feature.auth.AuthViewModel
 import com.logflare.android.feature.log.LogViewModel
+import com.logflare.android.feature.log.LogsUiState
+import com.logflare.android.feature.project.ProjectsUiState
 import com.logflare.android.feature.project.ProjectsViewModel
+import com.logflare.android.ui.VisualQaTags
 
 /**
  * Home screen: dashboard style summary showing recent logs and a few projects.
@@ -57,15 +62,34 @@ fun HomeScreen(
         projectsVm.refresh()
     }
     LaunchedEffect(projectsState.items) {
-        // Fetch only a small recent subset of logs (limit=5) for Home dashboard context
         logsVm.getLogs(5)
-        // projectsState.items.firstOrNull()?.let { p -> logsVm.refresh(p.id, limit = 5) }
     }
 
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(bottom = 12.dp)) {
-        // User info card
+    HomeScreenContent(
+        authState = userState,
+        projectsState = projectsState,
+        logsState = logsState,
+        onProjectSelected = onProjectSelected,
+        onViewMoreLogs = onViewMoreLogs,
+        onCreateProject = onCreateProject,
+    )
+}
+
+@Composable
+fun HomeScreenContent(
+    authState: AuthUiState,
+    projectsState: ProjectsUiState,
+    logsState: LogsUiState,
+    onProjectSelected: (Int) -> Unit,
+    onViewMoreLogs: () -> Unit,
+    onCreateProject: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(VisualQaTags.Home)
+            .padding(bottom = 12.dp)
+    ) {
         Card(
             modifier = Modifier
                 .padding(top = 16.dp, start = 16.dp, end = 16.dp)
@@ -74,12 +98,12 @@ fun HomeScreen(
             shape = RoundedCornerShape(12.dp)
         ) {
             val username = when {
-                userState.loading -> "Loading..."
-                userState.username == null -> "Guest"
-                else -> userState.username
+                authState.loading -> "Loading..."
+                authState.username == null -> "Guest"
+                else -> authState.username
             }
 
-            val perm = UserPermission.fromCode(userState.permission)
+            val perm = UserPermission.fromCode(authState.permission)
 
             Row(
                 modifier = Modifier
@@ -94,7 +118,7 @@ fun HomeScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
-                    userState.profileError?.let { err ->
+                    authState.profileError?.let { err ->
                         Text(
                             text = err,
                             color = MaterialTheme.colorScheme.error,
@@ -117,7 +141,6 @@ fun HomeScreen(
             }
         }
 
-        // Recent Logs header
         Row(
             modifier = Modifier
                 .padding(top = 32.dp, start = 16.dp, end = 16.dp)
@@ -132,13 +155,25 @@ fun HomeScreen(
                 colors = AssistChipDefaults.assistChipColors(containerColor = Color.Transparent)
             )
         }
-        // Recent Logs content (empty state when no logs)
         when {
-            logsState.loading -> Text("Loading logs…", modifier = Modifier.padding(start = 16.dp))
-            logsState.error != null -> Text("Logs error: ${logsState.error}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 16.dp))
+            logsState.loading -> Text(
+                "Loading logs…",
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .testTag(VisualQaTags.Loading)
+            )
+            logsState.error != null -> Text(
+                "Logs error: ${logsState.error}",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .testTag(VisualQaTags.Error)
+            )
             logsState.errorLogs.isEmpty() -> EmptyStateCard(
                 text = "No logs found.\nPlease check your server connection.",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .testTag(VisualQaTags.Empty)
             )
             else -> LazyColumn(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
@@ -149,7 +184,6 @@ fun HomeScreen(
             }
         }
 
-        // Project List header
         Row(
             modifier = Modifier
                 .padding(top = 32.dp, start = 16.dp, end = 16.dp)
@@ -165,11 +199,24 @@ fun HomeScreen(
             )
         }
         when {
-            projectsState.loading -> Text("Loading projects…", modifier = Modifier.padding(start = 16.dp))
-            projectsState.error != null -> Text("Projects error: ${projectsState.error}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 16.dp))
+            projectsState.loading -> Text(
+                "Loading projects…",
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .testTag(VisualQaTags.Loading)
+            )
+            projectsState.error != null -> Text(
+                "Projects error: ${projectsState.error}",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .testTag(VisualQaTags.Error)
+            )
             projectsState.items.isEmpty() -> EmptyStateCard(
                 text = "No projects found.",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .testTag(VisualQaTags.Empty)
             )
             else -> LazyColumn(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
@@ -216,7 +263,6 @@ private fun EmptyStateCard(text: String, modifier: Modifier = Modifier) {
 
 @Composable
 private fun LogRowItem(log: ErrorlogDTO) {
-    // Color badge based on level
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -245,7 +291,7 @@ private fun LogRowItem(log: ErrorlogDTO) {
     }
 }
 
-private fun cropLongText(text: String, maxLength: Int=200): String {
+private fun cropLongText(text: String, maxLength: Int = 200): String {
     return if (text.length <= maxLength) {
         text
     } else {
