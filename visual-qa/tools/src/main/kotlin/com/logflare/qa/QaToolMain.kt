@@ -4,6 +4,7 @@ import com.logflare.qa.image.CompareResult
 import com.logflare.qa.image.DeviceImageComparator
 import com.logflare.qa.server.MockServer
 import java.io.File
+import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import kotlin.system.exitProcess
 
@@ -96,9 +97,7 @@ class QaToolMain {
                 0
             }
             is CompareResult.Changed -> {
-                println(
-                    "RESULT Changed ratio=${"%.8f".format(result.changedRatio)} count=${result.changedPixels}",
-                )
+                println(QaResultPresenter.format(result))
                 1
             }
             is CompareResult.DimensionMismatch -> {
@@ -177,4 +176,10 @@ class QaToolMain {
             """.trimIndent(),
         )
     }
+}
+
+object QaResultPresenter {
+    fun format(result: CompareResult.Changed): String =
+        "RESULT Changed ratio=${String.format(Locale.US, "%.8f", result.changedRatio)} " +
+            "count=${result.changedPixels}"
 }

@@ -17,6 +17,7 @@ java {
 dependencies {
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
+    testImplementation(project(path = ":core:model", configuration = "jvmTestElements"))
 }
 
 tasks.test {
