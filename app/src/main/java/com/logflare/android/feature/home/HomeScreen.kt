@@ -94,7 +94,7 @@ fun HomeScreenContent(
             modifier = Modifier
                 .padding(top = 16.dp, start = 16.dp, end = 16.dp)
                 .fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFEEEEEE)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             shape = RoundedCornerShape(12.dp)
         ) {
             val username = when {
@@ -135,7 +135,7 @@ fun HomeScreenContent(
                         text = perm.label,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFF9F9F9)
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -244,7 +244,7 @@ private fun EmptyStateCard(text: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .height(136.dp),
-        color = Color(0xFFEEEEEE),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -255,7 +255,7 @@ private fun EmptyStateCard(text: String, modifier: Modifier = Modifier) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF616161)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -280,7 +280,7 @@ private fun LogRowItem(log: ErrorlogDTO) {
             Text(
                 text = cropLongText("${log.errortype ?: "Error"}: ${log.message}"),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF212121)
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = log.level.uppercase(),
