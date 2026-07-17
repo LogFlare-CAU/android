@@ -203,7 +203,7 @@ fun LoginScreenContent(
                 disabledContentColor = Neutral20
             )
         ) {
-            Text("Sign In")
+            Text(if (uiState.loading) "Signing In…" else "Sign In")
         }
     }
 }
