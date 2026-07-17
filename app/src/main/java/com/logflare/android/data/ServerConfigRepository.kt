@@ -24,13 +24,16 @@ class ServerConfigRepository @Inject constructor(
     val serverUrl: Flow<String?> = context.configDataStore.data.map { it[KEY_SERVER_URL] }
 
     suspend fun setServerUrl(url: String) {
-        val normalized = normalize(url)
+        setNormalizedServerUrl(normalize(url))
+    }
+
+    suspend fun setNormalizedServerUrl(normalized: String) {
         context.configDataStore.edit { prefs ->
             prefs[KEY_SERVER_URL] = normalized
         }
     }
 
-    private fun normalize(raw: String): String {
+    internal fun normalize(raw: String): String {
         var working = raw.trim()
         if (working.isEmpty()) return working
         // Add scheme if missing

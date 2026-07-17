@@ -2,7 +2,7 @@ package com.logflare.android.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.logflare.android.data.ServerConfigRepository
+import com.example.logflare.core.network.host.MutableBaseUrlProvider
 import com.logflare.android.feature.usecase.AuthLoginUseCase
 import com.logflare.android.feature.usecase.AuthMeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +29,7 @@ data class AuthUiState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authLoginUseCase: AuthLoginUseCase,
-    private val serverConfigRepository: ServerConfigRepository,
+    private val mutableBaseUrlProvider: MutableBaseUrlProvider,
     private val authMeUseCase: AuthMeUseCase
 ) : ViewModel() {
 
@@ -50,7 +50,7 @@ class AuthViewModel @Inject constructor(
      */
     fun login(serverUrl: String, username: String, password: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            serverConfigRepository.setServerUrl(serverUrl)
+            mutableBaseUrlProvider.setBaseUrl(serverUrl)
             performLoginInternal(username, password, onSuccess)
         }
     }
