@@ -29,7 +29,9 @@ data class ProjectDetailUiState(
     val settingsLabel: String = "Project Settings",
     val logs: List<ProjectDetailLog> = emptyList(),
     val filterState: ProjectDetailFilterState = ProjectDetailFilterState(),
-    val showMoreState: ShowMoreState = ShowMoreState(onClick = {})
+    val showMoreLoading: Boolean = false,
+    val showMoreHasMore: Boolean = true,
+    val error: String? = null,
 )
 
 data class ProjectDetailLog(
@@ -39,12 +41,6 @@ data class ProjectDetailLog(
     val message: String,
     val projectName: String,
     val fileName: String
-)
-
-data class ShowMoreState(
-    val loading: Boolean = false,
-    val hasMore: Boolean = true,
-    val onClick: () -> Unit
 )
 
 data class ProjectDetailFilterState(
@@ -88,18 +84,19 @@ class ProjectDetailViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             project = getProjectDetailUseCase(projectId)
+            if (project == null) {
+                _ui.value = _ui.value.copy(
+                    loading = false,
+                    error = "Project not found",
+                )
+                return@launch
+            }
             hydratePlaceholder()
             addInitialLogs()
             fillLogFiles()
             getLogs()
         }
-        _ui.value = _ui.value.copy(
-            showMoreState = ShowMoreState(
-                onClick = { getMoreLogs() }
-            )
-        )
     }
-
 
     private fun hydratePlaceholder() {
         val defaultLog = ProjectDetailLog(
@@ -161,23 +158,31 @@ class ProjectDetailViewModel @Inject constructor(
         )
     }
 
-    private fun getMoreLogs() {
-        _ui.value = _ui.value.copy(
-            showMoreState = _ui.value.showMoreState.copy(
-                loading = true
-            )
-        )
+    fun loadMoreLogs() {
+        _ui.value = _ui.value.copy(showMoreLoading = true)
         globalOffset += 50
         viewModelScope.launch {
-            getLogs(
-                offset = globalOffset
-            )
+            getLogs(offset = globalOffset)
         }
     }
 
     private suspend fun getLogs(limit: Int = 50, offset: Int = 0) {
-        val dto = project?.dto ?: return
-        val logfile = selectedLogfile ?: return
+        val dto = project?.dto
+        if (dto == null) {
+            _ui.value = _ui.value.copy(
+                showMoreLoading = false,
+                error = _ui.value.error ?: "Project not found",
+            )
+            return
+        }
+        val logfile = selectedLogfile
+        if (logfile == null) {
+            _ui.value = _ui.value.copy(
+                showMoreLoading = false,
+                error = _ui.value.error ?: "No log file selected",
+            )
+            return
+        }
         val logs = getProjectLogsUseCase(
             projectId = dto.id,
             projectName = dto.name,
@@ -186,20 +191,24 @@ class ProjectDetailViewModel @Inject constructor(
             limit = limit,
             offset = offset,
             sortBy = sortBy
-        ) ?: return
+        )
+        if (logs == null) {
+            _ui.value = _ui.value.copy(
+                loading = false,
+                showMoreLoading = false,
+                error = "Failed to load logs",
+            )
+            return
+        }
         val first = offset == 0
         addLogs(
             newLogs = logs,
             first = first
         )
-        if (logs.size < limit) {
-            _ui.value = _ui.value.copy(
-                showMoreState = _ui.value.showMoreState.copy(
-                    hasMore = false,
-                    loading = false
-                )
-            )
-        }
+        _ui.value = _ui.value.copy(
+            showMoreLoading = false,
+            showMoreHasMore = logs.size >= limit,
+        )
     }
 
 
@@ -272,7 +281,8 @@ class ProjectDetailViewModel @Inject constructor(
                 logfileOptions = _ui.value.filterState.logfileOptions.map {
                     it.copy(selected = it.id == logfileId)
                 }
-            )
+            ),
+            showMoreHasMore = true,
         )
         viewModelScope.launch {
             getLogs()

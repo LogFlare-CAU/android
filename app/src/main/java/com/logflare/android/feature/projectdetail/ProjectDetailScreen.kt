@@ -6,14 +6,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -31,25 +28,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.LogSort
+import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.common.*
 import com.logflare.android.ui.components.BackHeader
 
-private val CardGray = Color(0xFFEEEEEE)
-private val LogCardGray = Color(0xFFEDEDED)
 private val FatalRed = Color(0xFFB12B38)
-private val InfoGray = Color(0xFF616161)
-private val PrimaryText = Color(0xFF1A1A1A)
-private val SecondaryText = Color(0xFF353535)
-private val AccentGreen = Color(0xFF61B075)
-private val OutlineGray = Color(0xFFBDBDBD)
 
 @Composable
 fun ProjectDetailScreen(
@@ -62,7 +52,6 @@ fun ProjectDetailScreen(
 ) {
     val uiState by viewModel.ui.collectAsState()
 
-    // Propagate the resolved project name upward so the main top bar can display it.
     LaunchedEffect(uiState.projectName) {
         if (uiState.projectName.isNotBlank()) {
             onProjectNameResolved(uiState.projectName)
@@ -73,45 +62,93 @@ fun ProjectDetailScreen(
         modifier = modifier.fillMaxSize(),
         color = AppTheme.colors.surface
     ) {
-        when {
-            uiState.loading -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-
-            else -> ProjectDetailContent(
-                uiState = uiState,
-                onBack = onBack,
-                onOpenProjectSettings = onOpenProjectSettings,
-                onLevelSelected = { level -> viewModel.onLevelSelected(level) },
-                onLogfileSelected = { id -> viewModel.onLogfileSelected(id) },
-                onSortSelected = { sort -> viewModel.onSortSelected(sort) },
-                onLogClick = { log -> viewModel.onLogClick(log); onLogClick() }
-            )
-        }
+        ProjectDetailScreenContent(
+            uiState = uiState,
+            onBack = onBack,
+            onOpenProjectSettings = onOpenProjectSettings,
+            onLevelSelected = { level -> viewModel.onLevelSelected(level) },
+            onLogfileSelected = { id -> viewModel.onLogfileSelected(id) },
+            onSortSelected = { sort -> viewModel.onSortSelected(sort) },
+            onLogClick = { log -> viewModel.onLogClick(log); onLogClick() },
+            onLoadMore = { viewModel.loadMoreLogs() },
+        )
     }
 }
 
 @Composable
-private fun ProjectDetailContent(
+fun ProjectDetailScreenContent(
     uiState: ProjectDetailUiState,
     onBack: () -> Unit,
     onOpenProjectSettings: (Int) -> Unit,
     onLevelSelected: (LogLevel) -> Unit,
     onLogfileSelected: (Int) -> Unit,
     onSortSelected: (LogSort) -> Unit,
-    onLogClick: (ProjectDetailLog) -> Unit = { }
+    onLogClick: (ProjectDetailLog) -> Unit,
+    onLoadMore: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .testTag(VisualQaTags.ProjectDetail)
             .background(AppTheme.colors.surface)
-            .navigationBarsPadding()
+            .navigationBarsPadding(),
+    ) {
+        when {
+            uiState.loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(VisualQaTags.Loading),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.error != null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(VisualQaTags.Error),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Error: ${uiState.error}",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+
+            else -> ProjectDetailBody(
+                uiState = uiState,
+                onBack = onBack,
+                onOpenProjectSettings = onOpenProjectSettings,
+                onLevelSelected = onLevelSelected,
+                onLogfileSelected = onLogfileSelected,
+                onSortSelected = onSortSelected,
+                onLogClick = onLogClick,
+                onLoadMore = onLoadMore,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProjectDetailBody(
+    uiState: ProjectDetailUiState,
+    onBack: () -> Unit,
+    onOpenProjectSettings: (Int) -> Unit,
+    onLevelSelected: (LogLevel) -> Unit,
+    onLogfileSelected: (Int) -> Unit,
+    onSortSelected: (LogSort) -> Unit,
+    onLogClick: (ProjectDetailLog) -> Unit,
+    onLoadMore: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-//        BackHeader(title = uiState.projectName, onBack = onBack)
         ProjectSettingsCard(
             label = uiState.settingsLabel,
             onClick = { onOpenProjectSettings(uiState.projectId) }
@@ -128,11 +165,19 @@ private fun ProjectDetailContent(
                 .weight(1f, fill = true)
         ) {
             when {
-                uiState.logs.isEmpty() -> EmptyState(uiState.projectId > 0, uiState.filterState.selectedLevel)
+                uiState.logs.isEmpty() -> Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(VisualQaTags.Empty),
+                ) {
+                    EmptyState(uiState.projectId > 0, uiState.filterState.selectedLevel)
+                }
                 else -> LogsSection(
                     logs = uiState.logs,
-                    showMore = uiState.showMoreState,
-                    onLogClick = onLogClick
+                    showMoreLoading = uiState.showMoreLoading,
+                    showMoreHasMore = uiState.showMoreHasMore,
+                    onLoadMore = onLoadMore,
+                    onLogClick = onLogClick,
                 )
             }
         }
@@ -177,7 +222,9 @@ private fun ProjectSettingsCard(
 @Composable
 private fun LogsSection(
     logs: List<ProjectDetailLog>,
-    showMore: ShowMoreState,
+    showMoreLoading: Boolean,
+    showMoreHasMore: Boolean,
+    onLoadMore: () -> Unit,
     onLogClick: (ProjectDetailLog) -> Unit
 ) {
     LazyColumn(
@@ -199,11 +246,11 @@ private fun LogsSection(
                 onClick = { onLogClick(log) }
             )
         }
-        if (showMore.hasMore) {
+        if (showMoreHasMore) {
             item(key = "load_more") {
                 LoadMoreRow(
-                    loading = showMore.loading,
-                    onClick = showMore.onClick
+                    loading = showMoreLoading,
+                    onClick = onLoadMore
                 )
             }
         }
@@ -249,7 +296,6 @@ private fun FilterPanel(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Log Level 필터
             CommonFilterDropdown(
                 title = "Log Level",
                 isActive = filterState.selectedLevel.isNotEmpty(),
@@ -265,7 +311,6 @@ private fun FilterPanel(
                 }
             }
 
-            // Log File 필터
             CommonFilterDropdown(
                 title = "Log File",
                 isActive = filterState.logfileOptions.any { it.selected },
@@ -279,7 +324,6 @@ private fun FilterPanel(
                     )
                 }
             }
-            // Sort By 필터
             CommonFilterDropdown(
                 title = "Sort By",
                 isActive = filterState.sortBy != LogSort.NEWEST,

@@ -2,6 +2,18 @@ package com.logflare.android.feature.project
 
 import androidx.compose.ui.graphics.Color
 
+sealed interface ProjectEditorAction {
+    data class NameChanged(val value: String) : ProjectEditorAction
+    data class KeywordChanged(val value: String) : ProjectEditorAction
+    data object AddKeyword : ProjectEditorAction
+    data class RemoveKeyword(val value: String) : ProjectEditorAction
+    data class ToggleLevel(val value: String) : ProjectEditorAction
+    data class TogglePermission(val username: String) : ProjectEditorAction
+    data object Submit : ProjectEditorAction
+    data object CopyToken : ProjectEditorAction
+    data object Delete : ProjectEditorAction
+}
+
 data class ProjectCreateUiState(
     val id: Int = 0,
     val name: String = "",
