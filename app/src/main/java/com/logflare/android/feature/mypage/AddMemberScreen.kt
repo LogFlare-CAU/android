@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,11 +23,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.button.ButtonSize
@@ -36,26 +36,21 @@ import com.example.logflare.core.designsystem.components.dropdown.DropdownSize
 import com.example.logflare.core.designsystem.components.dropdown.LogFlareDropdown
 import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
 import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
+import com.logflare.android.enums.UserPermission
+import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.component.common.LogFlareActionTextField
 import com.logflare.android.ui.component.common.LogFlareActionTextFieldHelperTone
 import com.logflare.android.ui.component.common.LogFlareActionTextFieldState
 import com.logflare.android.ui.component.common.MemberFieldStatus
 import com.logflare.android.ui.component.common.toActionTextFieldState
-import com.logflare.android.enums.UserPermission
 
 @Composable
 fun AddMemberScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AddMemberViewModel = hiltViewModel()
+    viewModel: AddMemberViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.ui.collectAsState()
-
-    val canSubmit = uiState.usernameValidation.status == MemberFieldStatus.Valid &&
-        uiState.passwordValidation.status == MemberFieldStatus.Valid &&
-        uiState.username.isNotBlank() &&
-        uiState.temporaryPassword.isNotBlank() &&
-        !uiState.isLoading
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -64,59 +59,101 @@ fun AddMemberScreen(
             LogFlareTopAppBar(
                 titleType = TopAppBarTitleType.Title,
                 titleText = "Add Member",
-                onBack = onBack
+                onBack = onBack,
             )
         },
-        bottomBar = {
+    ) { innerPadding ->
+        AddMemberScreenContent(
+            uiState = uiState,
+            onUsernameChange = { value ->
+                if (value == uiState.username) {
+                    viewModel.retryUsernameValidation()
+                } else {
+                    viewModel.updateUsername(value)
+                }
+            },
+            onPasswordChange = { value ->
+                if (value == uiState.temporaryPassword) {
+                    viewModel.retryPasswordValidation()
+                } else {
+                    viewModel.updateTemporaryPassword(value)
+                }
+            },
+            onPermissionChange = { permission ->
+                if (permission == uiState.selectedPermission) {
+                    viewModel.clearError()
+                } else {
+                    viewModel.selectPermission(permission)
+                }
+            },
+            onSubmit = { viewModel.addMember(onBack) },
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
+}
+
+@Composable
+fun AddMemberScreenContent(
+    uiState: AddMemberUiState,
+    onUsernameChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onPermissionChange: (UserPermission) -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val canSubmit = uiState.usernameValidation.status == MemberFieldStatus.Valid &&
+        uiState.passwordValidation.status == MemberFieldStatus.Valid &&
+        uiState.username.isNotBlank() &&
+        uiState.temporaryPassword.isNotBlank() &&
+        !uiState.isLoading
+
+    Surface(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(VisualQaTags.AddMember),
+        color = AppTheme.colors.surface,
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            AddMemberForm(
+                uiState = uiState,
+                onUsernameChange = onUsernameChange,
+                onPasswordChange = onPasswordChange,
+                onPermissionChange = onPermissionChange,
+                modifier = Modifier.weight(1f),
+            )
+
             Surface(
                 tonalElevation = 4.dp,
                 shadowElevation = 4.dp,
-                color = AppTheme.colors.surface
+                color = AppTheme.colors.surface,
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = AppTheme.spacing.s4)
                         .padding(vertical = AppTheme.spacing.s3)
-                        .navigationBarsPadding()
+                        .navigationBarsPadding(),
                 ) {
                     LogFlareButton(
                         text = if (uiState.isLoading) "Saving..." else "Done",
-                        onClick = { viewModel.addMember(onBack) },
+                        onClick = onSubmit,
                         size = ButtonSize.Large,
                         enabled = canSubmit,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
         }
-    ) { innerPadding ->
-        AddMemberContent(
-            uiState = uiState,
-            onUsernameChange = viewModel::updateUsername,
-            onPasswordChange = viewModel::updateTemporaryPassword,
-            onPermissionSelect = viewModel::selectPermission,
-            onRequestUsernameValidation = viewModel::retryUsernameValidation,
-            onRequestPasswordValidation = viewModel::retryPasswordValidation,
-            onClearBanner = viewModel::clearError,
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        )
     }
 }
 
-
 @Composable
-private fun AddMemberContent(
+private fun AddMemberForm(
     uiState: AddMemberUiState,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onPermissionSelect: (UserPermission) -> Unit,
-    onRequestUsernameValidation: () -> Unit,
-    onRequestPasswordValidation: () -> Unit,
-    onClearBanner: () -> Unit,
-    modifier: Modifier = Modifier
+    onPermissionChange: (UserPermission) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
     val usernameFieldState = uiState.usernameValidation.status.toActionTextFieldState()
@@ -127,7 +164,7 @@ private fun AddMemberContent(
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(horizontal = AppTheme.spacing.s4)
-            .padding(bottom = AppTheme.spacing.s6)
+            .padding(bottom = AppTheme.spacing.s6),
     ) {
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
 
@@ -149,10 +186,10 @@ private fun AddMemberContent(
             actionEnabled = canSaveUsername,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
-                autoCorrectEnabled = false
+                autoCorrectEnabled = false,
             ),
-            onActionClick = onRequestUsernameValidation,
-            modifier = Modifier.fillMaxWidth()
+            onActionClick = { onUsernameChange(uiState.username) },
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
@@ -176,11 +213,11 @@ private fun AddMemberContent(
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
                 autoCorrectEnabled = false,
-                keyboardType = KeyboardType.Password
+                keyboardType = KeyboardType.Password,
             ),
             visualTransformation = PasswordVisualTransformation(),
-            onActionClick = onRequestPasswordValidation,
-            modifier = Modifier.fillMaxWidth()
+            onActionClick = { onPasswordChange(uiState.temporaryPassword) },
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(AppTheme.spacing.s6))
@@ -188,20 +225,20 @@ private fun AddMemberContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 text = "Role",
                 style = AppTheme.typography.bodySmBold,
-                color = AppTheme.colors.onSurface
+                color = AppTheme.colors.onSurface,
             )
             LogFlareDropdown(
                 items = UserPermission.entries.filter { it != UserPermission.SUPER_USER },
                 selectedItem = uiState.selectedPermission,
-                onItemSelected = onPermissionSelect,
+                onItemSelected = onPermissionChange,
                 itemLabelMapper = { it.label },
                 size = DropdownSize.Large,
-                modifier = Modifier.width(140.dp)
+                modifier = Modifier.width(140.dp),
             )
         }
 
@@ -210,7 +247,8 @@ private fun AddMemberContent(
             AddMemberBanner(
                 text = message,
                 isError = true,
-                onDismiss = onClearBanner
+                onDismiss = { onPermissionChange(uiState.selectedPermission) },
+                modifier = Modifier.testTag(VisualQaTags.Error),
             )
         }
 
@@ -219,7 +257,7 @@ private fun AddMemberContent(
             AddMemberBanner(
                 text = message,
                 isError = false,
-                onDismiss = onClearBanner
+                onDismiss = { onPermissionChange(uiState.selectedPermission) },
             )
         }
 
@@ -232,7 +270,7 @@ private fun AddMemberBanner(
     text: String,
     isError: Boolean,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
     val background = if (isError) {
@@ -247,14 +285,14 @@ private fun AddMemberBanner(
             .fillMaxWidth()
             .clickable { onDismiss() },
         color = background,
-        shape = AppTheme.radius.large
+        shape = AppTheme.radius.large,
     ) {
         Text(
             text = text,
             style = AppTheme.typography.bodySmMedium,
             color = contentColor,
             modifier = Modifier
-                .padding(horizontal = AppTheme.spacing.s4, vertical = AppTheme.spacing.s3)
+                .padding(horizontal = AppTheme.spacing.s4, vertical = AppTheme.spacing.s3),
         )
     }
 }

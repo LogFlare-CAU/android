@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,24 +29,48 @@ import com.example.logflare.core.designsystem.components.button.LogFlareButton
 import com.example.logflare.core.designsystem.components.feedback.LogFlareSnackbar
 import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
 import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
+import com.logflare.android.ui.VisualQaTags
 
 @Composable
 fun LogoutScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: LogoutViewModel = hiltViewModel()
+    viewModel: LogoutViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.ui.collectAsState()
 
+    LogoutScreenContent(
+        uiState = uiState,
+        onBack = {
+            if (uiState.errorMessage != null) {
+                viewModel.clearError()
+            } else {
+                onBack()
+            }
+        },
+        onLogout = { viewModel.performLogout(onLogout) },
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun LogoutScreenContent(
+    uiState: LogoutUiState,
+    onBack: () -> Unit,
+    onLogout: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(VisualQaTags.Logout),
         containerColor = AppTheme.colors.surface,
         topBar = {
             LogFlareTopAppBar(
                 titleType = TopAppBarTitleType.Title,
                 titleText = "Log Out",
-                onBack = onBack
+                onBack = onBack,
             )
         },
         bottomBar = {
@@ -53,15 +78,15 @@ fun LogoutScreen(
                 isLoading = uiState.isLoading,
                 errorMessage = uiState.errorMessage,
                 onCancel = onBack,
-                onConfirm = { viewModel.performLogout(onLogout) },
-                onDismissError = viewModel::clearError
+                onConfirm = onLogout,
+                onDismissError = onBack,
             )
-        }
+        },
     ) { innerPadding ->
         LogoutBody(
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize()
+                .fillMaxSize(),
         )
     }
 }
@@ -73,22 +98,22 @@ private fun LogoutBody(modifier: Modifier = Modifier) {
             .padding(horizontal = AppTheme.spacing.s6)
             .padding(top = AppTheme.spacing.s8),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "Log Out",
             style = AppTheme.typography.bodyLgBold,
             color = AppTheme.colors.onSurface,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
 
         Spacer(modifier = Modifier.height(AppTheme.spacing.s4))
 
         Text(
-            text = "Are you sure you want to log out?\nYou’ll need to sign in again to use LogFlare",
+            text = "Are you sure you want to log out?\nYou'll need to sign in again to use LogFlare",
             style = AppTheme.typography.bodySmLight,
             color = AppTheme.colors.neutral.s70,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -99,12 +124,12 @@ private fun LogoutBottomBar(
     errorMessage: String?,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
-    onDismissError: () -> Unit
+    onDismissError: () -> Unit,
 ) {
     Surface(
         color = AppTheme.colors.surface,
         tonalElevation = 4.dp,
-        shadowElevation = 4.dp
+        shadowElevation = 4.dp,
     ) {
         Column(
             modifier = Modifier
@@ -112,7 +137,7 @@ private fun LogoutBottomBar(
                 .navigationBarsPadding()
                 .padding(horizontal = AppTheme.spacing.s4)
                 .padding(vertical = AppTheme.spacing.s3),
-            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.s3)
+            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.s3),
         ) {
             errorMessage?.let { message ->
                 LogFlareSnackbar(
@@ -120,12 +145,13 @@ private fun LogoutBottomBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onDismissError() }
+                        .testTag(VisualQaTags.Error),
                 )
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.s3)
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.s3),
             ) {
                 LogFlareButton(
                     text = "Cancel",
@@ -133,7 +159,7 @@ private fun LogoutBottomBar(
                     variant = ButtonVariant.Primary,
                     type = ButtonType.Outline,
                     enabled = !isLoading,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
 
                 LogFlareButton(
@@ -142,7 +168,7 @@ private fun LogoutBottomBar(
                     variant = ButtonVariant.Primary,
                     type = ButtonType.Filled,
                     enabled = !isLoading,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
