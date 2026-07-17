@@ -59,6 +59,8 @@ class DeviceImageComparatorTest {
         val diff = File(temp.root, "nested/diff-dim.png")
         solid(expected, 8, 8, 0xFF000000.toInt())
         solid(actual, 8, 9, 0xFF000000.toInt())
+        diff.parentFile.mkdirs()
+        diff.writeText("stale")
 
         val result = comparator.compare(expected, actual, diff)
         assertTrue(result is CompareResult.DimensionMismatch)
@@ -141,9 +143,11 @@ class DeviceImageComparatorTest {
         val diff = temp.newFile("diff-bad.png")
         solid(expected, 2, 2, 0xFFFFFFFF.toInt())
         actual.writeText("not-a-png")
+        diff.writeText("stale")
 
         val result = comparator.compare(expected, actual, diff)
         assertTrue(result is CompareResult.InvalidImage)
+        assertFalse(diff.exists())
     }
 
     @Test
@@ -172,5 +176,81 @@ class DeviceImageComparatorTest {
             // expected
         }
         assertFalse(expected.exists())
+    }
+
+    @Test
+    fun recordDeviceRejectsImageIoReadableJpeg() {
+        val actual = temp.newFile("capture.jpg")
+        val expected = File(temp.root, "baselines/jpeg.png")
+        val jpeg = BufferedImage(3, 3, BufferedImage.TYPE_INT_RGB)
+        assertTrue(ImageIO.write(jpeg, "jpg", actual))
+
+        try {
+            DeviceImageComparator.recordDevice(actual = actual, expected = expected)
+            fail("expected JPEG rejection")
+        } catch (_: IllegalArgumentException) {
+            // expected
+        }
+        assertFalse(expected.exists())
+    }
+
+    @Test
+    fun channelDeltaThreeIsChanged() {
+        val expected = temp.newFile("expected-delta3.png")
+        val actual = temp.newFile("actual-delta3.png")
+        val diff = temp.newFile("diff-delta3.png")
+        solid(expected, 10, 10, 0xFF101010.toInt())
+        solid(actual, 10, 10, 0xFF131313.toInt())
+
+        assertTrue(comparator.compare(expected, actual, diff) is CompareResult.Changed)
+    }
+
+    @Test
+    fun ratioExactlyOneInTenThousandIsMatch() {
+        val expected = temp.newFile("expected-ratio-boundary.png")
+        val actual = temp.newFile("actual-ratio-boundary.png")
+        val diff = temp.newFile("diff-ratio-boundary.png")
+        solid(expected, 100, 100, 0xFF101010.toInt())
+        solid(actual, 100, 100, 0xFF101010.toInt())
+        val image = ImageIO.read(actual)
+        image.setRGB(0, 0, 0xFF131313.toInt())
+        ImageIO.write(image, "png", actual)
+
+        assertEquals(CompareResult.Match, comparator.compare(expected, actual, diff))
+        assertFalse(diff.exists())
+    }
+
+    @Test
+    fun ratioGreaterThanOneInTenThousandIsChangedAndAtomicallyReplacesDiff() {
+        val expected = temp.newFile("expected-ratio-over.png")
+        val actual = temp.newFile("actual-ratio-over.png")
+        val diff = temp.newFile("diff-ratio-over.png")
+        solid(expected, 100, 100, 0xFF101010.toInt())
+        solid(actual, 100, 100, 0xFF101010.toInt())
+        val image = ImageIO.read(actual)
+        image.setRGB(0, 0, 0xFF131313.toInt())
+        image.setRGB(1, 0, 0xFF131313.toInt())
+        ImageIO.write(image, "png", actual)
+        diff.writeText("old-final")
+
+        val result = comparator.compare(expected, actual, diff)
+
+        assertTrue(result is CompareResult.Changed)
+        assertTrue(ImageIO.read(diff) != null)
+        assertTrue(diff.parentFile.listFiles()!!.none { it.name.startsWith("${diff.name}.tmp-") })
+    }
+
+    @Test
+    fun recordDeviceAtomicallyReplacesExistingBaselineAndCleansTemp() {
+        val actual = temp.newFile("capture-replace.png")
+        val expected = temp.newFile("expected-replace.png")
+        solid(actual, 3, 3, 0xFFABCDEF.toInt())
+        solid(expected, 3, 3, 0xFF000000.toInt())
+        val actualBytes = actual.readBytes()
+
+        DeviceImageComparator.recordDevice(actual = actual, expected = expected)
+
+        assertTrue(actualBytes.contentEquals(expected.readBytes()))
+        assertTrue(expected.parentFile.listFiles()!!.none { it.name.startsWith("${expected.name}.tmp-") })
     }
 }

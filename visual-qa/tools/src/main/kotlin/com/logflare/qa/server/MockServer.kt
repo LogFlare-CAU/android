@@ -19,6 +19,7 @@ import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -28,40 +29,51 @@ class MockServer(
 ) {
     private val state = FixtureState()
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-    private val executor = Executors.newSingleThreadExecutor(
-        ThreadFactory { runnable ->
-            Thread(runnable, "qa-mock-server").apply { isDaemon = false }
-        },
-    )
+    private var executor: ExecutorService? = null
     private var server: HttpServer? = null
     private val started = AtomicBoolean(false)
 
     val boundPort: Int
         get() = server?.address?.port ?: error("Server not started")
 
+    @Synchronized
     fun start() {
         check(started.compareAndSet(false, true)) { "Server already started" }
-        val httpServer = HttpServer.create(InetSocketAddress(host, port), 0)
-        httpServer.executor = executor
-        httpServer.createContext("/") { exchange ->
-            try {
-                handle(exchange)
-            } catch (t: Throwable) {
-                writeJson(
-                    exchange,
-                    500,
-                    envelope(success = false, message = t.message ?: "internal error"),
-                )
+        val newExecutor = Executors.newSingleThreadExecutor(
+            ThreadFactory { runnable ->
+                Thread(runnable, "qa-mock-server").apply { isDaemon = false }
+            },
+        )
+        try {
+            val httpServer = HttpServer.create(InetSocketAddress(host, port), 0)
+            httpServer.executor = newExecutor
+            httpServer.createContext("/") { exchange ->
+                try {
+                    handle(exchange)
+                } catch (t: Throwable) {
+                    writeJson(
+                        exchange,
+                        500,
+                        envelope(success = false, message = t.message ?: "internal error"),
+                    )
+                }
             }
+            httpServer.start()
+            executor = newExecutor
+            server = httpServer
+        } catch (t: Throwable) {
+            newExecutor.shutdownNow()
+            started.set(false)
+            throw t
         }
-        httpServer.start()
-        server = httpServer
     }
 
+    @Synchronized
     fun stop() {
         server?.stop(0)
         server = null
-        executor.shutdownNow()
+        executor?.shutdownNow()
+        executor = null
         started.set(false)
     }
 
@@ -72,30 +84,56 @@ class MockServer(
         val query = parseQuery(exchange.requestURI.rawQuery)
 
         when {
-            method == "GET" && path == "/__qa/health" -> {
-                writeRawJson(exchange, 200, """{"status":"ok"}""")
-            }
-            method == "POST" && path == "/__qa/reset" -> {
-                state.reset()
-                writeJson(exchange, 200, envelope(success = true, message = "reset"))
-            }
-            method == "POST" && path == "/user/auth" -> handleAuth(exchange)
-            path == "/user/" || path == "/user" -> handleUsersCollection(exchange, method)
-            path == "/user/me" -> requireAuth(exchange) {
-                val user = state.getUser(1)!!
-                writeJson(exchange, 200, userEnvelope(user))
-            }
-            path == "/user/name" -> requireAuth(exchange) {
-                val username = query["username"]
-                if (username.isNullOrBlank()) {
-                    writeJson(exchange, 400, envelope(false, "username required"))
-                    return@requireAuth
-                }
-                val user = state.getUserByName(username)
-                if (user == null) {
-                    writeJson(exchange, 404, envelope(false, "user not found"))
+            path == "/__qa/health" -> {
+                if (method == "GET") {
+                    writeRawJson(exchange, 200, """{"status":"ok"}""")
                 } else {
-                    writeJson(exchange, 200, userEnvelope(user))
+                    methodNotAllowed(exchange)
+                }
+            }
+            path == "/__qa/reset" -> {
+                if (method == "POST") {
+                    state.reset()
+                    writeJson(exchange, 200, envelope(success = true, message = "reset"))
+                } else {
+                    methodNotAllowed(exchange)
+                }
+            }
+            path == "/user/auth" -> {
+                if (method == "POST") {
+                    handleAuth(exchange)
+                } else {
+                    methodNotAllowed(exchange)
+                }
+            }
+            path == "/user/" || path == "/user" -> handleUsersCollection(exchange, method)
+            path == "/user/me" -> {
+                if (method != "GET") {
+                    methodNotAllowed(exchange)
+                } else {
+                    requireAuth(exchange) {
+                        val user = state.getUser(1)!!
+                        writeJson(exchange, 200, userEnvelope(user))
+                    }
+                }
+            }
+            path == "/user/name" -> {
+                if (method != "GET") {
+                    methodNotAllowed(exchange)
+                } else {
+                    requireAuth(exchange) {
+                        val username = query["username"]
+                        if (username.isNullOrBlank()) {
+                            writeJson(exchange, 400, envelope(false, "username required"))
+                            return@requireAuth
+                        }
+                        val user = state.getUserByName(username)
+                        if (user == null) {
+                            writeJson(exchange, 404, envelope(false, "user not found"))
+                        } else {
+                            writeJson(exchange, 200, userEnvelope(user))
+                        }
+                    }
                 }
             }
             USER_ID_PATH.matches(path) -> handleUserById(exchange, method, path)
@@ -379,6 +417,12 @@ class MockServer(
             }
             "POST" -> {
                 // Authenticated via ProjectKey/Project headers for ingestion path.
+                val projectKey = exchange.requestHeaders.getFirst("ProjectKey")
+                val project = exchange.requestHeaders.getFirst("Project")
+                if (projectKey.isNullOrBlank() || project.isNullOrBlank()) {
+                    writeJson(exchange, 400, envelope(false, "ProjectKey and Project headers required"))
+                    return
+                }
                 val body = readBody(exchange)
                 val obj = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
                 if (obj == null) {
@@ -399,6 +443,10 @@ class MockServer(
             }
             else -> writeJson(exchange, 405, envelope(false, "method not allowed"))
         }
+    }
+
+    private fun methodNotAllowed(exchange: HttpExchange) {
+        writeJson(exchange, 405, envelope(false, "method not allowed"))
     }
 
     private inline fun requireAuth(exchange: HttpExchange, block: () -> Unit) {

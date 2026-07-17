@@ -2,6 +2,9 @@ package com.logflare.qa.image
 
 import java.awt.image.BufferedImage
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.imageio.ImageIO
 import kotlin.math.abs
 
@@ -28,10 +31,11 @@ class DeviceImageComparator(
     private val maxChangedRatio: Double = 0.0001,
 ) {
     fun compare(expected: File, actual: File, diff: File): CompareResult {
-        val expectedImage = readImage(expected) ?: return CompareResult.InvalidImage("cannot read expected: ${expected.path}")
-        val actualImage = readImage(actual) ?: return CompareResult.InvalidImage("cannot read actual: ${actual.path}")
+        val expectedImage = readImage(expected) ?: return invalid(diff, "cannot read expected: ${expected.path}")
+        val actualImage = readImage(actual) ?: return invalid(diff, "cannot read actual: ${actual.path}")
 
         if (expectedImage.width != actualImage.width || expectedImage.height != actualImage.height) {
+            deleteStaleDiff(diff)
             return CompareResult.DimensionMismatch(
                 expectedWidth = expectedImage.width,
                 expectedHeight = expectedImage.height,
@@ -44,7 +48,7 @@ class DeviceImageComparator(
         val height = expectedImage.height
         val total = width.toLong() * height.toLong()
         if (total == 0L) {
-            return CompareResult.InvalidImage("empty image")
+            return invalid(diff, "empty image")
         }
 
         val diffImage = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
@@ -69,14 +73,34 @@ class DeviceImageComparator(
 
         val ratio = changedPixels.toDouble() / total.toDouble()
         return if (ratio > maxChangedRatio) {
-            diff.parentFile?.mkdirs()
-            ImageIO.write(diffImage, "png", diff)
+            writePngAtomically(diffImage, diff)
             CompareResult.Changed(changedPixels = changedPixels, changedRatio = ratio)
         } else {
-            if (diff.exists()) {
-                diff.delete()
-            }
+            deleteStaleDiff(diff)
             CompareResult.Match
+        }
+    }
+
+    private fun invalid(diff: File, reason: String): CompareResult.InvalidImage {
+        deleteStaleDiff(diff)
+        return CompareResult.InvalidImage(reason)
+    }
+
+    private fun deleteStaleDiff(diff: File) {
+        if (diff.exists() && !diff.delete()) {
+            throw IllegalStateException("cannot delete stale diff: ${diff.path}")
+        }
+    }
+
+    private fun writePngAtomically(image: BufferedImage, destination: File) {
+        val parent = destination.absoluteFile.parentFile
+        parent.mkdirs()
+        val temp = Files.createTempFile(parent.toPath(), "${destination.name}.tmp-", ".png")
+        try {
+            check(ImageIO.write(image, "png", temp.toFile())) { "PNG writer unavailable" }
+            moveReplacing(temp, destination.toPath())
+        } finally {
+            Files.deleteIfExists(temp)
         }
     }
 
@@ -100,17 +124,59 @@ class DeviceImageComparator(
     companion object {
         private const val MAGENTA_OPAQUE = 0xFFFF00FF.toInt()
         private const val UNCHANGED_ALPHA = 51 // 20% of 255
+        private val PNG_SIGNATURE = byteArrayOf(
+            0x89.toByte(),
+            0x50,
+            0x4E,
+            0x47,
+            0x0D,
+            0x0A,
+            0x1A,
+            0x0A,
+        )
 
         fun recordDevice(actual: File, expected: File) {
             if (!actual.isFile) {
                 throw IllegalArgumentException("actual image missing: ${actual.path}")
             }
+            if (!hasPngSignature(actual)) {
+                throw IllegalArgumentException("actual is not a PNG: ${actual.path}")
+            }
             val image = ImageIO.read(actual)
                 ?: throw IllegalArgumentException("actual is not a valid PNG: ${actual.path}")
-            // Ensure it is readable as an image; copy original bytes to preserve PNG payload.
-            check(image.width > 0 && image.height > 0)
-            expected.parentFile?.mkdirs()
-            actual.copyTo(expected, overwrite = true)
+            require(image.width > 0 && image.height > 0) { "actual PNG is empty: ${actual.path}" }
+
+            val parent = expected.absoluteFile.parentFile
+            parent.mkdirs()
+            val temp = Files.createTempFile(parent.toPath(), "${expected.name}.tmp-", ".png")
+            try {
+                Files.copy(actual.toPath(), temp, StandardCopyOption.REPLACE_EXISTING)
+                moveReplacing(temp, expected.toPath())
+            } finally {
+                Files.deleteIfExists(temp)
+            }
+        }
+
+        private fun hasPngSignature(file: File): Boolean {
+            if (file.length() < PNG_SIGNATURE.size) return false
+            val signature = ByteArray(PNG_SIGNATURE.size)
+            file.inputStream().use { input ->
+                if (input.read(signature) != signature.size) return false
+            }
+            return signature.contentEquals(PNG_SIGNATURE)
+        }
+
+        private fun moveReplacing(source: java.nio.file.Path, destination: java.nio.file.Path) {
+            try {
+                Files.move(
+                    source,
+                    destination,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING)
+            }
         }
     }
 }

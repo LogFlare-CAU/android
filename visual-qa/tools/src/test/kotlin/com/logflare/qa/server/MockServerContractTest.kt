@@ -383,6 +383,70 @@ class MockServerContractTest {
     }
 
     @Test
+    fun everyStaticRouteRejectsUnsupportedMethodsWith405() {
+        val cases = listOf(
+            Triple("POST", "/__qa/health", emptyMap<String, String>()),
+            Triple("GET", "/__qa/reset", emptyMap()),
+            Triple("GET", "/user/auth", emptyMap()),
+            Triple("POST", "/user/me", authHeaders()),
+            Triple("POST", "/user/name?username=qa-admin", authHeaders()),
+            Triple("GET", "/project/perm/batch/reset", authHeaders()),
+            Triple("POST", "/fcm/data", authHeaders()),
+            Triple("GET", "/fcm/token", authHeaders()),
+        )
+
+        cases.forEach { (method, path, headers) ->
+            assertEquals("$method $path", 405, request(method, path, headers = headers).code)
+        }
+    }
+
+    @Test
+    fun postLogErrorRequiresNonblankProjectHeaders() {
+        val body = """{"errortype":"NPE","level":"ERROR","message":"boom"}"""
+        assertEquals(400, request("POST", "/log/error", body = body).code)
+        assertEquals(
+            400,
+            request(
+                "POST",
+                "/log/error",
+                body = body,
+                headers = mapOf("ProjectKey" to " ", "Project" to "Payments"),
+            ).code,
+        )
+        assertEquals(
+            400,
+            request(
+                "POST",
+                "/log/error",
+                body = body,
+                headers = mapOf("ProjectKey" to "token", "Project" to " "),
+            ).code,
+        )
+    }
+
+    @Test
+    fun serverCanStartStopAndStartAgain() {
+        val reusable = MockServer(host = "127.0.0.1", port = 0)
+        reusable.start()
+        val firstPort = reusable.boundPort
+        reusable.stop()
+
+        reusable.start()
+        try {
+            val response = client.send(
+                HttpRequest.newBuilder(
+                    URI.create("http://127.0.0.1:${reusable.boundPort}/__qa/health"),
+                ).GET().build(),
+                HttpResponse.BodyHandlers.ofString(),
+            )
+            assertEquals(200, response.statusCode())
+            assertTrue(firstPort > 0)
+        } finally {
+            reusable.stop()
+        }
+    }
+
+    @Test
     fun urlDecodingForQueryAndPath() {
         request(
             "POST",
