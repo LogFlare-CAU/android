@@ -1,0 +1,180 @@
+package com.logflare.qa
+
+import com.logflare.qa.image.CompareResult
+import com.logflare.qa.image.DeviceImageComparator
+import com.logflare.qa.server.MockServer
+import java.io.File
+import java.util.concurrent.CountDownLatch
+import kotlin.system.exitProcess
+
+fun main(args: Array<String>) {
+    exitProcess(QaToolMain().run(args))
+}
+
+class QaToolMain {
+    fun run(args: Array<String>): Int {
+        if (args.isEmpty() || args[0] == "--help" || args[0] == "-h") {
+            printHelp()
+            return 0
+        }
+        return when (args[0]) {
+            "server" -> runServer(args.drop(1))
+            "compare" -> runCompare(args.drop(1))
+            "record-device" -> runRecordDevice(args.drop(1))
+            else -> {
+                System.err.println("Unknown command: ${args[0]}")
+                printHelp()
+                2
+            }
+        }
+    }
+
+    private fun runServer(args: List<String>): Int {
+        var host = "127.0.0.1"
+        var port = 8000
+        var i = 0
+        while (i < args.size) {
+            when (args[i]) {
+                "--host" -> {
+                    host = args.getOrNull(++i) ?: return usageError("server requires --host <value>")
+                }
+                "--port" -> {
+                    port = args.getOrNull(++i)?.toIntOrNull()
+                        ?: return usageError("server requires --port <int>")
+                }
+                "--help", "-h" -> {
+                    printHelp()
+                    return 0
+                }
+                else -> return usageError("unknown server argument: ${args[i]}")
+            }
+            i++
+        }
+
+        val server = MockServer(host = host, port = port)
+        val latch = CountDownLatch(1)
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                runCatching { server.stop() }
+                latch.countDown()
+            },
+        )
+        server.start()
+        println("RESULT ServerStarted host=$host port=${server.boundPort}")
+        latch.await()
+        return 0
+    }
+
+    private fun runCompare(args: List<String>): Int {
+        var expected: File? = null
+        var actual: File? = null
+        var diff: File? = null
+        var i = 0
+        while (i < args.size) {
+            when (args[i]) {
+                "--expected" -> expected = File(args.getOrNull(++i) ?: return usageError("missing --expected"))
+                "--actual" -> actual = File(args.getOrNull(++i) ?: return usageError("missing --actual"))
+                "--diff" -> diff = File(args.getOrNull(++i) ?: return usageError("missing --diff"))
+                "--help", "-h" -> {
+                    printHelp()
+                    return 0
+                }
+                else -> return usageError("unknown compare argument: ${args[i]}")
+            }
+            i++
+        }
+        if (expected == null || actual == null || diff == null) {
+            return usageError("compare requires --expected <png> --actual <png> --diff <png>")
+        }
+        if (!expected.isFile) return fail("RESULT InvalidImage reason=missing-expected")
+        if (!actual.isFile) return fail("RESULT InvalidImage reason=missing-actual")
+
+        val result = DeviceImageComparator().compare(expected, actual, diff)
+        return when (result) {
+            CompareResult.Match -> {
+                println("RESULT Match")
+                0
+            }
+            is CompareResult.Changed -> {
+                println(
+                    "RESULT Changed ratio=${"%.8f".format(result.changedRatio)} count=${result.changedPixels}",
+                )
+                1
+            }
+            is CompareResult.DimensionMismatch -> {
+                println(
+                    "RESULT DimensionMismatch expected=${result.expectedWidth}x${result.expectedHeight} " +
+                        "actual=${result.actualWidth}x${result.actualHeight}",
+                )
+                1
+            }
+            is CompareResult.InvalidImage -> {
+                println("RESULT InvalidImage reason=${result.reason}")
+                1
+            }
+        }
+    }
+
+    private fun runRecordDevice(args: List<String>): Int {
+        var actual: File? = null
+        var expected: File? = null
+        var i = 0
+        while (i < args.size) {
+            when (args[i]) {
+                "--actual" -> actual = File(args.getOrNull(++i) ?: return usageError("missing --actual"))
+                "--expected" -> expected = File(args.getOrNull(++i) ?: return usageError("missing --expected"))
+                "--help", "-h" -> {
+                    printHelp()
+                    return 0
+                }
+                else -> return usageError("unknown record-device argument: ${args[i]}")
+            }
+            i++
+        }
+        if (actual == null || expected == null) {
+            return usageError("record-device requires --actual <png> --expected <png>")
+        }
+        return try {
+            DeviceImageComparator.recordDevice(actual = actual, expected = expected)
+            println("RESULT Recorded path=${expected.path}")
+            0
+        } catch (e: IllegalArgumentException) {
+            println("RESULT InvalidImage reason=${e.message}")
+            1
+        }
+    }
+
+    private fun usageError(message: String): Int {
+        System.err.println(message)
+        printHelp()
+        return 2
+    }
+
+    private fun fail(line: String): Int {
+        println(line)
+        return 1
+    }
+
+    private fun printHelp() {
+        println(
+            """
+            LogFlare Visual QA Tools
+
+            Usage:
+              tools server --host 127.0.0.1 --port 8000
+              tools compare --expected <png> --actual <png> --diff <png>
+              tools record-device --actual <png> --expected <png>
+
+            Commands:
+              server         Start deterministic mock API (blocks until terminated)
+              compare        Compare device PNGs; exit 0 on Match, nonzero otherwise
+              record-device   Copy validated actual PNG bytes into expected path
+
+            Exit codes:
+              0  success (server healthy start/normal stop, Match, record ok)
+              1  compare Changed / DimensionMismatch / InvalidImage
+              2  invalid arguments
+            """.trimIndent(),
+        )
+    }
+}
