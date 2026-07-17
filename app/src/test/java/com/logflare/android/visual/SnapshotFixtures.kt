@@ -169,13 +169,13 @@ object SnapshotFixtures {
             id = if (saved) 101 else 0,
             name = when {
                 invalid -> "Bad/Name?"
-                saved -> "QA Payments"
+                saved || loading -> "QA Payments"
                 else -> ""
             },
             nameValid = when {
                 invalid -> false
-                saved -> true
-                else -> false // blank initial / unsaved loading matches production default
+                saved || loading -> true
+                else -> false // blank initial matches production default
             },
             loading = loading,
             token = if (saved) "qa-token-101-abcdef" else null,
