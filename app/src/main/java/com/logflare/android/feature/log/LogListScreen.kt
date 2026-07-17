@@ -18,12 +18,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.model.ErrorlogDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.LogSort
+import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.common.*
 
 data class ProjectToggleOption(
@@ -32,6 +34,14 @@ data class ProjectToggleOption(
     val selected: Boolean
 )
 
+sealed interface LogListAction {
+    data class OpenLog(val log: ErrorlogDTO) : LogListAction
+    data object LoadMore : LogListAction
+    data class SelectProject(val projectId: Int?) : LogListAction
+    data class ToggleLevel(val level: LogLevel) : LogListAction
+    data class ChangeSort(val sort: LogSort) : LogListAction
+}
+
 @Composable
 fun LogListScreen(
     onLogClick: () -> Unit,
@@ -39,18 +49,43 @@ fun LogListScreen(
 ) {
     val uiState by viewModel.ui.collectAsState()
 
+    LogListScreenContent(
+        uiState = uiState,
+        onAction = { action ->
+            when (action) {
+                is LogListAction.OpenLog -> {
+                    viewModel.onLogClick(action.log)
+                    onLogClick()
+                }
+                LogListAction.LoadMore -> viewModel.loadMore()
+                is LogListAction.SelectProject -> {
+                    action.projectId?.let { viewModel.toggleProjectOption(it) }
+                }
+                is LogListAction.ToggleLevel -> viewModel.setFilter(action.level)
+                is LogListAction.ChangeSort -> viewModel.setSortBy(action.sort)
+            }
+        },
+    )
+}
+
+@Composable
+fun LogListScreenContent(
+    uiState: LogsUiState,
+    onAction: (LogListAction) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .testTag(VisualQaTags.Logs)
             .background(AppTheme.colors.surface)
     ) {
         FilterDropdownRow(
             selectedLevels = uiState.filter,
-            onLevelSelected = viewModel::setFilter,
+            onLevelSelected = { level -> onAction(LogListAction.ToggleLevel(level)) },
             projectOptions = uiState.projectOptions,
-            onToggleProjects = { id -> viewModel.toggleProjectOption(id) },
+            onToggleProjects = { id -> onAction(LogListAction.SelectProject(id)) },
             sortSelection = uiState.sortBy,
-            onSortSelected = { selection -> viewModel.setSortBy(selection) }
+            onSortSelected = { selection -> onAction(LogListAction.ChangeSort(selection)) }
         )
         Box(
             modifier = Modifier
@@ -60,14 +95,24 @@ fun LogListScreen(
             when {
                 uiState.loading -> LoadingState()
                 uiState.error != null -> ErrorState(uiState.error!!)
-                uiState.errorLogs.isEmpty() -> EmptyState(uiState.selectedProject != null, uiState.filter)
+                uiState.errorLogs.isEmpty() -> Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(VisualQaTags.Empty),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    EmptyState(
+                        projectFiltered = uiState.selectedProject != null,
+                        filter = uiState.filter,
+                    )
+                }
                 else -> LogListContent(
                     logs = uiState.errorLogs,
                     projectNames = uiState.projectNames,
                     showLoadMore = uiState.hasMore,
                     loadingMore = uiState.loadingMore,
-                    onLoadMore = { viewModel.loadMore() },
-                    onLogClick = { log -> viewModel.onLogClick(log); onLogClick() }
+                    onLoadMore = { onAction(LogListAction.LoadMore) },
+                    onLogClick = { log -> onAction(LogListAction.OpenLog(log)) }
                 )
             }
         }
@@ -87,7 +132,6 @@ private fun FilterDropdownRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-//            .padding(top = 12.dp)
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -156,6 +200,7 @@ private fun LoadingState(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
+            .testTag(VisualQaTags.Loading)
             .padding(top = 48.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -168,6 +213,7 @@ private fun ErrorState(message: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
+            .testTag(VisualQaTags.Error)
             .padding(top = 48.dp),
         contentAlignment = Alignment.Center
     ) {
