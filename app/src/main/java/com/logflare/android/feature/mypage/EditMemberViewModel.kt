@@ -32,6 +32,7 @@ data class EditMemberUiState(
     val originalPermission: UserPermission = UserPermission.USER,
     val isLoading: Boolean = false,
     val snackbarMessage: String? = null,
+    val snackbarIsError: Boolean = false,
     val showDeleteDialog: Boolean = false,
     val disabled: Boolean = false
 )
@@ -82,6 +83,7 @@ class EditMemberViewModel @Inject constructor(
                 it.copy(
                     isLoading = false,
                     snackbarMessage = message,
+                    snackbarIsError = true,
                     disabled = true,
                     usernameValidation = InputValidationUiState(
                         status = MemberFieldStatus.Error,
@@ -117,7 +119,8 @@ class EditMemberViewModel @Inject constructor(
             it.copy(
                 username = username,
                 usernameValidation = InputValidationUiState(),
-                snackbarMessage = null
+                snackbarMessage = null,
+                snackbarIsError = false,
             )
         }
         scheduleUsernameValidation()
@@ -135,7 +138,8 @@ class EditMemberViewModel @Inject constructor(
                     helperText = "Use English, numbers, and symbols only",
                     status = if (password.isBlank()) MemberFieldStatus.Idle else MemberFieldStatus.Idle
                 ),
-                snackbarMessage = null
+                snackbarMessage = null,
+                snackbarIsError = false,
             )
         }
         schedulePasswordValidation()
@@ -149,7 +153,8 @@ class EditMemberViewModel @Inject constructor(
         _ui.update {
             it.copy(
                 selectedPermission = permission,
-                snackbarMessage = null
+                snackbarMessage = null,
+                snackbarIsError = false,
             )
         }
     }
@@ -162,7 +167,12 @@ class EditMemberViewModel @Inject constructor(
         val roleChanged = current.selectedPermission != current.originalPermission
 
         if (!usernameChanged && !passwordReady && !roleChanged) {
-            _ui.update { it.copy(snackbarMessage = "No changes to save") }
+            _ui.update {
+                it.copy(
+                    snackbarMessage = "No changes to save",
+                    snackbarIsError = false,
+                )
+            }
             return
         }
 
@@ -184,6 +194,7 @@ class EditMemberViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             snackbarMessage = snackbarText,
+                            snackbarIsError = false,
                             originalUsername = if (usernameChanged) it.username else it.originalUsername,
                             originalPermission = if (roleChanged) it.selectedPermission else it.originalPermission,
                             newPassword = if (passwordReady) "" else it.newPassword,
@@ -204,7 +215,8 @@ class EditMemberViewModel @Inject constructor(
                     _ui.update {
                         it.copy(
                             isLoading = false,
-                            snackbarMessage = "Failed to update member: ${error.message}"
+                            snackbarMessage = "Failed to update member: ${error.message}",
+                            snackbarIsError = true,
                         )
                     }
                 }
@@ -228,7 +240,8 @@ class EditMemberViewModel @Inject constructor(
                     _ui.update {
                         it.copy(
                             isLoading = false,
-                            snackbarMessage = "${username.ifBlank { "Member" }} deleted successfully"
+                            snackbarMessage = "${username.ifBlank { "Member" }} deleted successfully",
+                            snackbarIsError = false,
                         )
                     }
                     delay(600)
@@ -238,7 +251,8 @@ class EditMemberViewModel @Inject constructor(
                     _ui.update {
                         it.copy(
                             isLoading = false,
-                            snackbarMessage = "Failed to delete member: ${error.message}"
+                            snackbarMessage = "Failed to delete member: ${error.message}",
+                            snackbarIsError = true,
                         )
                     }
                 }
@@ -246,7 +260,7 @@ class EditMemberViewModel @Inject constructor(
     }
 
     fun dismissSnackbar() {
-        _ui.update { it.copy(snackbarMessage = null) }
+        _ui.update { it.copy(snackbarMessage = null, snackbarIsError = false) }
     }
 
     private fun scheduleUsernameValidation(forceImmediate: Boolean = false) {
