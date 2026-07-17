@@ -41,12 +41,14 @@ class AuthViewModel @Inject constructor(
      * Uses whatever server URL was previously saved (or default).
      */
     fun login(username: String, password: String, onSuccess: () -> Unit) {
-        performLoginInternal(username, password, onSuccess)
+        viewModelScope.launch {
+            performLoginInternal(username, password, onSuccess)
+        }
     }
 
     /**
      * New login entry point supporting user-provided serverUrl.
-     * Persists serverUrl before making the auth request so that subsequent API calls route correctly.
+     * Publishes serverUrl before making the auth request so that subsequent API calls route correctly.
      */
     fun login(serverUrl: String, username: String, password: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
@@ -76,24 +78,22 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    private fun performLoginInternal(
+    private suspend fun performLoginInternal(
         username: String,
         password: String,
         onSuccess: () -> Unit
     ) {
-        viewModelScope.launch {
-            _ui.value = _ui.value.copy(loading = true, loginError = null)
+        _ui.value = _ui.value.copy(loading = true, loginError = null)
 
-            val ok = authLoginUseCase(username, password)
-            if (ok) {
-                _ui.value = _ui.value.copy(loading = false, loginError = null)
-                onSuccess()
-            } else {
-                _ui.value = _ui.value.copy(
-                    loading = false,
-                    loginError = "Login failed"
-                )
-            }
+        val ok = authLoginUseCase(username, password)
+        if (ok) {
+            _ui.value = _ui.value.copy(loading = false, loginError = null)
+            onSuccess()
+        } else {
+            _ui.value = _ui.value.copy(
+                loading = false,
+                loginError = "Login failed"
+            )
         }
     }
 
