@@ -1,6 +1,7 @@
 package com.logflare.android.di
 
 import com.example.logflare.core.network.host.BaseUrlProvider
+import com.example.logflare.core.network.host.MutableBaseUrlProvider
 import com.logflare.android.data.DataStoreBaseUrlProvider
 import dagger.Binds
 import dagger.Module
@@ -14,4 +15,8 @@ abstract class AppNetworkBindings {
     @Binds
     @Singleton
     abstract fun bindBaseUrlProvider(impl: DataStoreBaseUrlProvider): BaseUrlProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindMutableBaseUrlProvider(impl: DataStoreBaseUrlProvider): MutableBaseUrlProvider
 }
