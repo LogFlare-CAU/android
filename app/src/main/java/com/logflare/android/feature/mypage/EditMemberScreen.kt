@@ -217,7 +217,7 @@ private fun EditMemberContent(
             Text(
                 text = "Role",
                 style = AppTheme.typography.bodySmBold,
-                color = AppTheme.colors.neutral.black
+                color = AppTheme.colors.onSurface
             )
 
             LogFlareDropdown(
@@ -297,7 +297,7 @@ private fun DeleteMemberDialog(
             Text(
                 text = "Delete Member",
                 style = AppTheme.typography.bodyMdBold,
-                color = AppTheme.colors.neutral.black
+                color = AppTheme.colors.onSurface
             )
         },
         text = {

@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.designsystem.AppTheme
 import kotlinx.coroutines.launch
 
 // 파일 내부에 컬러 정의가 없을 경우를 대비해 기본값 지정 (필요시 수정)
@@ -69,7 +70,7 @@ fun ProjectCreateScreen(
                 if (ui.error != null) {
                     Text(
                         text = ui.error ?: "",
-                        color = ErrorRed,
+                        color = AppTheme.colors.red.default,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
@@ -144,7 +145,7 @@ private fun TokenSection(token: String?, onCopy: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
         Surface(
             shape = RoundedCornerShape(8.dp),
-            color = CardGray,
+            color = AppTheme.colors.surfaceVariant,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(enabled = token != null) { onCopy() }

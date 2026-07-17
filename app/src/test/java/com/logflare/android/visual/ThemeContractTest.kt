@@ -18,7 +18,7 @@ class ThemeContractTest {
     @get:Rule val compose = createComposeRule()
 
     @Test
-    fun lightAndDarkExposeDifferentSurfaces() {
+    fun lightAndDarkExposeDifferentBackgrounds() {
         var light = Color.Unspecified
         var dark = Color.Unspecified
         compose.setContent {
