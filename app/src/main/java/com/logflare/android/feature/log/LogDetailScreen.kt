@@ -49,7 +49,7 @@ fun LogDetailScreenContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(AppTheme.colors.neutral.white)
+            .background(AppTheme.colors.surface)
             .padding(bottom = 16.dp)
     ) {
         Column(

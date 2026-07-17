@@ -1,8 +1,10 @@
 package com.example.logflare.core.designsystem
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -38,42 +40,72 @@ object AppTheme {
         get() = LocalAppDimens.current
 }
 
+internal fun baseAppColors() = AppColors(
+    primary = BrandColorState(
+        default = GreenDefault,
+        pressed = GreenPressed,
+        disabled = GreenDisabled
+    ),
+    primarySubtle = GreenSubtle,
+    secondary = BrandColorState(
+        default = GreyDefault,
+        pressed = GreyPressed,
+        disabled = GreyDisabled
+    ),
+    red = BrandColorState(
+        default = RedDefault,
+        pressed = RedPressed,
+        disabled = RedDisabled
+    ),
+    neutral = NeutralColorStep(
+        s5 = Neutral5,
+        s10 = Neutral10,
+        s20 = Neutral20,
+        s30 = Neutral30,
+        s40 = Neutral40,
+        s50 = Neutral50,
+        s60 = Neutral60,
+        s70 = Neutral70,
+        s80 = Neutral80,
+        s90 = Neutral90,
+        black = Black,
+        white = White
+    ),
+    background = Color.Unspecified,
+    surface = Color.Unspecified,
+    surfaceVariant = Color.Unspecified,
+    onBackground = Color.Unspecified,
+    onSurface = Color.Unspecified,
+    onPrimary = Color.Unspecified,
+    outline = Color.Unspecified,
+)
+
+internal fun lightAppColors() = baseAppColors().copy(
+    background = Neutral5,
+    surface = White,
+    surfaceVariant = Neutral10,
+    onBackground = Neutral90,
+    onSurface = Neutral90,
+    onPrimary = Black,
+    outline = Neutral40,
+)
+
+internal fun darkAppColors() = baseAppColors().copy(
+    background = Neutral90,
+    surface = Neutral80,
+    surfaceVariant = Neutral70,
+    onBackground = Neutral5,
+    onSurface = Neutral5,
+    onPrimary = Black,
+    outline = Neutral60,
+)
+
 @Composable
 fun AppTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val appColors = AppColors(
-        primary = BrandColorState(
-            default = GreenDefault,
-            pressed = GreenPressed,
-            disabled = GreenDisabled
-        ),
-        primarySubtle = GreenSubtle,
-        secondary = BrandColorState(
-            default = GreyDefault,
-            pressed = GreyPressed,
-            disabled = GreyDisabled
-        ),
-        red = BrandColorState(
-            default = RedDefault,
-            pressed = RedPressed,
-            disabled = RedDisabled
-        ),
-        neutral = NeutralColorStep(
-            s5 = Neutral5,
-            s10 = Neutral10,
-            s20 = Neutral20,
-            s30 = Neutral30,
-            s40 = Neutral40,
-            s50 = Neutral50,
-            s60 = Neutral60,
-            s70 = Neutral70,
-            s80 = Neutral80,
-            s90 = Neutral90,
-            black = Black,
-            white = White
-        )
-    )
+    val appColors = if (darkTheme) darkAppColors() else lightAppColors()
 
     val appTypography = AppTypography(
         // Body Large

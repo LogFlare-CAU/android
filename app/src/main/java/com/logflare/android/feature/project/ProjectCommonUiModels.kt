@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.logflare.core.designsystem.Black
+import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
 
@@ -61,7 +61,7 @@ fun ProjectNameSection(
                     focusedBorderColor = AccentGreen,
                     unfocusedBorderColor = BorderGray,
                     errorBorderColor = ErrorRed,
-                    cursorColor = Black
+                    cursorColor = AppTheme.colors.onSurface
                 )
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -110,7 +110,7 @@ fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit, enabled: 
             Spacer(modifier = Modifier.weight(1f))
             Button(
                 onClick = { expanded = true },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surface),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.height(44.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
@@ -240,7 +240,7 @@ fun KeywordSection(
                     focusedBorderColor = AccentGreen,
                     unfocusedBorderColor = BorderGray,
                     errorBorderColor = ErrorRed,
-                    cursorColor = Black
+                    cursorColor = AppTheme.colors.onSurface
                 )
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -311,7 +311,7 @@ fun BottomActionBar(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = AppTheme.colors.surface,
         shadowElevation = 16.dp
     ) {
         Row(

@@ -63,7 +63,7 @@ fun MyPageScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = AppTheme.colors.neutral.white
+        color = AppTheme.colors.surface
     ) {
         when {
             uiState.loading -> Box(
@@ -98,7 +98,7 @@ private fun MyPageContent(
         modifier = Modifier
             .fillMaxSize()
             .navigationBarsPadding(),
-        color = AppTheme.colors.neutral.white
+        color = AppTheme.colors.surface
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 //            LogFlareTopAppBar(

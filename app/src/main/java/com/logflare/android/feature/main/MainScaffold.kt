@@ -144,7 +144,7 @@ private fun BottomNavigationBar(navController: NavHostController) {
         GnbItem(route = Route.MyPage, iconRes = DesignSystemR.drawable.ic_mypage, label = "MyPage")
     )
 
-    NavigationBar(containerColor = AppTheme.colors.neutral.white) {
+    NavigationBar(containerColor = AppTheme.colors.surface) {
         items.forEach { item ->
             val selected = currentDestination?.hierarchy?.any {
                 it.route == item.route.path

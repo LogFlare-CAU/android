@@ -64,7 +64,14 @@ data class AppColors(
     val primarySubtle: Color,
     val secondary: BrandColorState,
     val red: BrandColorState,
-    val neutral: NeutralColorStep
+    val neutral: NeutralColorStep,
+    val background: Color,
+    val surface: Color,
+    val surfaceVariant: Color,
+    val onBackground: Color,
+    val onSurface: Color,
+    val onPrimary: Color,
+    val outline: Color,
 )
 
 val LocalAppColors = staticCompositionLocalOf {
@@ -77,6 +84,13 @@ val LocalAppColors = staticCompositionLocalOf {
             Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified,
             Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified,
             Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified
-        )
+        ),
+        background = Color.Unspecified,
+        surface = Color.Unspecified,
+        surfaceVariant = Color.Unspecified,
+        onBackground = Color.Unspecified,
+        onSurface = Color.Unspecified,
+        onPrimary = Color.Unspecified,
+        outline = Color.Unspecified,
     )
 }

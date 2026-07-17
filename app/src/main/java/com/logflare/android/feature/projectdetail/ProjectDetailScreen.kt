@@ -71,7 +71,7 @@ fun ProjectDetailScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = AppTheme.colors.neutral.white
+        color = AppTheme.colors.surface
     ) {
         when {
             uiState.loading -> Box(
@@ -107,7 +107,7 @@ private fun ProjectDetailContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppTheme.colors.neutral.white)
+            .background(AppTheme.colors.surface)
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
@@ -168,7 +168,7 @@ private fun ProjectSettingsCard(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(AppTheme.colors.neutral.white.copy(alpha = 0.3f))
+                    .background(AppTheme.colors.surface.copy(alpha = 0.3f))
             )
         }
     }
