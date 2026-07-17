@@ -40,6 +40,7 @@ class MyPageScreenRenderTest {
                     onLogout = {},
                     onAddMember = {},
                     onEditMember = { _ -> },
+                    onSelectLogLevel = { _ -> },
                 )
             }
         }
@@ -54,10 +55,12 @@ class MyPageScreenRenderTest {
                         username = "new-member",
                         temporaryPassword = "Password1!",
                     ),
+                    onBack = {},
                     onUsernameChange = { _ -> },
                     onPasswordChange = { _ -> },
                     onPermissionChange = { _ -> },
                     onSubmit = {},
+                    onDismissMessage = {},
                 )
             }
         }
@@ -74,6 +77,7 @@ class MyPageScreenRenderTest {
                         selectedPermission = UserPermission.USER,
                         originalPermission = UserPermission.USER,
                     ),
+                    onBack = {},
                     onUsernameChange = { _ -> },
                     onPasswordChange = { _ -> },
                     onPermissionChange = { _ -> },
@@ -81,6 +85,7 @@ class MyPageScreenRenderTest {
                     onDeleteRequest = {},
                     onDeleteConfirm = {},
                     onDeleteDismiss = {},
+                    onDismissMessage = {},
                 )
             }
         }
@@ -94,6 +99,7 @@ class MyPageScreenRenderTest {
                     uiState = LogoutUiState(),
                     onBack = {},
                     onLogout = {},
+                    onDismissError = {},
                 )
             }
         }

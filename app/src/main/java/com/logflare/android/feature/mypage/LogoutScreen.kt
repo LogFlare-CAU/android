@@ -42,14 +42,9 @@ fun LogoutScreen(
 
     LogoutScreenContent(
         uiState = uiState,
-        onBack = {
-            if (uiState.errorMessage != null) {
-                viewModel.clearError()
-            } else {
-                onBack()
-            }
-        },
+        onBack = onBack,
         onLogout = { viewModel.performLogout(onLogout) },
+        onDismissError = viewModel::clearError,
         modifier = modifier,
     )
 }
@@ -59,6 +54,7 @@ fun LogoutScreenContent(
     uiState: LogoutUiState,
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    onDismissError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -79,7 +75,7 @@ fun LogoutScreenContent(
                 errorMessage = uiState.errorMessage,
                 onCancel = onBack,
                 onConfirm = onLogout,
-                onDismissError = onBack,
+                onDismissError = onDismissError,
             )
         },
     ) { innerPadding ->

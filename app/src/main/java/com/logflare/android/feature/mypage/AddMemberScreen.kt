@@ -52,53 +52,27 @@ fun AddMemberScreen(
 ) {
     val uiState by viewModel.ui.collectAsState()
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = AppTheme.colors.surface,
-        topBar = {
-            LogFlareTopAppBar(
-                titleType = TopAppBarTitleType.Title,
-                titleText = "Add Member",
-                onBack = onBack,
-            )
-        },
-    ) { innerPadding ->
-        AddMemberScreenContent(
-            uiState = uiState,
-            onUsernameChange = { value ->
-                if (value == uiState.username) {
-                    viewModel.retryUsernameValidation()
-                } else {
-                    viewModel.updateUsername(value)
-                }
-            },
-            onPasswordChange = { value ->
-                if (value == uiState.temporaryPassword) {
-                    viewModel.retryPasswordValidation()
-                } else {
-                    viewModel.updateTemporaryPassword(value)
-                }
-            },
-            onPermissionChange = { permission ->
-                if (permission == uiState.selectedPermission) {
-                    viewModel.clearError()
-                } else {
-                    viewModel.selectPermission(permission)
-                }
-            },
-            onSubmit = { viewModel.addMember(onBack) },
-            modifier = Modifier.padding(innerPadding),
-        )
-    }
+    AddMemberScreenContent(
+        uiState = uiState,
+        onBack = onBack,
+        onUsernameChange = viewModel::updateUsername,
+        onPasswordChange = viewModel::updateTemporaryPassword,
+        onPermissionChange = viewModel::selectPermission,
+        onSubmit = { viewModel.addMember(onBack) },
+        onDismissMessage = viewModel::clearError,
+        modifier = modifier,
+    )
 }
 
 @Composable
 fun AddMemberScreenContent(
     uiState: AddMemberUiState,
+    onBack: () -> Unit,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onPermissionChange: (UserPermission) -> Unit,
     onSubmit: () -> Unit,
+    onDismissMessage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val canSubmit = uiState.usernameValidation.status == MemberFieldStatus.Valid &&
@@ -107,21 +81,19 @@ fun AddMemberScreenContent(
         uiState.temporaryPassword.isNotBlank() &&
         !uiState.isLoading
 
-    Surface(
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
             .testTag(VisualQaTags.AddMember),
-        color = AppTheme.colors.surface,
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            AddMemberForm(
-                uiState = uiState,
-                onUsernameChange = onUsernameChange,
-                onPasswordChange = onPasswordChange,
-                onPermissionChange = onPermissionChange,
-                modifier = Modifier.weight(1f),
+        containerColor = AppTheme.colors.surface,
+        topBar = {
+            LogFlareTopAppBar(
+                titleType = TopAppBarTitleType.Title,
+                titleText = "Add Member",
+                onBack = onBack,
             )
-
+        },
+        bottomBar = {
             Surface(
                 tonalElevation = 4.dp,
                 shadowElevation = 4.dp,
@@ -143,7 +115,18 @@ fun AddMemberScreenContent(
                     )
                 }
             }
-        }
+        },
+    ) { innerPadding ->
+        AddMemberForm(
+            uiState = uiState,
+            onUsernameChange = onUsernameChange,
+            onPasswordChange = onPasswordChange,
+            onPermissionChange = onPermissionChange,
+            onDismissMessage = onDismissMessage,
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
+        )
     }
 }
 
@@ -153,6 +136,7 @@ private fun AddMemberForm(
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onPermissionChange: (UserPermission) -> Unit,
+    onDismissMessage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -161,7 +145,6 @@ private fun AddMemberForm(
 
     Column(
         modifier = modifier
-            .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(horizontal = AppTheme.spacing.s4)
             .padding(bottom = AppTheme.spacing.s6),
@@ -247,7 +230,7 @@ private fun AddMemberForm(
             AddMemberBanner(
                 text = message,
                 isError = true,
-                onDismiss = { onPermissionChange(uiState.selectedPermission) },
+                onDismiss = onDismissMessage,
                 modifier = Modifier.testTag(VisualQaTags.Error),
             )
         }
@@ -257,7 +240,7 @@ private fun AddMemberForm(
             AddMemberBanner(
                 text = message,
                 isError = false,
-                onDismiss = { onPermissionChange(uiState.selectedPermission) },
+                onDismiss = onDismissMessage,
             )
         }
 
