@@ -67,52 +67,25 @@ fun EditMemberScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = AppTheme.colors.surface,
-        topBar = {
-            LogFlareTopAppBar(
-                titleType = TopAppBarTitleType.Title,
-                titleText = "Edit Member",
-                onBack = onBack,
-            )
-        },
-    ) { innerPadding ->
-        EditMemberScreenContent(
-            uiState = uiState,
-            onUsernameChange = { value ->
-                if (value == uiState.username) {
-                    viewModel.retryUsernameValidation()
-                } else {
-                    viewModel.updateUsername(value)
-                }
-            },
-            onPasswordChange = { value ->
-                if (value == uiState.newPassword) {
-                    viewModel.retryPasswordValidation()
-                } else {
-                    viewModel.updatePassword(value)
-                }
-            },
-            onPermissionChange = { permission ->
-                if (permission == uiState.selectedPermission) {
-                    viewModel.dismissSnackbar()
-                } else {
-                    viewModel.selectPermission(permission)
-                }
-            },
-            onSave = { viewModel.saveChanges() },
-            onDeleteRequest = viewModel::showDeleteDialog,
-            onDeleteConfirm = { viewModel.deleteMember(onMemberDeleted) },
-            onDeleteDismiss = viewModel::hideDeleteDialog,
-            modifier = Modifier.padding(innerPadding),
-        )
-    }
+    EditMemberScreenContent(
+        uiState = uiState,
+        onBack = onBack,
+        onUsernameChange = viewModel::updateUsername,
+        onPasswordChange = viewModel::updatePassword,
+        onPermissionChange = viewModel::selectPermission,
+        onSave = viewModel::saveChanges,
+        onDeleteRequest = viewModel::showDeleteDialog,
+        onDeleteConfirm = { viewModel.deleteMember(onMemberDeleted) },
+        onDeleteDismiss = viewModel::hideDeleteDialog,
+        onDismissMessage = viewModel::dismissSnackbar,
+        modifier = modifier,
+    )
 }
 
 @Composable
 fun EditMemberScreenContent(
     uiState: EditMemberUiState,
+    onBack: () -> Unit,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onPermissionChange: (UserPermission) -> Unit,
@@ -120,6 +93,7 @@ fun EditMemberScreenContent(
     onDeleteRequest: () -> Unit,
     onDeleteConfirm: () -> Unit,
     onDeleteDismiss: () -> Unit,
+    onDismissMessage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val usernameState = uiState.usernameValidation.status.toActionTextFieldState()
@@ -130,16 +104,39 @@ fun EditMemberScreenContent(
     val roleChanged = uiState.selectedPermission != uiState.originalPermission
     val canSubmit = (usernameChanged || passwordReady || roleChanged) && !uiState.isLoading
 
-    Surface(
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
             .testTag(VisualQaTags.EditMember),
-        color = AppTheme.colors.surface,
-    ) {
+        containerColor = AppTheme.colors.surface,
+        topBar = {
+            LogFlareTopAppBar(
+                titleType = TopAppBarTitleType.Title,
+                titleText = "Edit Member",
+                onBack = onBack,
+            )
+        },
+        bottomBar = {
+            if (!(uiState.isLoading && uiState.username.isBlank())) {
+                    EditMemberBottomBar(
+                    snackbarMessage = uiState.snackbarMessage,
+                    snackbarIsError = uiState.disabled ||
+                        (uiState.snackbarMessage?.startsWith("Failed") == true),
+                    isLoading = uiState.isLoading,
+                    canSubmit = canSubmit,
+                    onDismissSnackbar = onDismissMessage,
+                    onDeleteClick = onDeleteRequest,
+                    onSaveClick = onSave,
+                    disabled = uiState.disabled,
+                )
+            }
+        },
+    ) { innerPadding ->
         when {
             uiState.isLoading && uiState.username.isBlank() -> {
                 Box(
                     modifier = Modifier
+                        .padding(innerPadding)
                         .fillMaxSize()
                         .testTag(VisualQaTags.Loading),
                     contentAlignment = Alignment.Center,
@@ -149,37 +146,27 @@ fun EditMemberScreenContent(
             }
 
             else -> {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    EditMemberForm(
-                        uiState = uiState,
-                        usernameFieldState = usernameState,
-                        passwordFieldState = passwordState,
-                        onUsernameChange = onUsernameChange,
-                        onPasswordChange = onPasswordChange,
-                        onPermissionChange = onPermissionChange,
-                        modifier = Modifier.weight(1f),
-                    )
-
-                    EditMemberBottomBar(
-                        snackbarMessage = uiState.snackbarMessage,
-                        isLoading = uiState.isLoading,
-                        canSubmit = canSubmit,
-                        onDismissSnackbar = { onPermissionChange(uiState.selectedPermission) },
-                        onDeleteClick = onDeleteRequest,
-                        onSaveClick = onSave,
-                        disabled = uiState.disabled,
-                    )
-                }
+                EditMemberForm(
+                    uiState = uiState,
+                    usernameFieldState = usernameState,
+                    passwordFieldState = passwordState,
+                    onUsernameChange = onUsernameChange,
+                    onPasswordChange = onPasswordChange,
+                    onPermissionChange = onPermissionChange,
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize(),
+                )
             }
         }
+    }
 
-        if (uiState.showDeleteDialog) {
-            DeleteMemberDialog(
-                username = uiState.username,
-                onConfirm = onDeleteConfirm,
-                onDismiss = onDeleteDismiss,
-            )
-        }
+    if (uiState.showDeleteDialog) {
+        DeleteMemberDialog(
+            username = uiState.username,
+            onConfirm = onDeleteConfirm,
+            onDismiss = onDeleteDismiss,
+        )
     }
 }
 
@@ -286,6 +273,7 @@ private fun EditMemberForm(
 @Composable
 private fun EditMemberBottomBar(
     snackbarMessage: String?,
+    snackbarIsError: Boolean,
     isLoading: Boolean,
     canSubmit: Boolean,
     onDismissSnackbar: () -> Unit,
@@ -311,7 +299,11 @@ private fun EditMemberBottomBar(
                     message = snackbarMessage,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onDismissSnackbar() },
+                        .clickable { onDismissSnackbar() }
+                        .then(
+                            if (snackbarIsError) Modifier.testTag(VisualQaTags.Error)
+                            else Modifier,
+                        ),
                 )
             } else {
                 LogFlareButton(

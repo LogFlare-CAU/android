@@ -22,11 +22,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -49,8 +47,6 @@ import com.example.logflare.core.designsystem.theme.AppTheme
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
 import com.logflare.android.ui.VisualQaTags
-
-internal val LocalSelectLogLevel = staticCompositionLocalOf<(LogLevel) -> Unit> { { _ -> } }
 
 @Composable
 fun MyPageScreen(
@@ -76,15 +72,14 @@ fun MyPageScreen(
         }
     }
 
-    CompositionLocalProvider(LocalSelectLogLevel provides viewModel::selectLogLevel) {
-        MyPageContent(
-            uiState = uiState,
-            onLogout = onLogout,
-            onAddMember = onAddMember,
-            onEditMember = onEditMember,
-            modifier = modifier,
-        )
-    }
+    MyPageContent(
+        uiState = uiState,
+        onLogout = onLogout,
+        onAddMember = onAddMember,
+        onEditMember = onEditMember,
+        onSelectLogLevel = viewModel::selectLogLevel,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -93,10 +88,9 @@ fun MyPageContent(
     onLogout: () -> Unit,
     onAddMember: () -> Unit,
     onEditMember: (String) -> Unit,
+    onSelectLogLevel: (LogLevel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val onSelectLogLevel = LocalSelectLogLevel.current
-
     Surface(
         modifier = modifier
             .fillMaxSize()
