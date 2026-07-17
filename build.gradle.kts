@@ -3,6 +3,8 @@ plugins {
     // avoid the Kotlin plugin being loaded multiple times across subprojects.
     // The actual subprojects will apply these plugins without repeating versions.
     alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.hilt.android) apply false
