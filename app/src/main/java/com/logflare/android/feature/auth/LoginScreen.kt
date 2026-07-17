@@ -35,7 +35,6 @@ import com.example.logflare.core.designsystem.Neutral20
 import com.example.logflare.core.designsystem.Neutral30
 import com.example.logflare.core.designsystem.Neutral50
 import com.example.logflare.core.designsystem.Neutral60
-import com.example.logflare.core.designsystem.Neutral80
 import com.logflare.android.R
 
 /**
@@ -91,7 +90,7 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = if (serverUrlError != null) AppTheme.colors.red.default else AppTheme.colors.onSurface,
-                unfocusedBorderColor = if (serverUrlError != null) AppTheme.colors.red.default else Neutral80,
+                unfocusedBorderColor = if (serverUrlError != null) AppTheme.colors.red.default else AppTheme.colors.outline,
                 errorBorderColor = AppTheme.colors.red.default,
                 cursorColor = AppTheme.colors.onSurface
             ),
@@ -119,7 +118,7 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = AppTheme.colors.onSurface,
-                unfocusedBorderColor = Neutral80,
+                unfocusedBorderColor = AppTheme.colors.outline,
                 cursorColor = AppTheme.colors.onSurface
             ),
             singleLine = true
@@ -146,7 +145,7 @@ fun LoginScreen(
             visualTransformation = PasswordVisualTransformation(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = AppTheme.colors.onSurface,
-                unfocusedBorderColor = Neutral80,
+                unfocusedBorderColor = AppTheme.colors.outline,
                 cursorColor = AppTheme.colors.onSurface
             ),
             modifier = Modifier.fillMaxWidth(),

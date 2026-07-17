@@ -162,7 +162,7 @@ private fun ProjectSettingsCard(
             Text(
                 text = label,
                 style = AppTheme.typography.bodyMdMedium,
-                color = AppTheme.colors.neutral.black.copy(alpha = 0.86f)
+                color = AppTheme.colors.onSurface.copy(alpha = 0.86f)
             )
             Box(
                 modifier = Modifier

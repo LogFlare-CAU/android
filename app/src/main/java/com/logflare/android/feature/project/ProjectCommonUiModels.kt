@@ -24,8 +24,6 @@ import com.logflare.android.enums.LogLevel
 
 val AccentGreen = Color(0xFF61B175)
 val DisabledGray = Color(0xFFC2C2C2)
-val BorderGray = Color(0xFFBDBDBD)
-val CardGray = Color(0xFFF5F5F5)
 val ErrorRed = Color(0xFFE53935)
 
 
@@ -59,8 +57,8 @@ fun ProjectNameSection(
                 isError = showError,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentGreen,
-                    unfocusedBorderColor = BorderGray,
-                    errorBorderColor = ErrorRed,
+                    unfocusedBorderColor = AppTheme.colors.outline,
+                    errorBorderColor = AppTheme.colors.red.default,
                     cursorColor = AppTheme.colors.onSurface
                 )
             )
@@ -88,7 +86,7 @@ fun ProjectNameSection(
         if (showError) {
             Text(
                 text = "Use English, Korean, and symbols only",
-                color = ErrorRed,
+                color = AppTheme.colors.red.default,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -118,7 +116,7 @@ fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit, enabled: 
             ) {
                 Text(
                     text = if (selected.isEmpty()) "Select" else selected.joinToString(", "),
-                    color = Color(0xFF333333)
+                    color = AppTheme.colors.onSurface
                 )
             }
         }
@@ -238,8 +236,8 @@ fun KeywordSection(
                 isError = error != null,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentGreen,
-                    unfocusedBorderColor = BorderGray,
-                    errorBorderColor = ErrorRed,
+                    unfocusedBorderColor = AppTheme.colors.outline,
+                    errorBorderColor = AppTheme.colors.red.default,
                     cursorColor = AppTheme.colors.onSurface
                 )
             )
@@ -262,7 +260,7 @@ fun KeywordSection(
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = error ?: "Use English, number, and symbols only",
-            color = if (error != null) ErrorRed else Color(0xFF6D6D6D),
+            color = if (error != null) AppTheme.colors.red.default else Color(0xFF6D6D6D),
             style = MaterialTheme.typography.bodySmall
         )
     }

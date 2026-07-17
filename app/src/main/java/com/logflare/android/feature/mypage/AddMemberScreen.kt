@@ -193,7 +193,7 @@ private fun AddMemberContent(
             Text(
                 text = "Role",
                 style = AppTheme.typography.bodySmBold,
-                color = AppTheme.colors.neutral.black
+                color = AppTheme.colors.onSurface
             )
             LogFlareDropdown(
                 items = UserPermission.entries.filter { it != UserPermission.SUPER_USER },

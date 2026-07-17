@@ -282,7 +282,7 @@ fun GlobalLogCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.radius.large)
-            .background(AppTheme.colors.neutral.s20)
+            .background(AppTheme.colors.surfaceVariant)
             .padding(AppTheme.spacing.s6)
             .clickable {
                 onClick()
@@ -301,7 +301,7 @@ fun GlobalLogCard(
         Text(
             text = cropLongText(log.message),
             style = AppTheme.typography.bodyLgBold,
-            color = AppTheme.colors.neutral.black,
+            color = AppTheme.colors.onSurface,
             lineHeight = 24.sp,
             maxLines = 6,
             overflow = TextOverflow.Ellipsis
@@ -347,7 +347,7 @@ fun EmptyState(projectFiltered: Boolean = false, filter: List<LogLevel> = emptyL
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.radius.large)
-            .background(AppTheme.colors.neutral.s20)
+            .background(AppTheme.colors.surfaceVariant)
             .padding(AppTheme.spacing.s6),
         contentAlignment = Alignment.Center
     ) {
@@ -358,7 +358,7 @@ fun EmptyState(projectFiltered: Boolean = false, filter: List<LogLevel> = emptyL
             Text(
                 text = if (projectFiltered) "No logs available" else "No logs for this Project / LogFile",
                 style = AppTheme.typography.bodyLgBold,
-                color = AppTheme.colors.neutral.black
+                color = AppTheme.colors.onSurface
             )
             if (filter.isNotEmpty()) {
                 Text(
@@ -389,7 +389,7 @@ fun TopTitle(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = AppTheme.colors.neutral.black
+                        tint = AppTheme.colors.onSurface
                     )
                 }
             }
@@ -397,7 +397,7 @@ fun TopTitle(
         Text(
             text = title,
             style = AppTheme.typography.bodyLgBold,
-            color = AppTheme.colors.neutral.black,
+            color = AppTheme.colors.onSurface,
             modifier = Modifier.align(Alignment.Center)
         )
     }

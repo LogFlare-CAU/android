@@ -145,7 +145,7 @@ private fun MyPageContent(
                         Text(
                             text = "Alert Level",
                             style = AppTheme.typography.bodyMdBold,
-                            color = AppTheme.colors.neutral.black
+                            color = AppTheme.colors.onSurface
                         )
 
                         LogFlareDropdown(
@@ -172,7 +172,7 @@ private fun MyPageContent(
                         Text(
                             text = "Members",
                             style = AppTheme.typography.bodyMdBold,
-                            color = AppTheme.colors.neutral.black
+                            color = AppTheme.colors.onSurface
                         )
 
                         if (uiState.permission.code >= UserPermission.MODERATOR.code) {
@@ -293,7 +293,7 @@ private fun SectionHeader(
     Text(
         text = title,
         style = AppTheme.typography.bodyMdBold,
-        color = AppTheme.colors.neutral.black,
+        color = AppTheme.colors.onSurface,
         modifier = modifier
             .fillMaxWidth()
             .padding(

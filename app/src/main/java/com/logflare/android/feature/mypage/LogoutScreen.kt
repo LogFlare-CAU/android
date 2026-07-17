@@ -78,7 +78,7 @@ private fun LogoutBody(modifier: Modifier = Modifier) {
         Text(
             text = "Log Out",
             style = AppTheme.typography.bodyLgBold,
-            color = AppTheme.colors.neutral.black,
+            color = AppTheme.colors.onSurface,
             textAlign = TextAlign.Center
         )
 
