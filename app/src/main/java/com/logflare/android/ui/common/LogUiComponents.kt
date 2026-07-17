@@ -294,7 +294,7 @@ fun GlobalLogCard(
             Text(
                 text = displayTimestamp(log.timestamp),
                 style = AppTheme.typography.bodySmMedium,
-                color = AppTheme.colors.neutral.s70
+                color = AppTheme.colors.onSurface.copy(alpha = 0.72f)
             )
         }
         Spacer(Modifier.height(AppTheme.spacing.s3))
@@ -311,17 +311,17 @@ fun GlobalLogCard(
             Text(
                 text = log.prefix,
                 style = AppTheme.typography.bodySmMedium,
-                color = AppTheme.colors.neutral.s70
+                color = AppTheme.colors.onSurface.copy(alpha = 0.72f)
             )
             Text(
                 " / ",
                 style = AppTheme.typography.bodySmMedium,
-                color = AppTheme.colors.neutral.s70
+                color = AppTheme.colors.onSurface.copy(alpha = 0.72f)
             )
             Text(
                 text = log.suffix,
                 style = AppTheme.typography.bodySmMedium,
-                color = AppTheme.colors.neutral.s70
+                color = AppTheme.colors.onSurface.copy(alpha = 0.72f)
             )
         }
     }
@@ -364,7 +364,7 @@ fun EmptyState(projectFiltered: Boolean = false, filter: List<LogLevel> = emptyL
                 Text(
                     text = "Try adjusting the filters",
                     style = AppTheme.typography.bodyMdMedium,
-                    color = AppTheme.colors.neutral.s60
+                    color = AppTheme.colors.onSurface.copy(alpha = 0.72f)
                 )
             }
         }

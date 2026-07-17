@@ -21,6 +21,8 @@ class ThemeContractTest {
     fun lightAndDarkExposeDifferentBackgrounds() {
         var light = Color.Unspecified
         var dark = Color.Unspecified
+        var darkSurfaceVariant = Color.Unspecified
+        var darkOnSurface = Color.Unspecified
         compose.setContent {
             Column {
                 LogflareandroidTheme(darkTheme = false) {
@@ -28,10 +30,13 @@ class ThemeContractTest {
                 }
                 LogflareandroidTheme(darkTheme = true) {
                     dark = MaterialTheme.colorScheme.background
+                    darkSurfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+                    darkOnSurface = MaterialTheme.colorScheme.onSurface
                 }
             }
         }
         assertNotEquals(light, dark)
         assertTrue(light.luminance() > dark.luminance())
+        assertNotEquals(darkSurfaceVariant, darkOnSurface)
     }
 }
