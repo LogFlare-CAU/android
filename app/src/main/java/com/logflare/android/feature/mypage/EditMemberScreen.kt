@@ -72,6 +72,8 @@ fun EditMemberScreen(
         onBack = onBack,
         onUsernameChange = viewModel::updateUsername,
         onPasswordChange = viewModel::updatePassword,
+        onValidateUsername = viewModel::retryUsernameValidation,
+        onValidatePassword = viewModel::retryPasswordValidation,
         onPermissionChange = viewModel::selectPermission,
         onSave = viewModel::saveChanges,
         onDeleteRequest = viewModel::showDeleteDialog,
@@ -88,6 +90,8 @@ fun EditMemberScreenContent(
     onBack: () -> Unit,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
+    onValidateUsername: () -> Unit,
+    onValidatePassword: () -> Unit,
     onPermissionChange: (UserPermission) -> Unit,
     onSave: () -> Unit,
     onDeleteRequest: () -> Unit,
@@ -118,10 +122,9 @@ fun EditMemberScreenContent(
         },
         bottomBar = {
             if (!(uiState.isLoading && uiState.username.isBlank())) {
-                    EditMemberBottomBar(
+                EditMemberBottomBar(
                     snackbarMessage = uiState.snackbarMessage,
-                    snackbarIsError = uiState.disabled ||
-                        (uiState.snackbarMessage?.startsWith("Failed") == true),
+                    snackbarIsError = uiState.snackbarIsError,
                     isLoading = uiState.isLoading,
                     canSubmit = canSubmit,
                     onDismissSnackbar = onDismissMessage,
@@ -152,6 +155,8 @@ fun EditMemberScreenContent(
                     passwordFieldState = passwordState,
                     onUsernameChange = onUsernameChange,
                     onPasswordChange = onPasswordChange,
+                    onValidateUsername = onValidateUsername,
+                    onValidatePassword = onValidatePassword,
                     onPermissionChange = onPermissionChange,
                     modifier = Modifier
                         .padding(innerPadding)
@@ -177,6 +182,8 @@ private fun EditMemberForm(
     passwordFieldState: LogFlareActionTextFieldState,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
+    onValidateUsername: () -> Unit,
+    onValidatePassword: () -> Unit,
     onPermissionChange: (UserPermission) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -210,7 +217,7 @@ private fun EditMemberForm(
                 capitalization = KeyboardCapitalization.None,
                 autoCorrectEnabled = false,
             ),
-            onActionClick = { onUsernameChange(uiState.username) },
+            onActionClick = onValidateUsername,
             modifier = Modifier.fillMaxWidth(),
             disabled = uiState.disabled,
         )
@@ -239,7 +246,7 @@ private fun EditMemberForm(
                 keyboardType = KeyboardType.Password,
             ),
             visualTransformation = PasswordVisualTransformation(),
-            onActionClick = { onPasswordChange(uiState.newPassword) },
+            onActionClick = onValidatePassword,
             modifier = Modifier.fillMaxWidth(),
             disabled = uiState.disabled,
         )

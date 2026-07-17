@@ -57,6 +57,8 @@ fun AddMemberScreen(
         onBack = onBack,
         onUsernameChange = viewModel::updateUsername,
         onPasswordChange = viewModel::updateTemporaryPassword,
+        onValidateUsername = viewModel::retryUsernameValidation,
+        onValidatePassword = viewModel::retryPasswordValidation,
         onPermissionChange = viewModel::selectPermission,
         onSubmit = { viewModel.addMember(onBack) },
         onDismissMessage = viewModel::clearError,
@@ -70,6 +72,8 @@ fun AddMemberScreenContent(
     onBack: () -> Unit,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
+    onValidateUsername: () -> Unit,
+    onValidatePassword: () -> Unit,
     onPermissionChange: (UserPermission) -> Unit,
     onSubmit: () -> Unit,
     onDismissMessage: () -> Unit,
@@ -121,6 +125,8 @@ fun AddMemberScreenContent(
             uiState = uiState,
             onUsernameChange = onUsernameChange,
             onPasswordChange = onPasswordChange,
+            onValidateUsername = onValidateUsername,
+            onValidatePassword = onValidatePassword,
             onPermissionChange = onPermissionChange,
             onDismissMessage = onDismissMessage,
             modifier = Modifier
@@ -135,6 +141,8 @@ private fun AddMemberForm(
     uiState: AddMemberUiState,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
+    onValidateUsername: () -> Unit,
+    onValidatePassword: () -> Unit,
     onPermissionChange: (UserPermission) -> Unit,
     onDismissMessage: () -> Unit,
     modifier: Modifier = Modifier,
@@ -171,7 +179,7 @@ private fun AddMemberForm(
                 capitalization = KeyboardCapitalization.None,
                 autoCorrectEnabled = false,
             ),
-            onActionClick = { onUsernameChange(uiState.username) },
+            onActionClick = onValidateUsername,
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -199,7 +207,7 @@ private fun AddMemberForm(
                 keyboardType = KeyboardType.Password,
             ),
             visualTransformation = PasswordVisualTransformation(),
-            onActionClick = { onPasswordChange(uiState.temporaryPassword) },
+            onActionClick = onValidatePassword,
             modifier = Modifier.fillMaxWidth(),
         )
 
