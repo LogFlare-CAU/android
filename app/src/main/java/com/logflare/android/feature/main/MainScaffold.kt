@@ -10,33 +10,35 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.navigation.NavType
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.navigation.LogFlareGnbItem
+import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
+import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
+import com.example.logflare.core.designsystem.R as DesignSystemR
 import com.logflare.android.feature.home.HomeScreen
 import com.logflare.android.feature.log.LogDetailScreen
 import com.logflare.android.feature.log.LogListScreen
-import com.logflare.android.feature.mypage.MyPageScreen
 import com.logflare.android.feature.mypage.AddMemberScreen
 import com.logflare.android.feature.mypage.EditMemberScreen
 import com.logflare.android.feature.mypage.LogoutScreen
-import com.logflare.android.feature.project.ProjectListScreen
+import com.logflare.android.feature.mypage.MyPageScreen
 import com.logflare.android.feature.project.ProjectCreateScreen
-import com.logflare.android.feature.projectdetail.ProjectDetailScreen
+import com.logflare.android.feature.project.ProjectListScreen
 import com.logflare.android.feature.project.ProjectSettingsScreen
+import com.logflare.android.feature.projectdetail.ProjectDetailScreen
+import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.navigation.Route
-import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
-import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
-import com.example.logflare.core.designsystem.R as DesignSystemR
 
 /**
  * Main app scaffold with bottom navigation.
@@ -46,7 +48,8 @@ import com.example.logflare.core.designsystem.R as DesignSystemR
 data class GnbItem(
     val route: Route,
     @androidx.annotation.DrawableRes val iconRes: Int,
-    val label: String
+    val label: String,
+    val testTag: String,
 )
 
 
@@ -76,49 +79,48 @@ fun MainScaffold(
         ?.getStateFlow<String?>("projectName", null)
         ?.collectAsState() ?: remember { mutableStateOf(null) }
 
+    val hideScaffoldTopBar = shouldHideScaffoldTopBar(currentRoute)
+
     Scaffold(
         topBar = {
-            LogFlareTopAppBar(
-                titleType = when (currentRoute) {
-                    Route.Home.path -> TopAppBarTitleType.Default
-                    Route.Logs.path -> TopAppBarTitleType.Title
-                    Route.Projects.path -> TopAppBarTitleType.Title
-                    Route.MyPage.path -> TopAppBarTitleType.Title
-                    Route.ProjectCreate.path -> TopAppBarTitleType.Title
-                    Route.ProjectDetail.path -> TopAppBarTitleType.Title
-                    Route.ProjectSettings.path -> TopAppBarTitleType.Title
-                    Route.MyPageAddMember.path -> TopAppBarTitleType.Title
-                    Route.MyPageEditMember.path -> TopAppBarTitleType.Title
-                    Route.MyPageLogout.path -> TopAppBarTitleType.Title
-                    Route.LogDetail.path -> TopAppBarTitleType.Title
-                    else -> TopAppBarTitleType.Default
-                },
-                titleText = when (currentRoute) {
-                    Route.Logs.path -> "LOGS"
-                    Route.Projects.path -> "PROJECTS"
-                    Route.MyPage.path -> "MYPAGE"
-                    Route.ProjectCreate.path -> "CREATE PROJECT"
-                    Route.ProjectDetail.path -> projectDetailTitle ?: "PROJECT DETAIL"
-                    Route.ProjectSettings.path -> "PROJECT SETTINGS"
-                    Route.MyPageAddMember.path -> "ADD MEMBER"
-                    Route.MyPageEditMember.path -> "EDIT MEMBER"
-                    Route.MyPageLogout.path -> "LOG OUT"
-                    Route.LogDetail.path -> "LOG DETAILS"
-                    else -> null
-                },
-                onBack = when (currentRoute) {
-                    Route.Home.path,
-                    Route.Logs.path,
-                    Route.Projects.path,
-                    Route.MyPage.path -> null
+            if (!hideScaffoldTopBar) {
+                LogFlareTopAppBar(
+                    titleType = when (currentRoute) {
+                        Route.Home.path -> TopAppBarTitleType.Default
+                        Route.Logs.path -> TopAppBarTitleType.Title
+                        Route.Projects.path -> TopAppBarTitleType.Title
+                        Route.MyPage.path -> TopAppBarTitleType.Title
+                        Route.ProjectCreate.path -> TopAppBarTitleType.Title
+                        Route.ProjectDetail.path -> TopAppBarTitleType.Title
+                        Route.ProjectSettings.path -> TopAppBarTitleType.Title
+                        Route.LogDetail.path -> TopAppBarTitleType.Title
+                        else -> TopAppBarTitleType.Default
+                    },
+                    titleText = when (currentRoute) {
+                        Route.Logs.path -> "LOGS"
+                        Route.Projects.path -> "PROJECTS"
+                        Route.MyPage.path -> "MYPAGE"
+                        Route.ProjectCreate.path -> "CREATE PROJECT"
+                        Route.ProjectDetail.path -> projectDetailTitle ?: "PROJECT DETAIL"
+                        Route.ProjectSettings.path -> "PROJECT SETTINGS"
+                        Route.LogDetail.path -> "LOG DETAILS"
+                        else -> null
+                    },
+                    onBack = when (currentRoute) {
+                        Route.Home.path,
+                        Route.Logs.path,
+                        Route.Projects.path,
+                        Route.MyPage.path -> null
 
-                    null -> null
-                    else -> {
-                        { navController.popBackStack() }
-                    }
-                },
-                onClose = null
-            )
+                        null -> null
+                        else -> {
+                            { navController.popBackStack() }
+                        }
+                    },
+                    onClose = null,
+                    backTestTag = VisualQaTags.NavigateBack,
+                )
+            }
         },
         bottomBar = {
             BottomNavigationBar(navController = navController)
@@ -138,10 +140,10 @@ private fun BottomNavigationBar(navController: NavHostController) {
     val currentDestination = navBackStackEntry?.destination
 
     val items = listOf(
-        GnbItem(route = Route.Home, iconRes = DesignSystemR.drawable.ic_home, label = "Home"),
-        GnbItem(route = Route.Logs, iconRes = DesignSystemR.drawable.ic_log, label = "Logs"),
-        GnbItem(route = Route.Projects, iconRes = DesignSystemR.drawable.ic_project, label = "Projects"),
-        GnbItem(route = Route.MyPage, iconRes = DesignSystemR.drawable.ic_mypage, label = "MyPage")
+        GnbItem(route = Route.Home, iconRes = DesignSystemR.drawable.ic_home, label = "Home", testTag = VisualQaTags.NavHome),
+        GnbItem(route = Route.Logs, iconRes = DesignSystemR.drawable.ic_log, label = "Logs", testTag = VisualQaTags.NavLogs),
+        GnbItem(route = Route.Projects, iconRes = DesignSystemR.drawable.ic_project, label = "Projects", testTag = VisualQaTags.NavProjects),
+        GnbItem(route = Route.MyPage, iconRes = DesignSystemR.drawable.ic_mypage, label = "MyPage", testTag = VisualQaTags.NavMyPage),
     )
 
     NavigationBar(containerColor = AppTheme.colors.surface) {
@@ -173,7 +175,8 @@ private fun BottomNavigationBar(navController: NavHostController) {
                     }
                 },
                 iconRes = item.iconRes,
-                label = item.label
+                label = item.label,
+                modifier = Modifier.testTag(item.testTag),
             )
         }
     }

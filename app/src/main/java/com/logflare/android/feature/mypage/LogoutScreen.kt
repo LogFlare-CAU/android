@@ -67,6 +67,7 @@ fun LogoutScreenContent(
                 titleType = TopAppBarTitleType.Title,
                 titleText = "Log Out",
                 onBack = onBack,
+                backTestTag = VisualQaTags.NavigateBack,
             )
         },
         bottomBar = {
@@ -164,7 +165,9 @@ private fun LogoutBottomBar(
                     variant = ButtonVariant.Primary,
                     type = ButtonType.Filled,
                     enabled = !isLoading,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(VisualQaTags.ConfirmLogout),
                 )
             }
         }

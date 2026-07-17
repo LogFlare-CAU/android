@@ -1,0 +1,13 @@
+appId: com.logflare.android
+---
+- launchApp:
+    clearState: true
+- tapOn: "Server URL"
+- inputText: ${QA_BASE_URL}
+- tapOn: "Username"
+- inputText: ${QA_USERNAME}
+- tapOn: "Password"
+- inputText: ${QA_PASSWORD}
+- tapOn: "Sign In"
+- assertVisible:
+    id: "home_screen"

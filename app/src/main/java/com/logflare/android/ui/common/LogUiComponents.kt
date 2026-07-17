@@ -276,10 +276,11 @@ data class LogCardInfo(
 @Composable
 fun GlobalLogCard(
     log: LogCardInfo,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(AppTheme.radius.large)
             .background(AppTheme.colors.surfaceVariant)

@@ -95,6 +95,7 @@ fun AddMemberScreenContent(
                 titleType = TopAppBarTitleType.Title,
                 titleText = "Add Member",
                 onBack = onBack,
+                backTestTag = VisualQaTags.NavigateBack,
             )
         },
         bottomBar = {

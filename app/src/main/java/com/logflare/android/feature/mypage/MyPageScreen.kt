@@ -193,6 +193,7 @@ fun MyPageContent(
                                             type = ButtonType.Text,
                                             variant = ButtonVariant.Secondary,
                                             size = ButtonSize.Small,
+                                            modifier = Modifier.testTag(VisualQaTags.AddMember),
                                         )
                                     }
                                 }
@@ -236,6 +237,7 @@ fun MyPageContent(
                                                     size = UserItemSize.Small,
                                                     modifier = Modifier
                                                         .fillMaxWidth()
+                                                        .testTag(VisualQaTags.memberRow(member.username))
                                                         .clickable { onEditMember(member.username) },
                                                     trailingContent = {
                                                         Icon(
@@ -265,6 +267,7 @@ fun MyPageContent(
                                         onClick = onLogout,
                                         type = ButtonType.Text,
                                         variant = ButtonVariant.Secondary,
+                                        modifier = Modifier.testTag(VisualQaTags.LogoutAction),
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(AppTheme.spacing.s4))

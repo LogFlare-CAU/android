@@ -1,0 +1,31 @@
+appId: com.logflare.android
+---
+- runFlow: _login.yaml
+- tapOn:
+    id: "nav_my_page"
+- assertVisible:
+    id: "my_page"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/my_page_${QA_THEME}
+    cropOn:
+      id: "app_root"
+- tapOn:
+    id: "add_member"
+- assertVisible:
+    id: "add_member"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/add_member_${QA_THEME}
+    cropOn:
+      id: "app_root"
+- tapOn:
+    id: "navigate_back"
+- assertVisible:
+    id: "my_page"
+- tapOn:
+    id: "member_row_qa-member"
+- assertVisible:
+    id: "edit_member"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/edit_member_${QA_THEME}
+    cropOn:
+      id: "app_root"

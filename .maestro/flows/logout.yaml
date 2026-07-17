@@ -1,0 +1,15 @@
+appId: com.logflare.android
+---
+- runFlow: _login.yaml
+- tapOn:
+    id: "nav_my_page"
+- assertVisible:
+    id: "my_page"
+- tapOn:
+    id: "logout"
+- assertVisible:
+    id: "logout_confirmation"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/logout_confirmation_${QA_THEME}
+    cropOn:
+      id: "app_root"

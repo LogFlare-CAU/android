@@ -118,6 +118,7 @@ fun EditMemberScreenContent(
                 titleType = TopAppBarTitleType.Title,
                 titleText = "Edit Member",
                 onBack = onBack,
+                backTestTag = VisualQaTags.NavigateBack,
             )
         },
         bottomBar = {

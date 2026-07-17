@@ -138,7 +138,9 @@ private fun FilterDropdownRow(
         CommonFilterDropdown(
             title = "Log Level",
             isActive = selectedLevels.isNotEmpty(),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .testTag(VisualQaTags.FilterLogLevel),
         ) {
             LogLevel.entries.forEach { level ->
                 CommonCheckRow(
@@ -154,7 +156,9 @@ private fun FilterDropdownRow(
         CommonFilterDropdown(
             title = "Projects",
             isActive = projectOptions.any { it.selected },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .testTag(VisualQaTags.FilterProjects),
         ) {
             projectOptions.forEach { option ->
                 CommonRadioRow(
@@ -168,7 +172,9 @@ private fun FilterDropdownRow(
         CommonFilterDropdown(
             title = "Sort By",
             isActive = sortSelection != LogSort.NEWEST,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .testTag(VisualQaTags.FilterSort),
         ) {
             CommonRadioRow(
                 label = "Newest",
@@ -247,7 +253,8 @@ private fun LogListContent(
                     projectNames[log.project_id] ?: "Project #${log.project_id}",
                     log.errortype ?: "Unknown"
                 ),
-                onClick = { onLogClick(log) }
+                onClick = { onLogClick(log) },
+                modifier = Modifier.testTag(VisualQaTags.logCard(log.id)),
             )
         }
         if (showLoadMore) {

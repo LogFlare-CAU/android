@@ -1,0 +1,9 @@
+appId: com.logflare.android
+---
+- runFlow: _login.yaml
+- assertVisible:
+    id: "home_screen"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/home_${QA_THEME}
+    cropOn:
+      id: "app_root"
