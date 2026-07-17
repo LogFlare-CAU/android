@@ -105,12 +105,12 @@ fun LogFlareActionTextField(
         LogFlareActionTextFieldState.Error -> colors.red.default
         LogFlareActionTextFieldState.Success, LogFlareActionTextFieldState.Validating -> colors.primary.default
         LogFlareActionTextFieldState.Saved -> colors.neutral.s50
-        else -> if (isFocused) colors.primary.default else colors.neutral.s40
+        else -> if (isFocused) colors.primary.default else colors.outline
     }
 
     val inputBackground = when (state) {
         LogFlareActionTextFieldState.Saved -> colors.neutral.s10
-        else -> colors.neutral.white
+        else -> colors.surface
     }
 
     val isButtonEnabled = actionEnabled && !showLoading && state != LogFlareActionTextFieldState.Saved && !disabled
@@ -131,7 +131,7 @@ fun LogFlareActionTextField(
             Text(
                 text = it,
                 style = AppTheme.typography.bodySmBold,
-                color = colors.neutral.black
+                color = colors.onSurface
             )
             Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
         }
@@ -166,7 +166,7 @@ fun LogFlareActionTextField(
                         value = value,
                         onValueChange = { if (!disabled) onValueChange(it) },
                         enabled = state != LogFlareActionTextFieldState.Saved,
-                        textStyle = AppTheme.typography.bodyMdMedium.copy(color = colors.neutral.s90),
+                        textStyle = AppTheme.typography.bodyMdMedium.copy(color = colors.onSurface),
                         cursorBrush = SolidColor(colors.primary.default),
                         keyboardOptions = keyboardOptions,
                         visualTransformation = visualTransformation,

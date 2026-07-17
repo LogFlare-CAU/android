@@ -18,8 +18,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.logflare.core.designsystem.AppTheme
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.model.ErrorlogDTO
 import com.logflare.android.enums.LogLevel
@@ -42,7 +42,7 @@ fun LogListScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(AppTheme.colors.surface)
     ) {
         FilterDropdownRow(
             selectedLevels = uiState.filter,

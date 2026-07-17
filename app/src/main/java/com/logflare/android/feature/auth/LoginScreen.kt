@@ -28,7 +28,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.logflare.core.designsystem.Black
+import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.GreenDefault
 import com.example.logflare.core.designsystem.Neutral10
 import com.example.logflare.core.designsystem.Neutral20
@@ -90,10 +90,10 @@ fun LoginScreen(
             placeholder = { Text("http://your-server:port") },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = if (serverUrlError != null) Color.Red else Black,
-                unfocusedBorderColor = if (serverUrlError != null) Color.Red else Neutral80,
-                errorBorderColor = Color.Red,
-                cursorColor = Black
+                focusedBorderColor = if (serverUrlError != null) AppTheme.colors.red.default else AppTheme.colors.onSurface,
+                unfocusedBorderColor = if (serverUrlError != null) AppTheme.colors.red.default else Neutral80,
+                errorBorderColor = AppTheme.colors.red.default,
+                cursorColor = AppTheme.colors.onSurface
             ),
             singleLine = true
         )
@@ -102,7 +102,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = serverUrlError ?: " ",
-            color = if (serverUrlError != null) Color.Red else Color.Transparent,
+            color = if (serverUrlError != null) AppTheme.colors.red.default else Color.Transparent,
             fontSize = 11.sp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -118,9 +118,9 @@ fun LoginScreen(
             label = { Text("Username") },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Black,
+                focusedBorderColor = AppTheme.colors.onSurface,
                 unfocusedBorderColor = Neutral80,
-                cursorColor = Black
+                cursorColor = AppTheme.colors.onSurface
             ),
             singleLine = true
         )
@@ -129,7 +129,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = uiState.loginError ?: " ",
-            color = if (uiState.loginError != null) Color.Red else Color.Transparent,
+            color = if (uiState.loginError != null) AppTheme.colors.red.default else Color.Transparent,
             fontSize = 11.sp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -145,9 +145,9 @@ fun LoginScreen(
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Black,
+                focusedBorderColor = AppTheme.colors.onSurface,
                 unfocusedBorderColor = Neutral80,
-                cursorColor = Black
+                cursorColor = AppTheme.colors.onSurface
             ),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -157,7 +157,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = uiState.loginError ?: " ",
-            color = if (uiState.loginError != null) Color.Red else Color.Transparent,
+            color = if (uiState.loginError != null) AppTheme.colors.red.default else Color.Transparent,
             fontSize = 11.sp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -181,7 +181,7 @@ fun LoginScreen(
                     !uiState.loading,
             colors = ButtonColors(
                 containerColor = GreenDefault,
-                contentColor = Black,
+                contentColor = AppTheme.colors.onPrimary,
                 disabledContainerColor = Neutral10,
                 disabledContentColor = Neutral20
             )

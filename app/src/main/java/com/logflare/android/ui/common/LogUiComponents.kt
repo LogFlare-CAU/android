@@ -69,8 +69,8 @@ fun CommonFilterDropdown(
                     buttonWidth = coords.size.width
                 }
                 .clip(AppTheme.radius.large)
-                .background(AppTheme.colors.neutral.white)
-                .border(0.5.dp, AppTheme.colors.neutral.s40, AppTheme.radius.large)
+                .background(AppTheme.colors.surface)
+                .border(0.5.dp, AppTheme.colors.outline, AppTheme.radius.large)
                 .clickable { expanded = !expanded }
                 .padding(horizontal = AppTheme.spacing.s3, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -99,8 +99,8 @@ fun CommonFilterDropdown(
                     modifier = Modifier
                         .width(with(density) { buttonWidth.toDp() })
                         .clip(AppTheme.radius.large)
-                        .background(AppTheme.colors.neutral.white)
-                        .border(0.5.dp, AppTheme.colors.neutral.s40, AppTheme.radius.large)
+                        .background(AppTheme.colors.surface)
+                        .border(0.5.dp, AppTheme.colors.outline, AppTheme.radius.large)
                         .padding(horizontal = AppTheme.spacing.s3, vertical = 10.dp),
                     verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.s1),
                     content = content
@@ -132,7 +132,7 @@ fun CommonCheckRow(
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
                 .border(
                     width = 0.6.dp,
-                    color = AppTheme.colors.neutral.s40,
+                    color = AppTheme.colors.outline,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
                 ),
             color = if (selected && fillWhenSelected) highlightColor else Color.Transparent
@@ -212,8 +212,8 @@ fun LoadMoreRow(
             .fillMaxWidth()
             .padding(top = AppTheme.spacing.s1)
             .clip(AppTheme.radius.full)
-            .background(AppTheme.colors.neutral.white)
-            .border(0.5.dp, AppTheme.colors.neutral.s40, AppTheme.radius.full)
+            .background(AppTheme.colors.surface)
+            .border(0.5.dp, AppTheme.colors.outline, AppTheme.radius.full)
             .clickable(enabled = !loading, onClick = onClick)
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center

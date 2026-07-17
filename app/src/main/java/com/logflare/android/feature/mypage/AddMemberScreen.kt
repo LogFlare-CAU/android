@@ -59,7 +59,7 @@ fun AddMemberScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = AppTheme.colors.neutral.white,
+        containerColor = AppTheme.colors.surface,
         topBar = {
             LogFlareTopAppBar(
                 titleType = TopAppBarTitleType.Title,
@@ -71,7 +71,7 @@ fun AddMemberScreen(
             Surface(
                 tonalElevation = 4.dp,
                 shadowElevation = 4.dp,
-                color = AppTheme.colors.neutral.white
+                color = AppTheme.colors.surface
             ) {
                 Box(
                     modifier = Modifier

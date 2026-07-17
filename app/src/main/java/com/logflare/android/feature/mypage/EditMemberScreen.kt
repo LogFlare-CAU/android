@@ -76,7 +76,7 @@ fun EditMemberScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = AppTheme.colors.neutral.white,
+        containerColor = AppTheme.colors.surface,
         topBar = {
             LogFlareTopAppBar(
                 titleType = TopAppBarTitleType.Title,
@@ -244,7 +244,7 @@ private fun EditMemberBottomBar(
     disabled: Boolean = false
 ) {
     Surface(
-        color = AppTheme.colors.neutral.white,
+        color = AppTheme.colors.surface,
         tonalElevation = 4.dp,
         shadowElevation = 4.dp
     ) {
@@ -323,7 +323,7 @@ private fun DeleteMemberDialog(
                 type = ButtonType.Text
             )
         },
-        containerColor = AppTheme.colors.neutral.white,
+        containerColor = AppTheme.colors.surface,
         tonalElevation = 2.dp
     )
 }
