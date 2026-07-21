@@ -30,8 +30,15 @@ Recorded on: Samsung SM-S948N (Galaxy S26 Ultra), native resolution, no `wm` ove
 resolution is later changed in Samsung settings, an `Override size` line appears and the run **fails loudly**
 rather than silently rewriting the baseline set.
 
-**These baselines are device-specific.** OEM fonts, status bar icons, punch-hole cutout and rounded corners are
-all baked in. They cannot be verified on an emulator, another phone, or CI. Only the JVM tier is portable.
+**These baselines are device-specific.** OEM fonts, punch-hole cutout and rounded corners are all baked in.
+They cannot be verified on an emulator, another phone, or CI. Only the JVM tier is portable.
+
+**The navigation mode is part of the reference configuration.** The status bar is cropped off, but the bottom
+of the frame still holds the app's own bottom bar and, below it, the system gesture pill. Switching the phone
+between gesture and 3-button navigation changes that region and invalidates all 18 baselines. `Assert-DeviceProfile`
+does not check this, so it fails as a comparison mismatch rather than a clear message.
+
+Nothing else in frame varies with time: two `Verify` runs an hour apart both matched 18/18.
 
 ---
 
