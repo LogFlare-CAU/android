@@ -3,6 +3,7 @@ package com.logflare.qa
 import com.logflare.qa.image.BaselineSetPromoter
 import com.logflare.qa.image.CompareResult
 import com.logflare.qa.image.DeviceImageComparator
+import com.logflare.qa.image.TopBandCropper
 import com.logflare.qa.server.MockServer
 import java.io.File
 import java.util.Locale
@@ -23,6 +24,7 @@ class QaToolMain {
             "server" -> runServer(args.drop(1))
             "compare" -> runCompare(args.drop(1))
             "record-device" -> runRecordDevice(args.drop(1))
+            "crop-top" -> runCropTop(args.drop(1))
             "promote-baselines" -> runPromoteBaselines(args.drop(1))
             else -> {
                 System.err.println("Unknown command: ${args[0]}")
@@ -145,6 +147,39 @@ class QaToolMain {
         }
     }
 
+    private fun runCropTop(args: List<String>): Int {
+        var image: File? = null
+        var pixels: Int? = null
+        var expectHeight: Int? = null
+        var i = 0
+        while (i < args.size) {
+            when (args[i]) {
+                "--image" -> image = File(args.getOrNull(++i) ?: return usageError("missing --image"))
+                "--pixels" -> pixels = args.getOrNull(++i)?.toIntOrNull()
+                    ?: return usageError("crop-top requires --pixels <int>")
+                "--expect-height" -> expectHeight = args.getOrNull(++i)?.toIntOrNull()
+                    ?: return usageError("crop-top requires --expect-height <int>")
+                "--help", "-h" -> {
+                    printHelp()
+                    return 0
+                }
+                else -> return usageError("unknown crop-top argument: ${args[i]}")
+            }
+            i++
+        }
+        if (image == null || pixels == null || expectHeight == null) {
+            return usageError("crop-top requires --image <png> --pixels <int> --expect-height <int>")
+        }
+        return try {
+            TopBandCropper.cropTop(image = image, pixels = pixels, expectedHeight = expectHeight)
+            println("RESULT Cropped path=${image.path} removedTop=$pixels height=${expectHeight - pixels}")
+            0
+        } catch (e: IllegalArgumentException) {
+            println("RESULT CropFailed reason=${e.message}")
+            1
+        }
+    }
+
     private fun runPromoteBaselines(args: List<String>): Int {
         var staging: File? = null
         var baselines: File? = null
@@ -201,17 +236,19 @@ class QaToolMain {
               tools server --host 127.0.0.1 --port 8000
               tools compare --expected <png> --actual <png> --diff <png>
               tools record-device --actual <png> --expected <png>
+              tools crop-top --image <png> --pixels 139 --expect-height 3120
               tools promote-baselines --staging <dir> --baselines <dir> --expected <a.png,b.png>
 
             Commands:
               server             Start deterministic mock API (blocks until terminated)
               compare            Compare device PNGs; exit 0 on Match, nonzero otherwise
               record-device       Copy validated actual PNG bytes into expected path
+              crop-top           Drop the status bar band off a capture, in place
               promote-baselines  Atomically promote a complete staged baseline set
 
             Exit codes:
-              0  success (server healthy start/normal stop, Match, record ok, promote ok)
-              1  compare Changed / DimensionMismatch / InvalidImage / promote failed
+              0  success (server healthy start/normal stop, Match, record ok, promote ok, crop ok)
+              1  compare Changed / DimensionMismatch / InvalidImage / promote failed / crop failed
               2  invalid arguments
             """.trimIndent(),
         )

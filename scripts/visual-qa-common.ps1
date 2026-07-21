@@ -43,7 +43,7 @@ function Resolve-EmulatorSerial {
     }
 
     if ($serials.Count -eq 0) {
-        throw "No connected adb devices found (state=device). Start a Pixel 7 API 35 emulator, then retry. Raw adb output:`n$raw"
+        throw "No connected adb devices found (state=device). Connect the QA device, then retry. Raw adb output:`n$raw"
     }
     if ($serials.Count -gt 1) {
         throw "Multiple adb devices connected ($($serials.Count)): [$($serials -join ', ')]. Pass -Serial <adb serial> to select one."
@@ -51,16 +51,22 @@ function Resolve-EmulatorSerial {
     return $serials[0]
 }
 
-function Assert-Pixel7Api35Profile {
+function Assert-DeviceProfile {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Serial
+        [string]$Serial,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedApi,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedSize,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedDensity
     )
     Assert-Command -Name 'adb'
 
     $api = (& adb -s $Serial shell getprop ro.build.version.sdk).Trim()
-    if ($api -ne '35') {
-        throw "Emulator API level must be 35 (Pixel 7 profile). Found API='$api' on serial '$Serial'."
+    if ($api -ne $ExpectedApi) {
+        throw "Device API level must be $ExpectedApi. Found API='$api' on serial '$Serial'."
     }
 
     $sizeRaw = (& adb -s $Serial shell wm size) | Out-String
@@ -73,8 +79,8 @@ function Assert-Pixel7Api35Profile {
         $override = "{0}x{1}" -f $Matches[1], $Matches[2]
     }
     $effective = if ($null -ne $override) { $override } else { $physical }
-    if ($effective -ne '1080x2400') {
-        throw "Emulator size must be 1080x2400 (physical/override effective). Found effective='$effective' from:`n$sizeRaw"
+    if ($effective -ne $ExpectedSize) {
+        throw "Device size must be $ExpectedSize (physical/override effective). Found effective='$effective' from:`n$sizeRaw"
     }
 
     $densityRaw = (& adb -s $Serial shell wm density) | Out-String
@@ -85,8 +91,8 @@ function Assert-Pixel7Api35Profile {
     elseif ($densityRaw -match 'Physical density:\s*(\d+)') {
         $density = $Matches[1]
     }
-    if ($density -ne '420') {
-        throw "Emulator density must be 420. Found density='$density' from:`n$densityRaw"
+    if ($density -ne $ExpectedDensity) {
+        throw "Device density must be $ExpectedDensity. Found density='$density' from:`n$densityRaw"
     }
 }
 
@@ -142,6 +148,32 @@ function Restore-AnimationScales {
             & adb -s $Serial shell settings put global $key $Previous[$key] | Out-Null
         }
     }
+}
+
+function Get-ScreenOffTimeout {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Serial
+    )
+    Assert-Command -Name 'adb'
+    $value = (& adb -s $Serial shell settings get system screen_off_timeout | Out-String).Trim()
+    if ([string]::IsNullOrWhiteSpace($value) -or $value -eq 'null') {
+        return $null
+    }
+    return $value
+}
+
+function Set-ScreenOffTimeout {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Serial,
+        [Parameter(Mandatory = $true)]
+        [string]$Milliseconds
+    )
+    Assert-Command -Name 'adb'
+    & adb -s $Serial shell settings put system screen_off_timeout $Milliseconds | Out-Null
+    # A locked or dozing screen breaks every Maestro flow; wake before capturing.
+    & adb -s $Serial shell input keyevent KEYCODE_WAKEUP | Out-Null
 }
 
 function Resolve-UiModeNightState {

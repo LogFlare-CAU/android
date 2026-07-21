@@ -4,10 +4,13 @@ appId: com.logflare.android
     clearState: true
 - tapOn: "Server URL"
 - inputText: ${QA_BASE_URL}
+- hideKeyboard
 - tapOn: "Username"
 - inputText: ${QA_USERNAME}
+- hideKeyboard
 - tapOn: "Password"
 - inputText: ${QA_PASSWORD}
+- hideKeyboard
 - tapOn: "Sign In"
 - assertVisible:
     id: "home_screen"
