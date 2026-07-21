@@ -112,24 +112,6 @@ function Invoke-QaReset {
     }
 }
 
-function Deny-PostNotificationsIfPresent {
-    param([string]$DeviceSerial)
-    $dump = & adb -s $DeviceSerial shell dumpsys package com.logflare.android 2>$null | Out-String
-    if ($dump -notmatch 'android\.permission\.POST_NOTIFICATIONS') {
-        Write-Info 'POST_NOTIFICATIONS not declared by package; skip deny'
-        return
-    }
-    $denyOut = & adb -s $DeviceSerial shell pm revoke com.logflare.android android.permission.POST_NOTIFICATIONS 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) {
-        # Already denied / not granted is acceptable.
-        if ($denyOut -match '(?i)not\s+held|already|Unknown permission|Security exception') {
-            Write-Info ("POST_NOTIFICATIONS deny tolerated: {0}" -f $denyOut.Trim())
-            return
-        }
-        Write-Warning ("pm deny POST_NOTIFICATIONS returned {0}: {1}" -f $LASTEXITCODE, $denyOut.Trim())
-    }
-}
-
 function Get-CheckpointPath {
     param(
         [string]$Directory,
@@ -137,17 +119,6 @@ function Get-CheckpointPath {
         [string]$Theme
     )
     return (Join-Path $Directory ("{0}_{1}.png" -f $Checkpoint, $Theme))
-}
-
-function ConvertTo-MaestroRelativePath {
-    param([string]$AbsolutePath)
-    $full = [System.IO.Path]::GetFullPath($AbsolutePath)
-    $root = [System.IO.Path]::GetFullPath($RepoRoot)
-    if (-not $full.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "Path '$AbsolutePath' is outside repo root '$RepoRoot'"
-    }
-    $rel = $full.Substring($root.Length).TrimStart('\', '/')
-    return ($rel -replace '\\', '/')
 }
 
 function Assert-CaptureManifest {

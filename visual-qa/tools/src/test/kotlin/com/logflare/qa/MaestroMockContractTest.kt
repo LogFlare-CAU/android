@@ -68,6 +68,10 @@ class MaestroMockContractTest {
             "Resolve-UiModeNightState",
             "Set-UiMode",
             "Wait-HttpHealth",
+            // Shared once the dev runner needed them too: Maestro rejects absolute paths, and a
+            // pm clear re-arms the notification dialog that otherwise covers the login screen.
+            "ConvertTo-MaestroRelativePath",
+            "Deny-PostNotificationsIfPresent",
         ).forEach { fn ->
             assertTrue("common missing $fn", commonText.contains("function $fn"))
         }
@@ -151,6 +155,39 @@ class MaestroMockContractTest {
             "flow loop may force-zero animations",
             flowLoop.contains("Disable-AnimationScales"),
         )
+    }
+
+    @Test
+    fun localEntryPointScriptsKeepTheirDistinctContracts() {
+        val snapshots = File(repoRoot, "scripts/visual-qa-snapshots.ps1")
+        val dev = File(repoRoot, "scripts/visual-qa-maestro-dev.ps1")
+        val release = File(repoRoot, "scripts/verify-release-isolation.ps1")
+        listOf(snapshots, dev, release).forEach { assertTrue("missing ${it.path}", it.isFile) }
+
+        val snapshotsText = snapshots.readText()
+        assertTrue("snapshots must map Record", snapshotsText.contains(":app:recordRoborazziDebug"))
+        assertTrue("snapshots must map Verify", snapshotsText.contains(":app:verifyRoborazziDebug"))
+        assertTrue("snapshots must reject other modes", snapshotsText.contains("ValidateSet('Verify', 'Record')"))
+        assertTrue("snapshots must point at the artifacts on failure", snapshotsText.contains("comparison images"))
+
+        // The dev runner is diagnostic only. Comparing there would imply a development server serves
+        // reproducible pixels, which it does not.
+        val devText = dev.readText()
+        assertFalse("dev runner must never compare", devText.contains("compare --expected"))
+        assertFalse("dev runner must never record baselines", devText.contains("record-device"))
+        assertFalse("dev runner must not echo the password", devText.contains("Write-Info (\"Password"))
+        assertTrue("dev runner must write to dev-captures", devText.contains("dev-captures"))
+        assertTrue("dev runner must require a base URL", devText.contains("\$BaseUrl"))
+        assertTrue("dev runner must default to the login smoke flow", devText.contains("\$Flows = @('login-home.yaml')"))
+
+        val releaseText = release.readText()
+        assertTrue("release guard must build release", releaseText.contains(":app:assembleRelease"))
+        assertTrue("release guard must demand explicit false", releaseText.contains("usesCleartextTraffic"))
+        assertTrue("release guard must reject qa components", releaseText.contains("'qa', 'maestro'"))
+        assertTrue("release guard must scan for the fixture password", releaseText.contains("qa-password"))
+        assertTrue("release guard must scan for the QA endpoint prefix", releaseText.contains("/__qa/"))
+        // A raw scan of the .apk would miss deflated entries, which is nearly all of them.
+        assertTrue("release guard must read the APK as a zip", releaseText.contains("ZipFile]::OpenRead"))
     }
 
     private fun locateRepoRoot(): File {
