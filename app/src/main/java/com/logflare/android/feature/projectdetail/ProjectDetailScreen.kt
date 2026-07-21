@@ -27,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,8 +37,6 @@ import com.logflare.android.enums.LogSort
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.common.*
 import com.logflare.android.ui.components.BackHeader
-
-private val FatalRed = Color(0xFFB12B38)
 
 @Composable
 fun ProjectDetailScreen(
@@ -197,7 +194,7 @@ private fun ProjectSettingsCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = AppTheme.colors.neutral.s20
+        color = AppTheme.colors.surfaceVariant
     ) {
         Row(
             modifier = Modifier
@@ -257,28 +254,6 @@ private fun LogsSection(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun LevelBadge(level: LogLevel) {
-    val badgeColor = when (level) {
-        LogLevel.CRITICAL -> FatalRed
-        LogLevel.ERROR -> Color(0xFFD84534)
-        LogLevel.WARNING -> Color(0xFFFFB74D)
-        LogLevel.INFO -> Color(0xFF1976D2)
-        LogLevel.DEBUG -> Color(0xFF388E3C)
-    }
-    Surface(
-        color = badgeColor,
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Text(
-            text = level.label,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = AppTheme.typography.captionSmMedium.copy(fontWeight = FontWeight.Medium),
-            color = Color.White
-        )
     }
 }
 

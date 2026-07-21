@@ -29,9 +29,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.model.ErrorlogDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
+import com.logflare.android.enums.color
 import com.logflare.android.feature.auth.AuthUiState
 import com.logflare.android.feature.auth.AuthViewModel
 import com.logflare.android.feature.log.LogViewModel
@@ -128,14 +130,14 @@ fun HomeScreenContent(
                     }
                 }
                 Surface(
-                    color = perm.color,
+                    color = perm.color(AppTheme.colors),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
                         text = perm.label,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = AppTheme.colors.onPrimary
                     )
                 }
             }
@@ -271,7 +273,7 @@ private fun LogRowItem(log: ErrorlogDTO) {
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val badgeColor = LogLevel.fromLabel(log.level).color
+        val badgeColor = LogLevel.fromLabel(log.level).color(AppTheme.colors)
         Surface(
             color = badgeColor,
             shape = RoundedCornerShape(4.dp),

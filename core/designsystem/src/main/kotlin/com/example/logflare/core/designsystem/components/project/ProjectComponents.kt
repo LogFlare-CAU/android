@@ -27,7 +27,7 @@ fun ProjectCard(
 ) {
     Surface(
         onClick = onClick,
-        color = AppTheme.colors.neutral.s20,
+        color = AppTheme.colors.surfaceVariant,
         shape = AppTheme.radius.large,
         modifier = modifier
             .fillMaxWidth()
@@ -40,7 +40,7 @@ fun ProjectCard(
                 Text(
                     text = name,
                     style = AppTheme.typography.bodyMdBold,
-                    color = AppTheme.colors.neutral.s90
+                    color = AppTheme.colors.onSurface
                 )
                 Spacer(modifier = Modifier.weight(1f, fill = true))
                 LogTimeRow(lastLogTime = lastLogTime)
@@ -49,7 +49,7 @@ fun ProjectCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = AppTheme.colors.neutral.s50,
+                tint = AppTheme.colors.muted,
                 modifier = Modifier.align(Alignment.CenterEnd)
             )
         }
@@ -64,13 +64,13 @@ private fun LogTimeRow(lastLogTime: String) {
         Text(
             text = "Last Log",
             style = AppTheme.typography.bodySmLight,
-            color = AppTheme.colors.neutral.s60
+            color = AppTheme.colors.muted
         )
         Spacer(modifier = Modifier.width(AppTheme.spacing.s4))
         Text(
             text = lastLogTime,
             style = AppTheme.typography.bodySmLight,
-            color = AppTheme.colors.neutral.s60
+            color = AppTheme.colors.muted
         )
     }
 }

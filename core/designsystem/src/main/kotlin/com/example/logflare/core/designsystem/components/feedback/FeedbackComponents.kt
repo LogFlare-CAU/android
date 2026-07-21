@@ -28,7 +28,7 @@ fun LogFlareSnackbar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = AppTheme.colors.neutral.s80,
+        color = AppTheme.colors.secondary.pressed,
         shape = AppTheme.radius.large,
         modifier = modifier
             .fillMaxWidth()
@@ -43,7 +43,7 @@ fun LogFlareSnackbar(
             Text(
                 text = message,
                 style = AppTheme.typography.bodySmMedium,
-                color = AppTheme.colors.neutral.white,
+                color = AppTheme.colors.onPrimary,
                 textAlign = TextAlign.Center
             )
         }
@@ -59,7 +59,7 @@ fun LogFlareListItem(
 ) {
     Surface(
         shape = AppTheme.radius.large,
-        color = AppTheme.colors.neutral.s10,
+        color = AppTheme.colors.surfaceVariant,
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
@@ -75,14 +75,14 @@ fun LogFlareListItem(
             Text(
                 text = text,
                 style = AppTheme.typography.bodySmMedium,
-                color = AppTheme.colors.neutral.s90,
+                color = AppTheme.colors.onSurface,
                 modifier = Modifier.weight(1f)
             )
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = AppTheme.colors.neutral.s60
+                    tint = AppTheme.colors.muted
                 )
             }
         }
@@ -102,10 +102,10 @@ fun LogFlareRadioButton(
         enabled = enabled,
         modifier = modifier,
         colors = SwitchDefaults.colors(
-            checkedThumbColor = AppTheme.colors.neutral.white,
-            uncheckedThumbColor = AppTheme.colors.neutral.white,
+            checkedThumbColor = AppTheme.colors.surface,
+            uncheckedThumbColor = AppTheme.colors.surface,
             checkedTrackColor = AppTheme.colors.primary.default,
-            uncheckedTrackColor = AppTheme.colors.neutral.s40
+            uncheckedTrackColor = AppTheme.colors.outline
         )
     )
 }
@@ -124,8 +124,8 @@ fun LogFlareCheckbox(
         modifier = modifier.size(20.dp),
         colors = CheckboxDefaults.colors(
             checkedColor = AppTheme.colors.primary.default,
-            uncheckedColor = AppTheme.colors.neutral.s40,
-            checkmarkColor = AppTheme.colors.neutral.white
+            uncheckedColor = AppTheme.colors.outline,
+            checkmarkColor = AppTheme.colors.onPrimary
         )
     )
 }

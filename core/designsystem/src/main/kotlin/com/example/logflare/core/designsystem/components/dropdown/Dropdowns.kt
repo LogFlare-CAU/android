@@ -63,18 +63,18 @@ fun <T> LogFlareDropdown(
     val currentLabel = selectedItem?.let(itemLabelMapper) ?: placeholder
     val isPlaceholder = selectedItem == null
     val textColor = when {
-        isPlaceholder -> colors.neutral.s50
+        isPlaceholder -> colors.muted
         expanded -> colors.primary.default
-        else -> colors.neutral.s70
+        else -> colors.muted
     }
 
     Box(modifier = modifier) {
         Surface(
             shape = AppTheme.radius.medium,
-            color = colors.neutral.white,
+            color = colors.input,
             border = BorderStroke(
                 width = 1.dp,
-                color = if (expanded) colors.primary.default else colors.neutral.s40
+                color = if (expanded) colors.primary.default else colors.outline
             ),
             onClick = { if (items.isNotEmpty()) expanded = !expanded },
             enabled = items.isNotEmpty() && !disabled
@@ -105,8 +105,8 @@ fun <T> LogFlareDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             modifier = Modifier
-                .background(color = colors.neutral.white, shape = AppTheme.radius.medium)
-                .border(1.dp, colors.neutral.s40, AppTheme.radius.medium),
+                .background(color = colors.surface, shape = AppTheme.radius.medium)
+                .border(1.dp, colors.outline, AppTheme.radius.medium),
         ) {
             items.forEach { item ->
                 val isSelected = selectedItem == item
@@ -140,7 +140,7 @@ fun DropdownItem(
 ) {
     val metrics = dropdownMetrics(size)
     val colors = AppTheme.colors
-    val textColor = if (selected) colors.primary.default else colors.neutral.s70
+    val textColor = if (selected) colors.primary.default else colors.muted
 
     DropdownMenuItem(
         text = {
@@ -186,7 +186,7 @@ private fun DropdownCheckbox(selected: Boolean) {
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = null,
-                tint = colors.neutral.white,
+                tint = colors.onPrimary,
                 modifier = Modifier.size(12.dp)
             )
         }
@@ -194,7 +194,7 @@ private fun DropdownCheckbox(selected: Boolean) {
         Box(
             modifier = Modifier
                 .size(size)
-                .border(1.dp, colors.neutral.s40, shape)
+                .border(1.dp, colors.outline, shape)
         )
     }
 }

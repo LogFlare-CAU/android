@@ -13,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -21,11 +20,8 @@ import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
-
-val AccentGreen = Color(0xFF61B175)
-val DisabledGray = Color(0xFFC2C2C2)
-val ErrorRed = Color(0xFFE53935)
-
+import com.logflare.android.enums.UserPermission
+import com.logflare.android.enums.color
 
 @Composable
 fun ProjectNameSection(
@@ -56,7 +52,7 @@ fun ProjectNameSection(
                 shape = RoundedCornerShape(8.dp),
                 isError = showError,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGreen,
+                    focusedBorderColor = AppTheme.colors.primary.default,
                     unfocusedBorderColor = AppTheme.colors.outline,
                     errorBorderColor = AppTheme.colors.red.default,
                     cursorColor = AppTheme.colors.onSurface
@@ -72,8 +68,8 @@ fun ProjectNameSection(
                 enabled = buttonEnabled,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (buttonEnabled) AccentGreen else DisabledGray,
-                    contentColor = Color.White
+                    containerColor = if (buttonEnabled) AppTheme.colors.primary.default else AppTheme.colors.primary.disabled,
+                    contentColor = AppTheme.colors.onPrimary
                 ),
                 modifier = Modifier
                     .height(50.dp)
@@ -103,7 +99,7 @@ fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit, enabled: 
             Text(
                 text = "Log Level",
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
-                color = AccentGreen
+                color = AppTheme.colors.primary.default
             )
             Spacer(modifier = Modifier.weight(1f))
             Button(
@@ -128,7 +124,7 @@ fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit, enabled: 
                             Checkbox(
                                 checked = selected.contains(level),
                                 onCheckedChange = null,
-                                colors = CheckboxDefaults.colors(checkedColor = AccentGreen)
+                                colors = CheckboxDefaults.colors(checkedColor = AppTheme.colors.primary.default)
                             )
                             Text(level)
                         }
@@ -151,7 +147,7 @@ fun PermissionsSection(
     Column(
         modifier = Modifier
             .padding(16.dp)
-            .background(Color(0xFFEDEDED), RoundedCornerShape(12.dp))
+            .background(AppTheme.colors.surfaceVariant, RoundedCornerShape(12.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -170,21 +166,23 @@ fun PermissionsSection(
 
 @Composable
 private fun PermissionRow(state: PermissionToggleState, onToggle: (Boolean) -> Unit, enabled: Boolean = false) {
+    val permission = UserPermission.fromCode(state.rolenum)
+    val roleColor = permission.color(AppTheme.colors)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            Text(text = state.username, color = state.roleColor, fontWeight = FontWeight.Medium)
+            Text(text = state.username, color = AppTheme.colors.onSurface, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
             Surface(
-                color = state.activeColor,
+                color = roleColor,
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
                     text = state.role,
-                    color = Color.White,
+                    color = AppTheme.colors.onPrimary,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelSmall
                 )
@@ -195,12 +193,12 @@ private fun PermissionRow(state: PermissionToggleState, onToggle: (Boolean) -> U
             onCheckedChange = onToggle,
             enabled = enabled,
             colors = SwitchDefaults.colors(
-                checkedTrackColor = AccentGreen,
-                checkedThumbColor = Color.White,
-                uncheckedTrackColor = Color(0xFFE0E0E0),
-                uncheckedThumbColor = Color.White,
-                disabledCheckedTrackColor = AccentGreen.copy(alpha = 0.5f),
-                disabledCheckedThumbColor = Color.White.copy(alpha = 0.5f)
+                checkedTrackColor = AppTheme.colors.primary.default,
+                checkedThumbColor = AppTheme.colors.surface,
+                uncheckedTrackColor = AppTheme.colors.divider,
+                uncheckedThumbColor = AppTheme.colors.surface,
+                disabledCheckedTrackColor = AppTheme.colors.primary.default.copy(alpha = 0.5f),
+                disabledCheckedThumbColor = AppTheme.colors.surface.copy(alpha = 0.5f)
             )
         )
     }
@@ -235,7 +233,7 @@ fun KeywordSection(
                 enabled = enabled,
                 isError = error != null,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGreen,
+                    focusedBorderColor = AppTheme.colors.primary.default,
                     unfocusedBorderColor = AppTheme.colors.outline,
                     errorBorderColor = AppTheme.colors.red.default,
                     cursorColor = AppTheme.colors.onSurface
@@ -247,8 +245,8 @@ fun KeywordSection(
                 enabled = canSave,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (canSave) AccentGreen else DisabledGray,
-                    contentColor = Color.White
+                    containerColor = if (canSave) AppTheme.colors.primary.default else AppTheme.colors.primary.disabled,
+                    contentColor = AppTheme.colors.onPrimary
                 ),
                 modifier = Modifier
                     .height(50.dp)
@@ -260,7 +258,7 @@ fun KeywordSection(
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = error ?: "Use English, number, and symbols only",
-            color = if (error != null) AppTheme.colors.red.default else Color(0xFF6D6D6D),
+            color = if (error != null) AppTheme.colors.red.default else AppTheme.colors.muted,
             style = MaterialTheme.typography.bodySmall
         )
     }
@@ -273,7 +271,7 @@ fun KeywordList(keywords: List<String>, onRemove: (String) -> Unit) {
         Text(text = "Keywords", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium))
         Spacer(modifier = Modifier.height(8.dp))
         if (keywords.isEmpty()) {
-            Text(text = "No keywords added", color = Color(0xFF8A8A8A))
+            Text(text = "No keywords added", color = AppTheme.colors.muted)
         } else {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -283,13 +281,13 @@ fun KeywordList(keywords: List<String>, onRemove: (String) -> Unit) {
                 keywords.forEach { keyword ->
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = Color(0xFFF0F0F0)
+                        color = AppTheme.colors.chip
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Text(keyword, color = Color(0xFF101010))
+                            Text(keyword, color = AppTheme.colors.onChip)
                             Spacer(modifier = Modifier.width(8.dp))
                             TextButton(onClick = { onRemove(keyword) }) {
                                 Text("🗑")
@@ -325,10 +323,10 @@ fun BottomActionBar(
                 enabled = enabled,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (enabled) AccentGreen else DisabledGray,
-                    contentColor = Color.White,
-                    disabledContainerColor = DisabledGray,
-                    disabledContentColor = Color.White
+                    containerColor = if (enabled) AppTheme.colors.primary.default else AppTheme.colors.primary.disabled,
+                    contentColor = AppTheme.colors.onPrimary,
+                    disabledContainerColor = AppTheme.colors.primary.disabled,
+                    disabledContentColor = AppTheme.colors.onPrimary
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -389,7 +387,7 @@ fun ProjectCard(
                         .size(12.dp)
                         .padding(start = 8.dp),
                     shape = CircleShape,
-                    color = if (connectionHealthy) Color(0xFF4CAF50) else Color(0xFFE53935)
+                    color = if (connectionHealthy) AppTheme.colors.success else AppTheme.colors.red.default
                 ) {}
             }
         }

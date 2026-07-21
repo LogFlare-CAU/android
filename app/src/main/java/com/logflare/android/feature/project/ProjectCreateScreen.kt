@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
@@ -44,8 +43,8 @@ fun ProjectCreateScreen(
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = Color(0xFF323232),
-                    contentColor = Color.White,
+                    containerColor = AppTheme.colors.onSurface,
+                    contentColor = AppTheme.colors.onPrimary,
                     shape = RoundedCornerShape(8.dp),
                 )
             }
@@ -216,16 +215,16 @@ private fun TokenSection(token: String?, onCopy: () -> Unit) {
                     text = token ?: "Token will be generated when you save",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (token != null) Color(0xFF4C4C4C) else Color(0xFF9E9E9E),
+                    color = if (token != null) AppTheme.colors.onSurface else AppTheme.colors.muted,
                 )
                 Button(
                     onClick = onCopy,
                     enabled = token != null,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF7B7B7B),
-                        contentColor = Color.White,
-                        disabledContainerColor = DisabledGray,
-                        disabledContentColor = Color.White,
+                        containerColor = AppTheme.colors.secondary.pressed,
+                        contentColor = AppTheme.colors.onPrimary,
+                        disabledContainerColor = AppTheme.colors.secondary.disabled,
+                        disabledContentColor = AppTheme.colors.onPrimary,
                     ),
                     modifier = Modifier.height(40.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp),

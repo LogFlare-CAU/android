@@ -40,10 +40,7 @@ fun LogFlareTopAppBar(
         require(!titleText.isNullOrBlank()) { "titleText is required when titleType is Title" }
     }
 
-    // Deliberately a fixed muted grey rather than a theme role: it reads as secondary against both
-    // surfaces (2.6:1 on light, 3.7:1 on dark, so still above the 3:1 non-text minimum where it is
-    // tightest), and promoting it to onSurface would restyle the light bar rather than fix a bug.
-    val iconTint = AppTheme.colors.neutral.s50
+    val iconTint = AppTheme.colors.muted
     Box(
         modifier = modifier
             .fillMaxWidth()

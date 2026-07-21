@@ -79,13 +79,13 @@ fun LogFlareActionTextField(
     val borderColor = when (state) {
         LogFlareActionTextFieldState.Error -> colors.red.default
         LogFlareActionTextFieldState.Success, LogFlareActionTextFieldState.Validating -> colors.primary.default
-        LogFlareActionTextFieldState.Saved -> colors.neutral.s50
+        LogFlareActionTextFieldState.Saved -> colors.muted
         else -> if (isFocused) colors.primary.default else colors.outline
     }
 
     val inputBackground = when (state) {
-        LogFlareActionTextFieldState.Saved -> colors.neutral.s10
-        else -> colors.surface
+        LogFlareActionTextFieldState.Saved -> colors.inputDisabled
+        else -> colors.input
     }
 
     val isButtonEnabled = actionEnabled && state != LogFlareActionTextFieldState.Saved && state != LogFlareActionTextFieldState.Validating
@@ -93,12 +93,12 @@ fun LogFlareActionTextField(
     val buttonBackground = when {
         state == LogFlareActionTextFieldState.Validating -> colors.primary.default
         isButtonEnabled -> colors.primary.default
-        else -> colors.neutral.s30
+        else -> colors.primary.disabled
     }
 
     val buttonContentColor = when {
-        state == LogFlareActionTextFieldState.Validating || isButtonEnabled -> colors.neutral.white
-        else -> colors.neutral.s70
+        state == LogFlareActionTextFieldState.Validating || isButtonEnabled -> colors.onPrimary
+        else -> colors.muted
     }
 
     Column(modifier = modifier) {
@@ -134,7 +134,7 @@ fun LogFlareActionTextField(
                         Text(
                             text = placeholder,
                             style = AppTheme.typography.bodyMdMedium,
-                            color = colors.neutral.s60
+                            color = colors.muted
                         )
                     }
                     BasicTextField(
@@ -168,7 +168,7 @@ fun LogFlareActionTextField(
                     if (state == LogFlareActionTextFieldState.Validating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
-                            color = colors.neutral.white,
+                            color = colors.onPrimary,
                             strokeWidth = 2.dp
                         )
                     } else {
@@ -203,7 +203,7 @@ fun LogFlareActionTextField(
                     color = if (helperTone == LogFlareActionTextFieldHelperTone.Error) {
                         colors.red.default
                     } else {
-                        colors.neutral.s70
+                        colors.muted
                     }
                 )
             }

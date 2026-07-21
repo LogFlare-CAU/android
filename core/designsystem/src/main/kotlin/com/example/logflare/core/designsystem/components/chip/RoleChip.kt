@@ -22,7 +22,7 @@ fun RoleChip(
     text: String,
     size: ChipSize = ChipSize.Small,
     backgroundColor: Color,
-    contentColor: Color = AppTheme.colors.neutral.s5,
+    contentColor: Color = AppTheme.colors.onChip,
     modifier: Modifier = Modifier
 ) {
     val (containerHeight, horizontalPadding, textStyle) = when (size) {

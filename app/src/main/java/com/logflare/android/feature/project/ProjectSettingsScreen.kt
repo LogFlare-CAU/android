@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.button.ButtonType
 import com.example.logflare.core.designsystem.components.button.ButtonVariant
 import com.example.logflare.core.designsystem.components.button.LogFlareButton
@@ -121,7 +122,7 @@ private fun ProjectSettingsScreenContent(
                 if (uiState.error != null) {
                     Text(
                         text = uiState.error ?: "",
-                        color = ErrorRed,
+                        color = AppTheme.colors.red.default,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )

@@ -27,7 +27,7 @@ fun UserProfileCard(
     val roleChipStyle = roleChipStyle(roleType)
 
     Surface(
-        color = AppTheme.colors.neutral.s20,
+        color = AppTheme.colors.surfaceVariant,
         shape = AppTheme.radius.large,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -44,7 +44,7 @@ fun UserProfileCard(
                 Text(
                     text = username,
                     style = AppTheme.typography.bodyLgBold,
-                    color = AppTheme.colors.neutral.black
+                    color = AppTheme.colors.onSurface
                 )
             }
 

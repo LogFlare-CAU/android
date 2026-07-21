@@ -19,8 +19,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import com.example.logflare.core.designsystem.logLevelColor
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
@@ -29,20 +29,11 @@ enum class LogItemType { Summary, Full }
 enum class LogCardType { Single, Multiple }
 
 @Composable
-private fun logLevelColor(level: String): Color = when (level.uppercase()) {
-    "FATAL", "ERROR" -> AppTheme.colors.red.pressed
-    "WARN" -> Color(0xFFFFB74D)
-    "INFO" -> Color(0xFF1976D2)
-    "DEBUG" -> AppTheme.colors.primary.default
-    else -> AppTheme.colors.neutral.s50
-}
-
-@Composable
 fun LogLevelChip(
     level: String,
     modifier: Modifier = Modifier
 ) {
-    val background = logLevelColor(level)
+    val background = AppTheme.colors.logLevelColor(level)
     Surface(
         color = background,
         shape = RoundedCornerShape(8.dp),
@@ -55,7 +46,7 @@ fun LogLevelChip(
             Text(
                 text = level.uppercase(),
                 style = AppTheme.typography.captionSmMedium,
-                color = AppTheme.colors.neutral.white
+                color = AppTheme.colors.onPrimary
             )
         }
     }
@@ -94,13 +85,13 @@ private fun SummaryLogItem(
         Text(
             text = path,
             style = AppTheme.typography.bodySmLight,
-            color = AppTheme.colors.neutral.s60
+            color = AppTheme.colors.muted
         )
         Spacer(Modifier.width(AppTheme.spacing.s1))
         Text(
             text = message,
             style = AppTheme.typography.bodySmMedium.copy(fontWeight = FontWeight.Bold),
-            color = AppTheme.colors.neutral.black,
+            color = AppTheme.colors.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
@@ -129,40 +120,40 @@ private fun FullLogItem(
             Text(
                 text = timestamp,
                 style = AppTheme.typography.bodySmLight,
-                color = AppTheme.colors.neutral.s60
+                color = AppTheme.colors.muted
             )
         }
         Text(
             text = message,
             style = AppTheme.typography.bodyMdBold,
-            color = AppTheme.colors.neutral.black
+            color = AppTheme.colors.onSurface
         )
         if (file != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = project,
                     style = AppTheme.typography.bodySmLight,
-                    color = AppTheme.colors.neutral.s60
+                    color = AppTheme.colors.muted
                 )
                 Spacer(Modifier.width(AppTheme.spacing.s1))
                 Box(
                     modifier = Modifier
                         .height(12.dp)
                         .width(1.dp)
-                        .background(AppTheme.colors.neutral.s40)
+                        .background(AppTheme.colors.divider)
                 )
                 Spacer(Modifier.width(AppTheme.spacing.s1))
                 Text(
                     text = file,
                     style = AppTheme.typography.bodySmLight,
-                    color = AppTheme.colors.neutral.s60
+                    color = AppTheme.colors.muted
                 )
             }
         } else {
             Text(
                 text = project,
                 style = AppTheme.typography.bodySmLight,
-                color = AppTheme.colors.neutral.s60
+                color = AppTheme.colors.muted
             )
         }
     }
@@ -184,7 +175,7 @@ fun LogCard(
     }
 
     Surface(
-        color = AppTheme.colors.neutral.s20,
+        color = AppTheme.colors.surfaceVariant,
         shape = AppTheme.radius.large,
         modifier = modifier.fillMaxWidth()
     ) {

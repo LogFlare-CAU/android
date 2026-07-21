@@ -1,7 +1,5 @@
 package com.logflare.android.feature.project
 
-import androidx.compose.ui.graphics.Color
-
 sealed interface ProjectEditorAction {
     data class NameChanged(val value: String) : ProjectEditorAction
     data class KeywordChanged(val value: String) : ProjectEditorAction
@@ -34,8 +32,5 @@ data class PermissionToggleState(
     val username: String,
     val role: String,
     val rolenum: Int = 0,
-    val roleColor: Color,
-    val activeColor: Color,
-    val inactiveColor: Color,
     val active: Boolean,
 )

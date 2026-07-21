@@ -100,7 +100,7 @@ fun LogDetailScreenContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(color = AppTheme.colors.neutral.s20)
+                    .background(color = AppTheme.colors.surfaceVariant)
                     .padding(24.dp),
                 text = log.message,
                 fontFamily = Cascadia,

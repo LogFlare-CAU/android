@@ -29,7 +29,7 @@ fun BackHeader(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    titleColor: Color = AppTheme.colors.neutral.black,
+    titleColor: Color = AppTheme.colors.onSurface,
     iconTint: Color = AppTheme.colors.secondary.default,
     horizontalPadding: Dp = AppTheme.spacing.s4,
     verticalPadding: Dp = AppTheme.spacing.s3
