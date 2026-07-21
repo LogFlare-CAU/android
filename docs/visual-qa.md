@@ -118,9 +118,12 @@ touch the phone while flows run; stray taps break the journey.
 ### JVM snapshots
 
 ```powershell
-.\gradlew.bat :app:recordRoborazziDebug    # rewrite baselines
-.\gradlew.bat :app:verifyRoborazziDebug    # compare only, never writes baselines
+.\scripts\visual-qa-snapshots.ps1 -Mode Record    # rewrite baselines
+.\scripts\visual-qa-snapshots.ps1 -Mode Verify    # compare only, never writes baselines
 ```
+
+A wrapper over `:app:recordRoborazziDebug` / `:app:verifyRoborazziDebug` that prints where the comparison images
+and HTML report landed when a run fails. The Gradle tasks work directly too.
 
 ### Device journeys
 
@@ -137,6 +140,37 @@ mid-run failure never leaves a half-updated baseline set. `Verify` never writes 
 magenta diff images to `visual-qa/device-diffs/`.
 
 A full run is 5 flows x 2 themes and takes several minutes over wireless adb.
+
+### Development-server journeys (diagnostic only)
+
+```powershell
+.\scripts\visual-qa-maestro-dev.ps1 -BaseUrl "https://dev.example.com/" -Username "user" -Password $env:LOGFLARE_QA_PASSWORD
+.\scripts\visual-qa-maestro-dev.ps1 -BaseUrl "https://dev.example.com/" -Username "user" -Password $env:LOGFLARE_QA_PASSWORD -Flows projects.yaml,logs-detail.yaml
+```
+
+Drives the debug app against a real server and writes captures to `visual-qa/dev-captures/`. It never compares
+and never records: a development server's data changes, so its captures are evidence for a human, not a pass/fail.
+
+Only `login-home.yaml` runs by default, because it depends on nothing but a reachable server and valid
+credentials. The other flows assert mock fixture values (user `qa-admin`, project `Payments`, ...) and will fail
+against real data -- pass them with `-Flows` only when the server carries matching content. Captures are tagged
+with the device's current light/dark state; this runner does not force a theme.
+
+### Release isolation guard
+
+```powershell
+.\scripts\verify-release-isolation.ps1
+.\scripts\verify-release-isolation.ps1 -SkipBuild   # reuse existing release artifacts
+```
+
+Builds release and fails if any QA affordance survived: `usesCleartextTraffic` not explicitly `false` in the
+merged manifest, an activity/service/receiver whose name mentions `qa` or `maestro`, or the strings
+`qa-password` / `/__qa/` anywhere in the APK. `android.permission.INTERNET` is expected and allowed.
+
+The APK is read as a zip and each entry scanned decompressed -- a raw scan of the `.apk` bytes would miss
+anything stored deflated, which is nearly all of it. Release currently sets `isMinifyEnabled = false`, so string
+constants are not obfuscated and a literal scan is meaningful; revisit the string checks if minification is
+enabled. There is no release `signingConfig`, so the artifact is `app-release-unsigned.apk`.
 
 ### What the runner does per theme
 
@@ -160,6 +194,8 @@ A full run is 5 flows x 2 themes and takes several minutes over wireless adb.
 | `visual-qa/device-captures/` | no | This run's captures, plus `_maestro/` scratch |
 | `visual-qa/device-diffs/` | no | Magenta diffs from a failed `Verify` |
 | `visual-qa/device-baselines-staging/` | no | `Record` staging area before promotion |
+| `visual-qa/dev-captures/` | no | Development-server captures, plus `_maestro/` scratch |
+| `app/build/outputs/roborazzi/` | no | JVM `*_actual.png` / `*_compare.png` from a failed Verify |
 
 Checkpoints: `home`, `logs_detail`, `projects_list`, `project_detail`, `project_settings`, `my_page`,
 `add_member`, `edit_member`, `logout_confirmation`.
@@ -268,13 +304,12 @@ Note that Gradle keys on content, not timestamps: `touch`-ing a script still sho
 
 ---
 
-## Not yet built
+## Relationship to the implementation plan
 
-Task 10 of `docs/superpowers/plans/2026-07-17-android-visual-qa.md` is only partly done. Still missing:
+`docs/superpowers/plans/2026-07-17-android-visual-qa.md` still describes the original Pixel 7 API 35 emulator
+target, `10.0.2.2`, and port 8000. **This document supersedes it for the device tier.** Its Task 10 is now
+complete; the three local entry points it called for are the scripts documented above.
 
-- `scripts/visual-qa-snapshots.ps1` — thin wrapper over the Roborazzi Gradle tasks
-- `scripts/visual-qa-maestro-dev.ps1` — run journeys against a real development server, diagnostic captures only
-- `scripts/verify-release-isolation.ps1` — assert release builds carry no cleartext, QA activities, or credentials
-
-That plan also still describes the original Pixel 7 API 35 emulator target, `10.0.2.2`, and port 8000. This
-document supersedes it for the device tier.
+Two of its acceptance criteria were adapted rather than met literally: the runbook it specifies (emulator, port
+8000) is obsolete, and its "`git status --short` prints nothing" check does not hold in a working tree that
+carries local agent tooling.

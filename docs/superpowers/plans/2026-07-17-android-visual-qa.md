@@ -2,8 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Status (2026-07-21): Tasks 1-9 are implemented and committed; Task 10 is only partly done.** Checkboxes
-> below were never ticked and do not reflect progress.
+> **Status (2026-07-21): all 10 tasks are implemented.** Checkboxes below were never ticked and do not
+> reflect progress.
+>
+> Task 10's three entry points exist as `scripts/visual-qa-snapshots.ps1`,
+> `scripts/visual-qa-maestro-dev.ps1` and `scripts/verify-release-isolation.ps1`. Two of its acceptance
+> criteria were adapted rather than met literally: Step 4's runbook content (emulator, `10.0.2.2`, port 8000)
+> is obsolete, and Step 6's "`git status --short` prints nothing" does not hold in a working tree carrying
+> local agent tooling. The dev runner also defaults to the login smoke flow only -- the other journeys assert
+> mock fixture values and cannot pass against a real server.
 >
 > **The device-tier sections of this plan are superseded by [`docs/visual-qa.md`](../../visual-qa.md).**
 > The device tier now runs on a physical Samsung SM-S948N (API 36, 1440x3120, density 600) instead of a
