@@ -35,3 +35,24 @@ jobs:
 
       - name: Build Debug
         run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest :visual-qa:tools:test --stacktrace
+
+      # Baselines under app/src/test/snapshots/images are recorded locally on Windows while this
+      # job runs on Linux. Robolectric's native graphics mode is meant to be platform independent,
+      # but font rasterisation is the usual place that assumption breaks. If this step fails on a
+      # commit that changed no UI, download the artifact below and compare before re-recording.
+      - name: Verify JVM snapshots
+        run: ./gradlew :app:verifyRoborazziDebug --stacktrace
+
+      - name: Upload snapshot comparisons
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roborazzi-comparisons
+          path: app/build/outputs/roborazzi/
+          if-no-files-found: ignore
+
+      # The device tier (visual-qa-maestro-mock.ps1) and the release guard
+      # (verify-release-isolation.ps1) are PowerShell and need a physical phone, so they stay local.
