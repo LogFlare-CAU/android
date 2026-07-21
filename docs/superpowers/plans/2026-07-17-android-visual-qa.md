@@ -2,6 +2,20 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Status (2026-07-21): Tasks 1-9 are implemented and committed; Task 10 is only partly done.** Checkboxes
+> below were never ticked and do not reflect progress.
+>
+> **The device-tier sections of this plan are superseded by [`docs/visual-qa.md`](../../visual-qa.md).**
+> The device tier now runs on a physical Samsung SM-S948N (API 36, 1440x3120, density 600) instead of a
+> Pixel 7 API 35 emulator, reaches the mock server over `adb reverse` at `http://localhost:18000` instead of
+> `http://10.0.2.2:8000`, and passes flow variables to Maestro with `-e` instead of ambient environment
+> variables. `Assert-Pixel7Api35Profile` is now the parameterized `Assert-DeviceProfile`.
+>
+> Device `Verify` passes as of 2026-07-21 (18/18 checkpoints). Getting there needed two fixes recorded in
+> `docs/visual-qa.md`: captures now drop the 139px status bar band (One UI ignores SystemUI demo mode), and
+> `LogFlareTopAppBar` was repainted from absolute palette values onto the `surface` / `onSurface` roles.
+> Device baselines are therefore `1440x2981`, and 26 JVM snapshots were re-recorded for the top bar change.
+
 **Goal:** Build a local-only visual regression suite that snapshots every major Compose screen in light and dark themes and verifies real app journeys on a Pixel 7-compatible Android emulator.
 
 **Architecture:** Roborazzi 1.60.0 and Robolectric 4.16.1 provide deterministic JVM snapshots of stateless screen-content composables. Maestro drives the installed debug app against either a deterministic host-side mock server or a caller-supplied development server; a JVM CLI compares mock-mode device captures and emits diff images.
