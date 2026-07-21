@@ -1,6 +1,5 @@
 package com.example.logflare.core.designsystem.components.navigation
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,12 +40,16 @@ fun LogFlareTopAppBar(
         require(!titleText.isNullOrBlank()) { "titleText is required when titleType is Title" }
     }
 
+    // Deliberately a fixed muted grey rather than a theme role: it reads as secondary against both
+    // surfaces (2.6:1 on light, 3.7:1 on dark, so still above the 3:1 non-text minimum where it is
+    // tightest), and promoting it to onSurface would restyle the light bar rather than fix a bug.
     val iconTint = AppTheme.colors.neutral.s50
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
-            .background(AppTheme.colors.neutral.white)
+            // surface, not neutral.white: an absolute here left the bar a white slab in dark mode.
+            .background(AppTheme.colors.surface)
             .statusBarsPadding()
             .padding(horizontal = AppTheme.spacing.s4),
         contentAlignment = Alignment.Center
@@ -69,7 +72,7 @@ fun LogFlareTopAppBar(
             TopAppBarTitleType.Title -> Text(
                 text = titleText.orEmpty(),
                 style = AppTheme.typography.bodyMdBold,
-                color = AppTheme.colors.neutral.black,
+                color = AppTheme.colors.onSurface,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.Center)
             )
@@ -95,9 +98,13 @@ fun LogFlareWordmark(
     modifier: Modifier = Modifier,
     contentDescription: String = "LogFlare logo"
 ) {
-    Image(
+    // The drawable is single-ink and baked at #212121, which disappears on a dark bar. Icon paints
+    // it as a mask, so the same asset serves both themes; onSurface is #212121 in light, leaving
+    // the light rendering byte-identical to the untinted Image this replaced.
+    Icon(
         painter = painterResource(id = R.drawable.ic_logflare_wordmark),
         contentDescription = contentDescription,
+        tint = AppTheme.colors.onSurface,
         modifier = modifier.height(17.dp)
     )
 }
