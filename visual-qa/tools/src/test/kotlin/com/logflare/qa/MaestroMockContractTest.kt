@@ -59,10 +59,12 @@ class MaestroMockContractTest {
             "Assert-Command",
             "Assert-Java17",
             "Resolve-EmulatorSerial",
-            "Assert-Pixel7Api35Profile",
+            "Assert-DeviceProfile",
             "Capture-AnimationScales",
             "Disable-AnimationScales",
             "Restore-AnimationScales",
+            "Get-ScreenOffTimeout",
+            "Set-ScreenOffTimeout",
             "Resolve-UiModeNightState",
             "Set-UiMode",
             "Wait-HttpHealth",
@@ -98,7 +100,27 @@ class MaestroMockContractTest {
         assertTrue(mockText.contains("visual-qa-common.ps1"))
         assertTrue(mockText.contains("assembleDebug"))
         assertTrue(mockText.contains("installDist"))
-        assertTrue(mockText.contains("10.0.2.2:8000"))
+        // Physical devices have no 10.0.2.2 host alias; they reach the mock server via adb reverse.
+        // Port is declared once and derived everywhere, so a collision is fixed in a single place.
+        assertTrue("mock must declare a single server port", mockText.contains("\$QaServerPort ="))
+        assertTrue("mock must derive the base URL from that port", mockText.contains("http://localhost:\$QaServerPort"))
+        assertFalse("emulator-only host alias must not come back", mockText.contains("10.0.2.2"))
+        assertTrue("mock must establish adb reverse", mockText.contains("reverse") && mockText.contains("tcp:"))
+        assertTrue("mock must tear down adb reverse", mockText.contains("reverse --remove"))
+        assertTrue("mock must restore the original screen off timeout", mockText.contains("screenTimeoutPrevious"))
+
+        // Maestro ignores ambient env vars (unset ones become the literal "undefined") and always
+        // nests screenshots under its own takeScreenshot tree, so both must be handled explicitly.
+        assertTrue("flow variables must be passed as --env pairs", mockText.contains("-e \"QA_BASE_URL="))
+        assertTrue("mock must pin Maestro's artifact directory", mockText.contains("--test-output-dir"))
+        assertTrue("mock must collect from Maestro's takeScreenshot tree", mockText.contains("takeScreenshot"))
+
+        // Captures crop on the edge-to-edge app_root and therefore include the live status bar.
+        // One UI ignores SystemUI demo mode, so the band is discarded; without this the device tier
+        // can never pass Verify, because clock and battery differ between record and verify.
+        assertTrue("mock must crop the status bar band off captures", mockText.contains("crop-top"))
+        assertTrue("crop band must be pinned, not guessed", mockText.contains("\$StatusBarCropPx ="))
+        assertTrue("crop must assert the uncropped source height", mockText.contains("--expect-height"))
         assertTrue(mockText.contains("device-baselines"))
         assertTrue(mockText.contains("device-diffs"))
         assertTrue(mockText.contains("record-device"))

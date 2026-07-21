@@ -38,12 +38,40 @@ $Themes = @('light', 'dark')
 
 $QaUsername = 'qa-admin'
 $QaPassword = 'qa-password'
-$QaBaseUrl = 'http://10.0.2.2:8000'
+# Not 8000: Docker Desktop squats that port on the host, and it is already taken on the device
+# too, so neither the mock server nor the adb reverse listener can bind it.
+$QaServerPort = 18000
+
+# Physical devices reach the host mock server through `adb reverse`, so the app talks to its
+# own loopback. `localhost` (not 127.0.0.1) is required: the debug network security config
+# whitelists cleartext by that hostname, and ServerConfigRepository special-cases it for ports.
+$QaBaseUrl = "http://localhost:$QaServerPort"
+
+# Reference device profile for the recorded baselines. Baselines are only reproducible on a
+# device matching all three values; a mismatch (e.g. a changed display resolution) fails loudly
+# instead of silently rewriting the baseline set.
+$ExpectedApi = '36'
+$ExpectedSize = '1440x3120'
+$ExpectedDensity = '600'
+$DeviceHeightPx = [int]($ExpectedSize -split 'x')[1]
+
+# Flows crop on `app_root`, which is edge-to-edge and so reaches under the status bar: every capture
+# would otherwise carry the live clock, battery level and notification icons and never match twice.
+# One UI ignores SystemUI demo mode (the usual way to freeze that chrome), so the band is dropped.
+# 139 is this device's reported top inset -- `adb shell dumpsys window displays` prints it as
+# `DisplayCutout{insets=Rect(0, 139 - 0, 0)}` / `overrideNonDecorInsets=[0,139]`. On this device rows
+# 108..142 are empty, so the cut lands in the gap between the status bar and the app's first pixel.
+$StatusBarCropPx = 139
+
+# Long enough to outlast a full light+dark run; the original value is restored on exit.
+$QaScreenOffTimeoutMs = '1800000'
 
 $BaselinesDir = Join-Path $RepoRoot 'visual-qa\device-baselines'
 $StagingDir = Join-Path $RepoRoot 'visual-qa\device-baselines-staging'
 $DiffsDir = Join-Path $RepoRoot 'visual-qa\device-diffs'
 $CapturesRoot = Join-Path $RepoRoot 'visual-qa\device-captures'
+# Scratch area for Maestro's own artifact tree; screenshots are collected out of it by file name.
+$MaestroOutputRoot = Join-Path $CapturesRoot '_maestro'
 $ToolsBat = Join-Path $RepoRoot 'visual-qa\tools\build\install\tools\bin\tools.bat'
 $Gradlew = Join-Path $RepoRoot 'gradlew.bat'
 $ApkPath = Join-Path $RepoRoot 'app\build\outputs\apk\debug\app-debug.apk'
@@ -52,6 +80,8 @@ $FlowsDir = Join-Path $RepoRoot '.maestro\flows'
 $resolvedSerial = $null
 $animationPrevious = @{}
 $uiModePrevious = $null
+$screenTimeoutPrevious = $null
+$reverseApplied = $false
 $serverProc = $null
 $exitCode = 1
 
@@ -73,7 +103,7 @@ function Stop-ProcessTree {
 }
 
 function Invoke-QaReset {
-    $uri = 'http://127.0.0.1:8000/__qa/reset'
+    $uri = "http://127.0.0.1:$QaServerPort/__qa/reset"
     if ($PSVersionTable.PSVersion.Major -ge 6) {
         Invoke-WebRequest -Uri $uri -Method Post -TimeoutSec 10 -UseBasicParsing | Out-Null
     }
@@ -89,7 +119,7 @@ function Deny-PostNotificationsIfPresent {
         Write-Info 'POST_NOTIFICATIONS not declared by package; skip deny'
         return
     }
-    $denyOut = & adb -s $DeviceSerial shell pm deny com.logflare.android android.permission.POST_NOTIFICATIONS 2>&1 | Out-String
+    $denyOut = & adb -s $DeviceSerial shell pm revoke com.logflare.android android.permission.POST_NOTIFICATIONS 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) {
         # Already denied / not granted is acceptable.
         if ($denyOut -match '(?i)not\s+held|already|Unknown permission|Security exception') {
@@ -237,10 +267,26 @@ function Invoke-MaestroFlow {
     $env:QA_THEME = $Theme
     $env:QA_OUTPUT_DIR = $relativeOutput
 
+    # Maestro always writes screenshots under "<test output dir>/**/takeScreenshot/<path>.png" and
+    # rejects absolute paths outright, so capture into a scratch tree and collect them by file name.
+    $flowOutDir = Join-Path $MaestroOutputRoot ("{0}_{1}" -f $Theme, [System.IO.Path]::GetFileNameWithoutExtension($FlowName))
+    if (Test-Path -LiteralPath $flowOutDir) {
+        Remove-Item -LiteralPath $flowOutDir -Recurse -Force
+    }
+    New-Item -ItemType Directory -Force -Path $flowOutDir | Out-Null
+
     Write-Info ("maestro test {0} theme={1} output={2}" -f $FlowName, $Theme, $relativeOutput)
     Push-Location $RepoRoot
     try {
-        & maestro --device $DeviceSerial test $relativeFlow
+        # Maestro resolves ${...} only from --env pairs; ambient environment variables are ignored
+        # and silently become the literal string "undefined" inside the flow.
+        & maestro --device $DeviceSerial test --test-output-dir $flowOutDir `
+            -e "QA_BASE_URL=$QaBaseUrl" `
+            -e "QA_USERNAME=$QaUsername" `
+            -e "QA_PASSWORD=$QaPassword" `
+            -e "QA_THEME=$Theme" `
+            -e "QA_OUTPUT_DIR=$relativeOutput" `
+            $relativeFlow
         if ($LASTEXITCODE -ne 0) {
             throw ("Maestro flow failed: {0} (theme={1}, exit={2})" -f $FlowName, $Theme, $LASTEXITCODE)
         }
@@ -248,6 +294,22 @@ function Invoke-MaestroFlow {
     finally {
         Pop-Location
     }
+
+    $shots = @(Get-ChildItem -LiteralPath $flowOutDir -Recurse -Filter '*.png' -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match '[\\/]takeScreenshot[\\/]' })
+    if ($shots.Count -eq 0) {
+        throw ("Maestro reported success but produced no takeScreenshot output for flow {0} (theme={1}) under {2}" -f `
+                $FlowName, $Theme, $flowOutDir)
+    }
+    foreach ($shot in $shots) {
+        $collected = Join-Path $OutputDirAbsolute $shot.Name
+        Move-Item -LiteralPath $shot.FullName -Destination $collected -Force
+        & $ToolsBat crop-top --image $collected --pixels $StatusBarCropPx --expect-height $DeviceHeightPx
+        if ($LASTEXITCODE -ne 0) {
+            throw ("crop-top failed for {0} (flow={1}, theme={2})" -f $shot.Name, $FlowName, $Theme)
+        }
+    }
+    Write-Info ("collected {0} screenshot(s) from {1}" -f $shots.Count, $FlowName)
 }
 
 try {
@@ -259,7 +321,8 @@ try {
     Assert-Command -Name 'maestro'
     Assert-Java17
     $resolvedSerial = Resolve-EmulatorSerial -Serial $Serial
-    Assert-Pixel7Api35Profile -Serial $resolvedSerial
+    Assert-DeviceProfile -Serial $resolvedSerial `
+        -ExpectedApi $ExpectedApi -ExpectedSize $ExpectedSize -ExpectedDensity $ExpectedDensity
 
     Write-Info ("Mode={0} Serial={1}" -f $Mode, $resolvedSerial)
     Write-Info 'Building app debug APK and installing visual-qa tools distribution'
@@ -287,15 +350,26 @@ try {
         throw "adb install failed with exit $LASTEXITCODE"
     }
 
+    Write-Info ("Reversing device localhost:{0} to host mock server" -f $QaServerPort)
+    # A binding left over from a crashed run would make the bind below fail; clearing it is a no-op otherwise.
+    & adb -s $resolvedSerial reverse --remove ("tcp:{0}" -f $QaServerPort) 2>$null | Out-Null
+    & adb -s $resolvedSerial reverse ("tcp:{0}" -f $QaServerPort) ("tcp:{0}" -f $QaServerPort) | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw ("adb reverse tcp:{0} failed with exit {1}. If this is 'Address already in use', something on the device already listens on {0}; pick a different `$QaServerPort." -f $QaServerPort, $LASTEXITCODE)
+    }
+    $reverseApplied = $true
+
     $uiModePrevious = (& adb -s $resolvedSerial shell cmd uimode night | Out-String).Trim()
+    $screenTimeoutPrevious = Get-ScreenOffTimeout -Serial $resolvedSerial
+    Set-ScreenOffTimeout -Serial $resolvedSerial -Milliseconds $QaScreenOffTimeoutMs
     Capture-AnimationScales -Serial $resolvedSerial -Previous $animationPrevious
     Disable-AnimationScales -Serial $resolvedSerial
 
-    Write-Info 'Starting mock server on 127.0.0.1:8000'
-    $serverProc = Start-Process -FilePath $ToolsBat -ArgumentList @('server', '--host', '127.0.0.1', '--port', '8000') `
+    Write-Info ("Starting mock server on 127.0.0.1:{0}" -f $QaServerPort)
+    $serverProc = Start-Process -FilePath $ToolsBat -ArgumentList @('server', '--host', '127.0.0.1', '--port', "$QaServerPort") `
         -WorkingDirectory (Split-Path -Parent $ToolsBat) `
         -PassThru -WindowStyle Hidden
-    Wait-HttpHealth -Url 'http://127.0.0.1:8000/__qa/health' -TimeoutSeconds 60
+    Wait-HttpHealth -Url "http://127.0.0.1:$QaServerPort/__qa/health" -TimeoutSeconds 60
 
     $themeCaptureDirs = @{}
     foreach ($theme in $Themes) {
@@ -363,6 +437,24 @@ finally {
             }
             catch {
                 Write-Warning ("Failed to restore UI mode: {0}" -f $_.Exception.Message)
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($screenTimeoutPrevious)) {
+            try {
+                Set-ScreenOffTimeout -Serial $resolvedSerial -Milliseconds $screenTimeoutPrevious
+            }
+            catch {
+                Write-Warning ("Failed to restore screen off timeout: {0}" -f $_.Exception.Message)
+            }
+        }
+
+        if ($reverseApplied) {
+            try {
+                & adb -s $resolvedSerial reverse --remove ("tcp:{0}" -f $QaServerPort) | Out-Null
+            }
+            catch {
+                Write-Warning ("Failed to remove adb reverse: {0}" -f $_.Exception.Message)
             }
         }
     }
