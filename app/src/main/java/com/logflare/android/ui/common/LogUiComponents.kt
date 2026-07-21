@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import com.logflare.android.enums.LogLevel
+import com.logflare.android.enums.color
 import com.example.logflare.core.designsystem.AppTheme
 import kotlinx.serialization.Serializable
 import java.time.Instant
@@ -82,7 +83,7 @@ fun CommonFilterDropdown(
             Text(
                 text = title,
                 style = AppTheme.typography.captionSmMedium.copy(
-                    color = if (isActive || expanded) AppTheme.colors.primary.default else AppTheme.colors.neutral.s80
+                    color = if (isActive || expanded) AppTheme.colors.primary.default else AppTheme.colors.muted
                 )
             )
             Icon(
@@ -144,7 +145,7 @@ fun CommonCheckRow(
         Text(
             text = label,
             style = AppTheme.typography.captionSmMedium.copy(
-                color = if (selected) highlightColor else AppTheme.colors.neutral.s80,
+                color = if (selected) highlightColor else AppTheme.colors.muted,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
             )
         )
@@ -167,7 +168,7 @@ fun CommonRadioRow(
         Text(
             text = label,
             style = AppTheme.typography.captionSmMedium.copy(
-                color = if (selected) AppTheme.colors.primary.default else AppTheme.colors.neutral.s80,
+                color = if (selected) AppTheme.colors.primary.default else AppTheme.colors.muted,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
             )
         )
@@ -178,14 +179,14 @@ fun CommonRadioRow(
 fun CommonLevelBadge(level: String) {
     val enum = LogLevel.fromLabel(level)
     Surface(
-        color = enum.color,
+        color = enum.color(AppTheme.colors),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
     ) {
         Text(
             text = enum.label,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-            color = Color.White
+            color = AppTheme.colors.onPrimary
         )
     }
 }
@@ -193,14 +194,14 @@ fun CommonLevelBadge(level: String) {
 @Composable
 fun CommonLevelBadge(level: LogLevel) {
     Surface(
-        color = level.color,
+        color = level.color(AppTheme.colors),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
     ) {
         Text(
             text = level.label,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-            color = Color.White
+            color = AppTheme.colors.onPrimary
         )
     }
 }
@@ -234,7 +235,7 @@ fun LoadMoreRow(
                 Text(
                     text = "Loading more...",
                     style = AppTheme.typography.bodySmMedium,
-                    color = AppTheme.colors.neutral.s80
+                    color = AppTheme.colors.muted
                 )
             }
         } else {

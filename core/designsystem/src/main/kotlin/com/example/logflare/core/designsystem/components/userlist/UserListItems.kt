@@ -66,7 +66,7 @@ fun UserListItem(
         Text(
             text = username,
             style = metrics.textStyle,
-            color = AppTheme.colors.neutral.black
+            color = AppTheme.colors.onSurface
         )
 
         Spacer(modifier = Modifier.width(metrics.nameChipSpacing))
@@ -84,10 +84,10 @@ fun UserListItem(
                 checked = isSelected,
                 onCheckedChange = { checked -> onSelectChange?.invoke(checked) },
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = AppTheme.colors.neutral.white,
-                    uncheckedThumbColor = AppTheme.colors.neutral.white,
+                    checkedThumbColor = AppTheme.colors.surface,
+                    uncheckedThumbColor = AppTheme.colors.surface,
                     checkedTrackColor = AppTheme.colors.primary.default,
-                    uncheckedTrackColor = AppTheme.colors.neutral.s30
+                    uncheckedTrackColor = AppTheme.colors.divider
                 )
             )
         }
@@ -101,7 +101,7 @@ fun UserListItem(
                 Icon(
                     imageVector = Icons.Filled.Delete,
                     contentDescription = "Delete user",
-                    tint = AppTheme.colors.neutral.s50
+                    tint = AppTheme.colors.muted
                 )
             }
         }
@@ -116,7 +116,7 @@ fun UserListItem(
 
 data class RoleChipStyle(
     val backgroundColor: Color,
-    val contentColor: Color = Color.White
+    val contentColor: Color = Color.Unspecified
 )
 
 @Composable
@@ -125,15 +125,15 @@ fun roleChipStyle(roleType: RoleBadgeType): RoleChipStyle {
     return when (roleType) {
         RoleBadgeType.SuperUser -> RoleChipStyle(
             backgroundColor = colors.primary.pressed,
-            contentColor = colors.neutral.white
+            contentColor = colors.onPrimary
         )
         RoleBadgeType.Moderator -> RoleChipStyle(
             backgroundColor = colors.primary.default,
-            contentColor = colors.neutral.white
+            contentColor = colors.onPrimary
         )
         RoleBadgeType.Member -> RoleChipStyle(
-            backgroundColor = colors.neutral.s70,
-            contentColor = colors.neutral.white
+            backgroundColor = colors.secondary.pressed,
+            contentColor = colors.onPrimary
         )
     }
 }

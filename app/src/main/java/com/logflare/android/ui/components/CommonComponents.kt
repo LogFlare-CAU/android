@@ -12,7 +12,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,15 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 
-// Local color tokens aligned with existing screens
-private val ColorNeutralBlack = Color(0xFF1A1A1A)
-private val ColorNeutral20 = Color(0xFFEEEEEE)
-private val ColorNeutral60 = Color(0xFF757575)
-private val ColorNeutral70 = Color(0xFF616161)
-private val ColorPrimaryDefault = Color(0xFF60B176)
-private val ColorDanger = Color(0xFFB12B38)
-private val ColorSecondaryDefault = Color(0xFF9E9E9E)
-
 /**
  * Standard back header used across screens.
  * Places a left-aligned back button and a bold title.
@@ -45,7 +35,7 @@ fun BackHeader(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     titleColor: Color = AppTheme.colors.onSurface,
-    iconTint: Color = ColorSecondaryDefault,
+    iconTint: Color = AppTheme.colors.secondary.default,
     horizontalPadding: Dp = 16.dp,
     verticalPadding: Dp = 12.dp
 ) {
@@ -81,8 +71,8 @@ fun BottomPrimaryButton(
     onClick: () -> Unit,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
-    containerColor: Color = ColorPrimaryDefault,
-    disabledContainerColor: Color = ColorNeutral20
+    containerColor: Color = AppTheme.colors.primary.default,
+    disabledContainerColor: Color = AppTheme.colors.primary.disabled
 ) {
     Button(
         onClick = onClick,
@@ -90,12 +80,14 @@ fun BottomPrimaryButton(
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
-            disabledContainerColor = disabledContainerColor
+            disabledContainerColor = disabledContainerColor,
+            contentColor = AppTheme.colors.onPrimary,
+            disabledContentColor = AppTheme.colors.onPrimary
         ),
         contentPadding = PaddingValues(vertical = 16.dp),
         shape = RoundedCornerShape(8.dp)
     ) {
-        Text(text = text, color = Color.White, fontWeight = FontWeight.Bold)
+        Text(text = text, color = AppTheme.colors.onPrimary, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -108,8 +100,8 @@ fun BottomOutlinedButton(
     onClick: () -> Unit,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
-    contentColor: Color = ColorNeutral70,
-    borderColor: Color = ColorNeutral60
+    contentColor: Color = AppTheme.colors.muted,
+    borderColor: Color = AppTheme.colors.outline
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -141,7 +133,7 @@ fun BottomDangerOutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
-        contentColor = ColorDanger,
-        borderColor = if (enabled) ColorDanger else ColorNeutral60
+        contentColor = AppTheme.colors.red.default,
+        borderColor = if (enabled) AppTheme.colors.red.default else AppTheme.colors.outline
     )
 }

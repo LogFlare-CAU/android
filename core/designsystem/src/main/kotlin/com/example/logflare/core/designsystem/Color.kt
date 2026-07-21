@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// 1. Primitive Colors (Raw Hex Values)
+// 1. Primitive Colors (Raw Hex Values) — Theme mapping only; UI uses AppColors semantics.
 
 val Black = Color(0xFF1A1A1A)
 val White = Color(0xFFFFFFFF)
@@ -33,7 +33,11 @@ val RedDefault = Color(0xFFE63946)
 val RedPressed = Color(0xFFB02C38)
 val RedDisabled = Color(0xFFF3B3B8)
 
-// 2. Semantic Structure (Naming Convention Implementation)
+val WarningDefault = Color(0xFFFFB74D)
+val InfoDefault = Color(0xFF1976D2)
+val DebugDefault = Color(0xFF64B5F6)
+
+// 2. Semantic Structure
 
 @Immutable
 data class BrandColorState(
@@ -72,6 +76,20 @@ data class AppColors(
     val onSurface: Color,
     val onPrimary: Color,
     val outline: Color,
+    /** Secondary text and icon tint. */
+    val muted: Color,
+    /** Text field fill when enabled. */
+    val input: Color,
+    val onInput: Color,
+    /** Text field fill when disabled. */
+    val inputDisabled: Color,
+    /** Neutral chip / tag background. */
+    val chip: Color,
+    val onChip: Color,
+    val divider: Color,
+    val success: Color,
+    val warning: Color,
+    val info: Color,
 )
 
 val LocalAppColors = staticCompositionLocalOf {
@@ -92,5 +110,24 @@ val LocalAppColors = staticCompositionLocalOf {
         onSurface = Color.Unspecified,
         onPrimary = Color.Unspecified,
         outline = Color.Unspecified,
+        muted = Color.Unspecified,
+        input = Color.Unspecified,
+        onInput = Color.Unspecified,
+        inputDisabled = Color.Unspecified,
+        chip = Color.Unspecified,
+        onChip = Color.Unspecified,
+        divider = Color.Unspecified,
+        success = Color.Unspecified,
+        warning = Color.Unspecified,
+        info = Color.Unspecified,
     )
+}
+
+/** Maps a log-level label (or enum name) to a status color. */
+fun AppColors.logLevelColor(level: String): Color = when (level.trim().uppercase()) {
+    "FATAL", "CRITICAL", "ERROR" -> red.pressed
+    "WARN", "WARNING" -> warning
+    "INFO" -> info
+    "DEBUG" -> DebugDefault
+    else -> muted
 }

@@ -354,7 +354,7 @@ private fun DeleteMemberDialog(
             Text(
                 text = "Are you sure you want to delete \"$username\"? This action cannot be undone.",
                 style = AppTheme.typography.bodySmMedium,
-                color = AppTheme.colors.neutral.s70,
+                color = AppTheme.colors.muted,
             )
         },
         confirmButton = {

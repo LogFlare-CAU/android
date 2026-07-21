@@ -1,15 +1,16 @@
 package com.logflare.android.enums
 
 import androidx.compose.ui.graphics.Color
+import com.example.logflare.core.designsystem.AppColors
+import com.example.logflare.core.designsystem.logLevelColor
 
 enum class UserPermission(
     val code: Int,
     val label: String,
-    val color: Color
 ) {
-    USER(0, "Member", Color(0xFF616161)),
-    MODERATOR(80, "Admin", Color(0xFF60B176)),
-    SUPER_USER(100, "Super Admin", Color(0xFF30A14F));
+    USER(0, "Member"),
+    MODERATOR(80, "Admin"),
+    SUPER_USER(100, "Super Admin");
 
     companion object {
         fun fromCode(code: Int): UserPermission =
@@ -17,12 +18,18 @@ enum class UserPermission(
     }
 }
 
-enum class LogLevel(val code: Int, val label: String, val color: Color) {
-    DEBUG(10, "Debug", Color(0xFF90CAF9)),
-    INFO(20, "Info", Color(0xFF4CAF50)),
-    WARNING(30, "Warning", Color(0xFFFFC107)),
-    ERROR(40, "Error", Color(0xFFF44336)),
-    CRITICAL(50, "Critical", Color(0xFFD32F2F));
+fun UserPermission.color(colors: AppColors): Color = when (this) {
+    UserPermission.USER -> colors.secondary.pressed
+    UserPermission.MODERATOR -> colors.primary.default
+    UserPermission.SUPER_USER -> colors.primary.pressed
+}
+
+enum class LogLevel(val code: Int, val label: String) {
+    DEBUG(10, "Debug"),
+    INFO(20, "Info"),
+    WARNING(30, "Warning"),
+    ERROR(40, "Error"),
+    CRITICAL(50, "Critical");
 
     companion object {
         fun fromCode(code: Int): LogLevel =
@@ -39,6 +46,8 @@ enum class LogLevel(val code: Int, val label: String, val color: Color) {
             LogLevel.entries.filter { it.code >= fromLabel(level).code }
     }
 }
+
+fun LogLevel.color(colors: AppColors): Color = colors.logLevelColor(label)
 
 enum class LogSort(val label: String) {
     NEWEST("newest"),

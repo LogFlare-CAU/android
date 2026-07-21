@@ -78,6 +78,16 @@ internal fun baseAppColors() = AppColors(
     onSurface = Color.Unspecified,
     onPrimary = Color.Unspecified,
     outline = Color.Unspecified,
+    muted = Color.Unspecified,
+    input = Color.Unspecified,
+    onInput = Color.Unspecified,
+    inputDisabled = Color.Unspecified,
+    chip = Color.Unspecified,
+    onChip = Color.Unspecified,
+    divider = Color.Unspecified,
+    success = GreenDefault,
+    warning = WarningDefault,
+    info = InfoDefault,
 )
 
 internal fun lightAppColors() = baseAppColors().copy(
@@ -86,18 +96,38 @@ internal fun lightAppColors() = baseAppColors().copy(
     surfaceVariant = Neutral10,
     onBackground = Neutral90,
     onSurface = Neutral90,
-    onPrimary = Black,
+    onPrimary = White,
     outline = Neutral40,
+    muted = Neutral60,
+    input = White,
+    onInput = Neutral90,
+    inputDisabled = Neutral10,
+    chip = Neutral20,
+    onChip = Neutral90,
+    divider = Neutral30,
+    success = GreenDefault,
+    warning = WarningDefault,
+    info = InfoDefault,
 )
 
 internal fun darkAppColors() = baseAppColors().copy(
-    background = Neutral90,
+    background = Black,
     surface = Neutral80,
     surfaceVariant = Neutral70,
     onBackground = Neutral5,
     onSurface = Neutral5,
-    onPrimary = Black,
+    onPrimary = White,
     outline = Neutral60,
+    muted = Neutral40,
+    input = Neutral80,
+    onInput = Neutral5,
+    inputDisabled = Neutral90,
+    chip = Neutral70,
+    onChip = Neutral5,
+    divider = Neutral60,
+    success = GreenDefault,
+    warning = WarningDefault,
+    info = DebugDefault,
 )
 
 @Composable

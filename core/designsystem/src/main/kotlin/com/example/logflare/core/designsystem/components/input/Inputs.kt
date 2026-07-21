@@ -47,22 +47,22 @@ fun LogFlareTextField(
     val isFocused by interactionSource.collectIsFocusedAsState()
 
     val borderColor = when {
-        !enabled -> AppTheme.colors.neutral.s70
+        !enabled -> AppTheme.colors.outline
         isError -> AppTheme.colors.red.default
         isFocused -> AppTheme.colors.primary.default
-        else -> AppTheme.colors.neutral.s70
+        else -> AppTheme.colors.outline
     }
-    val backgroundColor = if (enabled) AppTheme.colors.neutral.white else AppTheme.colors.neutral.s10
-    val textColor = if (enabled) AppTheme.colors.neutral.s90 else AppTheme.colors.neutral.s60
-    val placeholderColor = AppTheme.colors.neutral.s60
-    val helperColor = if (isError) AppTheme.colors.red.default else AppTheme.colors.neutral.s70
+    val backgroundColor = if (enabled) AppTheme.colors.input else AppTheme.colors.inputDisabled
+    val textColor = if (enabled) AppTheme.colors.onInput else AppTheme.colors.muted
+    val placeholderColor = AppTheme.colors.muted
+    val helperColor = if (isError) AppTheme.colors.red.default else AppTheme.colors.muted
 
     Column(modifier = modifier) {
         label?.let {
             Text(
                 text = it,
                 style = AppTheme.typography.bodyMdMedium,
-                color = AppTheme.colors.neutral.s70
+                color = AppTheme.colors.muted
             )
             Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
         }
@@ -151,22 +151,22 @@ fun LogFlareActionTextField(
     val isFocused by interactionSource.collectIsFocusedAsState()
 
     val borderColor = when {
-        !enabled -> AppTheme.colors.neutral.s70
+        !enabled -> AppTheme.colors.outline
         isError -> AppTheme.colors.red.default
         isFocused -> AppTheme.colors.primary.default
-        else -> AppTheme.colors.neutral.s70
+        else -> AppTheme.colors.outline
     }
-    val backgroundColor = if (enabled) AppTheme.colors.neutral.white else AppTheme.colors.neutral.s10
-    val textColor = if (enabled) AppTheme.colors.neutral.s90 else AppTheme.colors.neutral.s60
-    val placeholderColor = AppTheme.colors.neutral.s60
-    val helperColor = if (isError) AppTheme.colors.red.default else AppTheme.colors.neutral.s70
+    val backgroundColor = if (enabled) AppTheme.colors.input else AppTheme.colors.inputDisabled
+    val textColor = if (enabled) AppTheme.colors.onInput else AppTheme.colors.muted
+    val placeholderColor = AppTheme.colors.muted
+    val helperColor = if (isError) AppTheme.colors.red.default else AppTheme.colors.muted
 
     Column(modifier = modifier) {
         label?.let {
             Text(
                 text = it,
                 style = AppTheme.typography.bodyMdMedium,
-                color = AppTheme.colors.neutral.s70
+                color = AppTheme.colors.muted
             )
             Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
         }
@@ -258,7 +258,7 @@ private fun InlineActionButton(
 ) {
     val colors = AppTheme.colors
     val backgroundColor = when {
-        !enabled -> colors.neutral.s40
+        !enabled -> colors.primary.disabled
         else -> colors.primary.default
     }
 
@@ -277,13 +277,13 @@ private fun InlineActionButton(
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
                     strokeWidth = 2.dp,
-                    color = colors.neutral.white
+                    color = colors.onPrimary
                 )
             } else {
                 Text(
                     text = text,
                     style = AppTheme.typography.captionSmMedium,
-                    color = colors.neutral.white
+                    color = colors.onPrimary
                 )
             }
         }

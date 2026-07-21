@@ -115,9 +115,9 @@ fun LogFlareButton(
     val colors = when (type) {
         Filled -> ButtonDefaults.buttonColors(
             containerColor = variantColors.default,
-            contentColor = AppTheme.colors.neutral.white,
+            contentColor = AppTheme.colors.onPrimary,
             disabledContainerColor = variantColors.disabled,
-            disabledContentColor = AppTheme.colors.neutral.s40,
+            disabledContentColor = AppTheme.colors.outline,
         )
 
         Outline -> ButtonDefaults.outlinedButtonColors(
@@ -137,7 +137,7 @@ fun LogFlareButton(
         Filled, Text -> null
         Outline -> BorderStroke(
             width = 1.dp,
-            color = if (enabled) variantColors.default else AppTheme.colors.neutral.s40,
+            color = if (enabled) variantColors.default else AppTheme.colors.outline,
         )
     }
 

@@ -22,7 +22,7 @@ fun RowScope.LogFlareGnbItem(
 ) {
     val selectedColor = AppTheme.colors.primary.default
     val unselectedColor = AppTheme.colors.secondary.default
-    val disabledColor = AppTheme.colors.neutral.s40
+    val disabledColor = AppTheme.colors.muted
 
     NavigationBarItem(
         selected = selected,

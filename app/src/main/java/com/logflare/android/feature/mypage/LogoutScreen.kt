@@ -109,7 +109,7 @@ private fun LogoutBody(modifier: Modifier = Modifier) {
         Text(
             text = "Are you sure you want to log out?\nYou'll need to sign in again to use LogFlare",
             style = AppTheme.typography.bodySmLight,
-            color = AppTheme.colors.neutral.s70,
+            color = AppTheme.colors.muted,
             textAlign = TextAlign.Center,
         )
     }

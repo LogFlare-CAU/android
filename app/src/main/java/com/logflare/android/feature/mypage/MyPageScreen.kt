@@ -201,7 +201,7 @@ fun MyPageContent(
 
                             item {
                                 Surface(
-                                    color = AppTheme.colors.neutral.s10,
+                                    color = AppTheme.colors.surfaceVariant,
                                     shape = AppTheme.radius.large,
                                     modifier = Modifier
                                         .padding(horizontal = AppTheme.spacing.s4)
@@ -211,7 +211,7 @@ fun MyPageContent(
                                         Text(
                                             text = "No members registered yet",
                                             style = AppTheme.typography.bodySmLight,
-                                            color = AppTheme.colors.neutral.s60,
+                                            color = AppTheme.colors.muted,
                                             modifier = Modifier
                                                 .padding(
                                                     horizontal = AppTheme.spacing.s4,
