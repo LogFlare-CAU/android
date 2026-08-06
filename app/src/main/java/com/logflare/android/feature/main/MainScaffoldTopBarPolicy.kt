@@ -1,5 +1,6 @@
 package com.logflare.android.feature.main
 
+import com.example.logflare.core.designsystem.AppLayoutRoles
 import com.logflare.android.ui.navigation.Route
 
 fun shouldHideScaffoldTopBar(route: String?): Boolean {
@@ -9,7 +10,7 @@ fun shouldHideScaffoldTopBar(route: String?): Boolean {
         route.startsWith("mypage/edit-member/")
 }
 
-/** Extra top padding applied under MainScaffold content. Account-owned top bars drop it. */
+/** Non-composable helper that mirrors the default role used by MainScaffold content. */
 fun mainNavHostExtraTopPaddingDp(route: String?): Int =
-    if (shouldHideScaffoldTopBar(route)) 0 else 16
+    if (shouldHideScaffoldTopBar(route)) 0 else AppLayoutRoles().screenPadding.value.toInt()
 

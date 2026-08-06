@@ -21,7 +21,7 @@ fun RowScope.LogFlareGnbItem(
     modifier: Modifier = Modifier,
 ) {
     val selectedColor = AppTheme.colors.primary.default
-    val unselectedColor = AppTheme.colors.secondary.default
+    val unselectedColor = AppTheme.colors.muted
     val disabledColor = AppTheme.colors.muted
 
     NavigationBarItem(
@@ -33,7 +33,11 @@ fun RowScope.LogFlareGnbItem(
             androidx.compose.material3.Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = label,
-                tint = Color.Unspecified
+                tint = when {
+                    !enabled -> disabledColor
+                    selected -> selectedColor
+                    else -> unselectedColor
+                },
             )
         },
         label = {
