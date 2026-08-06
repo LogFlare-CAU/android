@@ -36,7 +36,28 @@ data class AppDimens(
     val gridColumns: Int = 4
 )
 
+@Immutable
+data class AppChromeRoles(
+    val topBarHeight: Dp = 56.dp,
+    val topBarHorizontalPadding: Dp = 16.dp,
+)
+
+@Immutable
+data class AppLayoutRoles(
+    val screenPadding: Dp = 16.dp,
+    val sectionGap: Dp = 32.dp,
+    val contentGap: Dp = 12.dp,
+    val statePadding: Dp = 24.dp,
+)
+
+@Immutable
+data class AppRoles(
+    val chrome: AppChromeRoles = AppChromeRoles(),
+    val layout: AppLayoutRoles = AppLayoutRoles(),
+)
+
 // CompositionLocals for new systems
 val LocalAppSpacing = staticCompositionLocalOf { AppSpacing() }
 val LocalAppRadius = staticCompositionLocalOf { AppRadius() }
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }
+val LocalAppRoles = staticCompositionLocalOf { AppRoles() }

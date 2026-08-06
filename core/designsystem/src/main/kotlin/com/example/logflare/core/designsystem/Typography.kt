@@ -29,6 +29,9 @@ val Pretendard = FontFamily(
 
 @Immutable
 data class AppTypography(
+    val titleAppBar: TextStyle,
+    val titleSection: TextStyle,
+
     // Body - Large
     val bodyLgBold: TextStyle,
 
@@ -50,6 +53,8 @@ data class AppTypography(
 // CompositionLocal 생성 (기본값은 비어있음)
 val LocalAppTypography = staticCompositionLocalOf {
     AppTypography(
+        titleAppBar = TextStyle.Default,
+        titleSection = TextStyle.Default,
         bodyLgBold = TextStyle.Default,
         bodyMdBold = TextStyle.Default,
         bodyMdMedium = TextStyle.Default,

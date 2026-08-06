@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
 import com.logflare.android.ui.theme.LogflareandroidTheme
 import org.junit.Assert.assertNotEquals
@@ -68,5 +69,36 @@ class ThemeContractTest {
     private fun MaterialThemeConsistentContrast(lightMuted: Color, darkMuted: Color): Boolean {
         // Light muted should be darker than dark-theme muted (which sits on dark surfaces).
         return lightMuted.luminance() < darkMuted.luminance()
+    }
+
+    @Test
+    fun rolesExposePositiveLayoutTokens() {
+        var screenPadding = 0.dp
+        var sectionGap = 0.dp
+        var topBarHeight = 0.dp
+        compose.setContent {
+            LogflareandroidTheme(darkTheme = false) {
+                screenPadding = AppTheme.roles.layout.screenPadding
+                sectionGap = AppTheme.roles.layout.sectionGap
+                topBarHeight = AppTheme.roles.chrome.topBarHeight
+            }
+        }
+        assertTrue(screenPadding > 0.dp)
+        assertTrue(sectionGap > 0.dp)
+        assertTrue(topBarHeight >= 56.dp)
+    }
+
+    @Test
+    fun titleTypographyRolesExist() {
+        var appBarSize = 0f
+        var sectionSize = 0f
+        compose.setContent {
+            LogflareandroidTheme(darkTheme = false) {
+                appBarSize = AppTheme.typography.titleAppBar.fontSize.value
+                sectionSize = AppTheme.typography.titleSection.fontSize.value
+            }
+        }
+        assertTrue(appBarSize >= 14f)
+        assertTrue(sectionSize >= 16f)
     }
 }

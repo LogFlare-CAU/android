@@ -5,9 +5,11 @@ import androidx.compose.runtime.ReadOnlyComposable
 import com.example.logflare.core.designsystem.AppColors
 import com.example.logflare.core.designsystem.AppDimens
 import com.example.logflare.core.designsystem.AppRadius
+import com.example.logflare.core.designsystem.AppRoles
 import com.example.logflare.core.designsystem.AppSpacing
 import com.example.logflare.core.designsystem.AppTheme as CoreAppTheme
 import com.example.logflare.core.designsystem.AppTypography
+import com.example.logflare.core.designsystem.LocalAppRoles
 
 /**
  * Thin wrapper that exposes the canonical [CoreAppTheme] object under the
@@ -40,4 +42,9 @@ object AppTheme {
         @Composable
         @ReadOnlyComposable
         get() = CoreAppTheme.dimens
+
+    val roles: AppRoles
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalAppRoles.current
 }
