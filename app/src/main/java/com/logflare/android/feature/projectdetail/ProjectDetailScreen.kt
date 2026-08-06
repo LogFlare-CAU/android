@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.logflare.android.enums.LogLevel
@@ -208,7 +207,7 @@ private fun ProjectSettingsCard(
             )
             Box(
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(AppTheme.spacing.s6)
                     .clip(AppTheme.radius.medium)
                     .background(AppTheme.colors.surface.copy(alpha = 0.3f))
             )
