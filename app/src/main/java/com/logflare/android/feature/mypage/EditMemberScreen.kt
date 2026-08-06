@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.button.ButtonSize
@@ -271,7 +270,9 @@ private fun EditMemberForm(
                 onItemSelected = onPermissionChange,
                 itemLabelMapper = { it.label },
                 size = DropdownSize.Large,
-                modifier = Modifier.width(140.dp),
+                modifier = Modifier.width(
+                    AppTheme.roles.layout.screenPadding * 9 - AppTheme.spacing.s1,
+                ),
                 disabled = uiState.disabled,
             )
         }
@@ -291,8 +292,8 @@ private fun EditMemberBottomBar(
 ) {
     Surface(
         color = AppTheme.colors.surface,
-        tonalElevation = 4.dp,
-        shadowElevation = 4.dp,
+        tonalElevation = AppTheme.spacing.s1,
+        shadowElevation = AppTheme.spacing.s1,
     ) {
         Column(
             modifier = Modifier
@@ -374,6 +375,6 @@ private fun DeleteMemberDialog(
             )
         },
         containerColor = AppTheme.colors.surface,
-        tonalElevation = 2.dp,
+        tonalElevation = AppTheme.spacing.s1 / 2,
     )
 }

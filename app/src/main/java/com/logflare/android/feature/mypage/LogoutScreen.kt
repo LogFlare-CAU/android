@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.button.ButtonType
@@ -125,8 +124,8 @@ private fun LogoutBottomBar(
 ) {
     Surface(
         color = AppTheme.colors.surface,
-        tonalElevation = 4.dp,
-        shadowElevation = 4.dp,
+        tonalElevation = AppTheme.spacing.s1,
+        shadowElevation = AppTheme.spacing.s1,
     ) {
         Column(
             modifier = Modifier

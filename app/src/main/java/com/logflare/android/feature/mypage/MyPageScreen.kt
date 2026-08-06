@@ -27,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -128,7 +127,7 @@ fun MyPageContent(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(bottom = AppTheme.spacing.s4),
-                            verticalArrangement = Arrangement.spacedBy(0.dp),
+                            verticalArrangement = Arrangement.Top,
                         ) {
                             item {
                                 SectionHeader(title = "Account Info")
@@ -179,7 +178,9 @@ fun MyPageContent(
                                         },
                                         placeholder = "Theme",
                                         size = DropdownSize.Large,
-                                        modifier = Modifier.width(140.dp),
+                                        modifier = Modifier.width(
+                                            AppTheme.roles.layout.screenPadding * 9 - AppTheme.spacing.s1,
+                                        ),
                                         showCheckboxInMenu = false,
                                     )
                                 }
@@ -209,7 +210,9 @@ fun MyPageContent(
                                         itemLabelMapper = { it.label },
                                         placeholder = "Log Level",
                                         size = DropdownSize.Large,
-                                        modifier = Modifier.width(140.dp),
+                                        modifier = Modifier.width(
+                                            AppTheme.roles.layout.screenPadding * 9 - AppTheme.spacing.s1,
+                                        ),
                                         showCheckboxInMenu = false,
                                     )
                                 }
@@ -287,7 +290,9 @@ fun MyPageContent(
                                                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                                             contentDescription = null,
                                                             tint = AppTheme.colors.secondary.default,
-                                                            modifier = Modifier.size(20.dp),
+                                                            modifier = Modifier.size(
+                                                                AppTheme.spacing.s6 - AppTheme.spacing.s1,
+                                                            ),
                                                         )
                                                     },
                                                 )
