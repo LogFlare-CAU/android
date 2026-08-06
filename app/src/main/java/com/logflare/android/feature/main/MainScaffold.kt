@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -39,6 +40,7 @@ import com.logflare.android.feature.project.ProjectSettingsScreen
 import com.logflare.android.feature.projectdetail.ProjectDetailScreen
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.navigation.Route
+import com.logflare.android.viewmodel.ThemeViewModel
 
 /**
  * Main app scaffold with bottom navigation.
@@ -57,7 +59,8 @@ data class GnbItem(
 fun MainScaffold(
     onLogout: () -> Unit,
     intentProjectId: Int? = null,
-    intentErrorId: Int? = null
+    intentErrorId: Int? = null,
+    themeViewModel: ThemeViewModel = hiltViewModel(),
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -82,6 +85,8 @@ fun MainScaffold(
     val hideScaffoldTopBar = shouldHideScaffoldTopBar(currentRoute)
 
     Scaffold(
+        containerColor = AppTheme.colors.background,
+        contentColor = AppTheme.colors.onBackground,
         topBar = {
             if (!hideScaffoldTopBar) {
                 LogFlareTopAppBar(
@@ -134,7 +139,8 @@ fun MainScaffold(
                 .then(
                     if (extraTop > 0) Modifier.padding(top = extraTop.dp) else Modifier,
                 ),
-            onLogout = onLogout
+            onLogout = onLogout,
+            themeViewModel = themeViewModel,
         )
     }
 }
@@ -191,7 +197,8 @@ private fun BottomNavigationBar(navController: NavHostController) {
 private fun MainNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    themeViewModel: ThemeViewModel,
 ) {
     NavHost(
         navController = navController,
@@ -222,9 +229,14 @@ private fun MainNavHost(
             )
         }
         composable(Route.Projects.path) {
-            ProjectListScreen(onProjectClick = { projectId ->
-                navController.navigate(Route.ProjectDetail.createRoute(projectId))
-            })
+            ProjectListScreen(
+                onProjectClick = { projectId ->
+                    navController.navigate(Route.ProjectDetail.createRoute(projectId))
+                },
+                onCreateProject = {
+                    navController.navigate(Route.ProjectCreate.path)
+                },
+            )
         }
         composable(Route.ProjectCreate.path) {
             ProjectCreateScreen(onCreated = { navController.navigate(Route.Projects.path) })
@@ -236,7 +248,8 @@ private fun MainNavHost(
                 onAddMember = { navController.navigate(Route.MyPageAddMember.path) },
                 onEditMember = { username ->
                     navController.navigate(Route.MyPageEditMember.createRoute(username))
-                }
+                },
+                themeViewModel = themeViewModel,
             )
         }
         composable(Route.MyPageAddMember.path) {

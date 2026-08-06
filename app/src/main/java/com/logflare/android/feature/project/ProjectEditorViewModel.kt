@@ -161,6 +161,27 @@ open class ProjectEditorViewModel(
         }
     }
 
+    fun rotateToken() {
+        val projectId = projectId ?: return
+        if (_ui.value.loading) return
+        updateUi { copy(loading = true, error = null) }
+        viewModelScope.launch {
+            repo.rotateToken(projectId)
+                .onSuccess { dto ->
+                    updateUi {
+                        copy(
+                            loading = false,
+                            token = dto.token,
+                            snackbar = "Project token rotated",
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    updateUi { copy(loading = false, error = e.message ?: "Failed to rotate token") }
+                }
+        }
+    }
+
     fun deleteProject(onSuccess: () -> Unit) {
         if (_ui.value.loading) return
         val projectId = projectId ?: return

@@ -166,7 +166,7 @@ fun LogFlareActionTextField(
                         value = value,
                         onValueChange = { if (!disabled) onValueChange(it) },
                         enabled = state != LogFlareActionTextFieldState.Saved,
-                        textStyle = AppTheme.typography.bodyMdMedium.copy(color = colors.onSurface),
+                        textStyle = AppTheme.typography.bodyMdMedium.copy(color = colors.onInput),
                         cursorBrush = SolidColor(colors.primary.default),
                         keyboardOptions = keyboardOptions,
                         visualTransformation = visualTransformation,

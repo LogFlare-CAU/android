@@ -6,11 +6,13 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
@@ -87,6 +89,25 @@ class VisualQaSemanticsTest {
         compose.onNodeWithTag(VisualQaTags.projectCard(101)).assertExists()
         compose.onNodeWithTag(VisualQaTags.projectCard(202)).performClick()
         assertEquals(202, clicked)
+    }
+
+    @Test
+    fun projectListEmptyCreateTagReachesCallback() {
+        var created = false
+        compose.setContent {
+            LogflareandroidTheme(false) {
+                ProjectListScreenContent(
+                    uiState = ProjectsUiState(items = emptyList()),
+                    onProjectClick = {},
+                    onRefresh = {},
+                    onCreateProject = { created = true },
+                )
+            }
+        }
+        compose.onNodeWithTag(VisualQaTags.Projects).assertExists()
+        compose.onNodeWithTag(VisualQaTags.Empty).assertExists()
+        compose.onNodeWithTag(VisualQaTags.CreateProject).performClick()
+        assertTrue(created)
     }
 
     @Test
@@ -256,6 +277,30 @@ class VisualQaSemanticsTest {
         }
         compose.onNodeWithTag(VisualQaTags.projectCard(101)).performClick()
         assertEquals(101, selected)
+    }
+
+    @Test
+    fun homeLongRecentLogsKeepProjectListReachable() {
+        compose.setContent {
+            LogflareandroidTheme(false) {
+                HomeScreenContent(
+                    authState = SnapshotFixtures.auth(),
+                    projectsState = SnapshotFixtures.projects(),
+                    logsState = SnapshotFixtures.logs(longMessages = true),
+                    onProjectSelected = {},
+                    onViewMoreLogs = {},
+                    onCreateProject = {},
+                )
+            }
+        }
+        compose.onNodeWithTag(VisualQaTags.Home).assertExists()
+        compose.onNodeWithText("Project List").assertExists()
+        compose.onNodeWithTag(VisualQaTags.projectCard(101))
+            .performScrollTo()
+            .assertIsDisplayed()
+        compose.onNodeWithTag(VisualQaTags.CreateProject)
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test

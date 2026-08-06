@@ -169,6 +169,17 @@ class ProjectsRepository @Inject constructor(
         } else throw e
     }
 
+    suspend fun rotateToken(projectId: Int): Result<ProjectDTOWithToken> = runCatching {
+        val token = auth.token.first() ?: throw IllegalStateException("No token")
+        val res = api.rotateProjectToken(token, projectId)
+        if (!res.success) throw IllegalStateException("rotateProjectToken failed: ${res.message}")
+        res.data ?: throw IllegalStateException("Empty project returned")
+    }.recoverCatching { e ->
+        if (e is HttpException && e.code() == 401) {
+            throw IllegalStateException("Unauthorized")
+        } else throw e
+    }
+
     suspend fun addKeyword(projectId: Int, keyword: String): Result<Set<String>> {
         val project = get(projectId)
             ?: return Result.failure(IllegalStateException("Project not found"))

@@ -9,6 +9,7 @@ sealed interface ProjectEditorAction {
     data class TogglePermission(val username: String) : ProjectEditorAction
     data object Submit : ProjectEditorAction
     data object CopyToken : ProjectEditorAction
+    data object RotateToken : ProjectEditorAction
     data object Delete : ProjectEditorAction
 }
 

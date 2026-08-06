@@ -81,4 +81,30 @@ class HomeSnapshots : VisualSnapshotTest() {
             )
         }
     }
+
+    @Test fun home_long_logs_light() {
+        capture("home_long_logs", darkTheme = false) {
+            HomeScreenContent(
+                authState = SnapshotFixtures.auth(),
+                projectsState = SnapshotFixtures.projects(),
+                logsState = SnapshotFixtures.logs(longMessages = true),
+                onProjectSelected = { _ -> },
+                onViewMoreLogs = {},
+                onCreateProject = {},
+            )
+        }
+    }
+
+    @Test fun home_long_logs_dark() {
+        capture("home_long_logs", darkTheme = true) {
+            HomeScreenContent(
+                authState = SnapshotFixtures.auth(),
+                projectsState = SnapshotFixtures.projects(),
+                logsState = SnapshotFixtures.logs(longMessages = true),
+                onProjectSelected = { _ -> },
+                onViewMoreLogs = {},
+                onCreateProject = {},
+            )
+        }
+    }
 }

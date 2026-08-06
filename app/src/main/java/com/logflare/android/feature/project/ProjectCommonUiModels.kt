@@ -18,10 +18,14 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
+import com.example.logflare.core.designsystem.components.button.ButtonType
+import com.example.logflare.core.designsystem.components.button.ButtonVariant
+import com.example.logflare.core.designsystem.components.button.LogFlareButton
 import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
 import com.logflare.android.enums.color
+import com.logflare.android.ui.theme.logflareOutlinedTextFieldColors
 
 @Composable
 fun ProjectNameSection(
@@ -51,12 +55,7 @@ fun ProjectNameSection(
                 placeholder = { Text("Project name") },
                 shape = RoundedCornerShape(8.dp),
                 isError = showError,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AppTheme.colors.primary.default,
-                    unfocusedBorderColor = AppTheme.colors.outline,
-                    errorBorderColor = AppTheme.colors.red.default,
-                    cursorColor = AppTheme.colors.onSurface
-                )
+                colors = logflareOutlinedTextFieldColors(isError = showError)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Button(
@@ -151,15 +150,22 @@ fun PermissionsSection(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(text = "Permissions", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-        permissions.forEachIndexed { index, state ->
-            PermissionRow(
-                state = state,
-                onToggle = { checked ->
-                    onToggle(index, checked)
-                },
-                enabled = enabled
+        if (permissions.isEmpty()) {
+            Text(
+                text = "No members available yet",
+                color = AppTheme.colors.muted,
+                style = MaterialTheme.typography.bodyMedium,
             )
+        } else {
+            permissions.forEachIndexed { index, state ->
+                PermissionRow(
+                    state = state,
+                    onToggle = { checked ->
+                        onToggle(index, checked)
+                    },
+                    enabled = enabled
+                )
+            }
         }
     }
 }
@@ -232,12 +238,7 @@ fun KeywordSection(
                 shape = RoundedCornerShape(8.dp),
                 enabled = enabled,
                 isError = error != null,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AppTheme.colors.primary.default,
-                    unfocusedBorderColor = AppTheme.colors.outline,
-                    errorBorderColor = AppTheme.colors.red.default,
-                    cursorColor = AppTheme.colors.onSurface
-                )
+                colors = logflareOutlinedTextFieldColors(isError = error != null)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Button(
@@ -304,6 +305,7 @@ fun KeywordList(keywords: List<String>, onRemove: (String) -> Unit) {
 fun BottomActionBar(
     onDone: () -> Unit,
     enabled: Boolean,
+    label: String = "Done",
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -333,9 +335,101 @@ fun BottomActionBar(
                     .height(56.dp)
             ) {
                 Text(
-                    text = "Done",
+                    text = label,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun DeleteProjectButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp, horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        LogFlareButton(
+            text = "Delete Project",
+            onClick = onClick,
+            type = ButtonType.Text,
+            variant = ButtonVariant.Secondary,
+            enabled = enabled,
+        )
+    }
+}
+
+@Composable
+fun ProjectTokenSection(
+    token: String?,
+    onCopy: () -> Unit,
+    onRotate: (() -> Unit)? = null,
+    rotateEnabled: Boolean = true,
+    placeholder: String = "Token will be generated when you save",
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            text = "Project Token",
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = AppTheme.colors.surfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = token != null) { onCopy() },
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .heightIn(min = 50.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = token ?: placeholder,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (token != null) AppTheme.colors.onSurface else AppTheme.colors.muted,
+                )
+                Button(
+                    onClick = onCopy,
+                    enabled = token != null,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppTheme.colors.secondary.pressed,
+                        contentColor = AppTheme.colors.onPrimary,
+                        disabledContainerColor = AppTheme.colors.secondary.disabled,
+                        disabledContentColor = AppTheme.colors.onPrimary,
+                    ),
+                    modifier = Modifier.height(40.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                ) {
+                    Text("Copy")
+                }
+            }
+        }
+        if (onRotate != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onRotate,
+                enabled = rotateEnabled,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppTheme.colors.secondary.pressed,
+                    contentColor = AppTheme.colors.onPrimary,
+                    disabledContainerColor = AppTheme.colors.secondary.disabled,
+                    disabledContentColor = AppTheme.colors.onPrimary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+            ) {
+                Text("Rotate Token")
             }
         }
     }
@@ -354,29 +448,34 @@ fun ProjectCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = AppTheme.colors.surfaceVariant,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(12.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     text = project.name,
-                    style = MaterialTheme.typography.titleMedium
+                    style = AppTheme.typography.bodyMdBold,
+                    color = AppTheme.colors.onSurface,
                 )
 
-                project.description?.let { desc ->
+                project.description?.takeIf { it.isNotBlank() }?.let { desc ->
                     Text(
                         text = desc,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
+                        style = AppTheme.typography.bodySmMedium,
+                        color = AppTheme.colors.muted,
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
@@ -387,8 +486,15 @@ fun ProjectCard(
                         .size(12.dp)
                         .padding(start = 8.dp),
                     shape = CircleShape,
-                    color = if (connectionHealthy) AppTheme.colors.success else AppTheme.colors.red.default
+                    color = if (connectionHealthy) AppTheme.colors.success else AppTheme.colors.red.default,
                 ) {}
+            } else {
+                Text(
+                    text = "›",
+                    style = AppTheme.typography.bodyLgBold,
+                    color = AppTheme.colors.muted,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
             }
         }
     }

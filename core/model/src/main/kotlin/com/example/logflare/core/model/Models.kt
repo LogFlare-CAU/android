@@ -160,40 +160,14 @@ data class FcmConfigResponse(
     val data: FcmConfig? = null
 )
 
+/** Minimal Firebase client fields from GET /fcm/data (backend FCMClientConfig). */
 @Serializable
 data class FcmConfig(
-    @SerialName("project_info") val projectInfo: FcmProjectInfo,
-    val client: List<FcmClient>,
-    @SerialName("configuration_version") val configurationVersion: String
-)
-
-@Serializable
-data class FcmProjectInfo(
-    @SerialName("project_number") val projectNumber: String,
-    @SerialName("project_id") val projectId: String,
-    @SerialName("storage_bucket") val storageBucket: String? = null
-)
-
-@Serializable
-data class FcmClient(
-    @SerialName("client_info") val clientInfo: FcmClientInfo,
-    @SerialName("api_key") val apiKey: List<FcmApiKey> = emptyList()
-)
-
-@Serializable
-data class FcmClientInfo(
-    @SerialName("mobilesdk_app_id") val mobileSdkAppId: String,
-    @SerialName("android_client_info") val androidClientInfo: FcmAndroidClientInfo
-)
-
-@Serializable
-data class FcmAndroidClientInfo(
-    @SerialName("package_name") val packageName: String
-)
-
-@Serializable
-data class FcmApiKey(
-    @SerialName("current_key") val currentKey: String
+    @SerialName("project_id") val projectId: String? = null,
+    @SerialName("messaging_sender_id") val messagingSenderId: String? = null,
+    @SerialName("mobilesdk_app_id") val mobilesdkAppId: String? = null,
+    @SerialName("package_name") val packageName: String? = null,
+    @SerialName("api_key") val apiKey: String? = null,
 )
 
 @Serializable

@@ -4,8 +4,15 @@ import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare.core.network.LogflareApi
 import com.logflare.android.data.AuthRepository
 import com.logflare.android.data.DeviceRepository
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+sealed class LoginResult {
+    data object Success : LoginResult()
+    data object RateLimited : LoginResult()
+    data object Failed : LoginResult()
+}
 
 @Singleton
 class AuthLoginUseCase @Inject constructor(
@@ -17,17 +24,20 @@ class AuthLoginUseCase @Inject constructor(
     suspend operator fun invoke(
         username: String,
         password: String
-    ): Boolean {
+    ): LoginResult {
         val result = runCatching {
             api.authenticate(UserAuthParams(username, password, true))
-        }.getOrElse {
-            // 네트워크/서버 에러
-            return false
+        }.getOrElse { error ->
+            return if (error is HttpException && error.code() == 429) {
+                LoginResult.RateLimited
+            } else {
+                LoginResult.Failed
+            }
         }
 
         val token = result.data
         if (!result.success || token.isNullOrBlank()) {
-            return false
+            return LoginResult.Failed
         }
 
         val bearer = "Bearer $token"
@@ -40,7 +50,6 @@ class AuthLoginUseCase @Inject constructor(
             // 앱이 죽는 건 막기 위해 swallow 가능
         }
 
-
-        return true
+        return LoginResult.Success
     }
 }
