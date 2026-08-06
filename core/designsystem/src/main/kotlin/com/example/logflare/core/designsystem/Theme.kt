@@ -38,6 +38,11 @@ object AppTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalAppDimens.current
+
+    val roles: AppRoles
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalAppRoles.current
 }
 
 internal fun baseAppColors() = AppColors(
@@ -138,6 +143,19 @@ fun AppTheme(
     val appColors = if (darkTheme) darkAppColors() else lightAppColors()
 
     val appTypography = AppTypography(
+        titleAppBar = TextStyle(
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+        ),
+        titleSection = TextStyle(
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            lineHeight = 28.sp,
+        ),
+
         // Body Large
         bodyLgBold = TextStyle(
             fontFamily = Pretendard,
@@ -207,6 +225,7 @@ fun AppTheme(
     val appSpacing = AppSpacing()
     val appRadius = AppRadius()
     val appDimens = AppDimens()
+    val appRoles = AppRoles()
 
     CompositionLocalProvider(
         LocalAppColors provides appColors,
@@ -214,6 +233,7 @@ fun AppTheme(
         LocalAppSpacing provides appSpacing,
         LocalAppRadius provides appRadius,
         LocalAppDimens provides appDimens,
+        LocalAppRoles provides appRoles,
         content = content
     )
 }
