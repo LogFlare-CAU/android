@@ -44,11 +44,11 @@ fun LogFlareTopAppBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(AppTheme.roles.chrome.topBarHeight)
             // surface, not neutral.white: an absolute here left the bar a white slab in dark mode.
             .background(AppTheme.colors.surface)
             .statusBarsPadding()
-            .padding(horizontal = AppTheme.spacing.s4),
+            .padding(horizontal = AppTheme.roles.chrome.topBarHorizontalPadding),
         contentAlignment = Alignment.Center
     ) {
         onBack?.let {
@@ -68,7 +68,7 @@ fun LogFlareTopAppBar(
             TopAppBarTitleType.Default -> LogFlareWordmark(modifier = Modifier.align(Alignment.Center))
             TopAppBarTitleType.Title -> Text(
                 text = titleText.orEmpty(),
-                style = AppTheme.typography.bodyMdBold,
+                style = AppTheme.typography.titleAppBar,
                 color = AppTheme.colors.onSurface,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.Center)

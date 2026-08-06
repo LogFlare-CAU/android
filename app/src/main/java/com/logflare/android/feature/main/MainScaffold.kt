@@ -102,13 +102,13 @@ fun MainScaffold(
                         else -> TopAppBarTitleType.Default
                     },
                     titleText = when (currentRoute) {
-                        Route.Logs.path -> "LOGS"
-                        Route.Projects.path -> "PROJECTS"
-                        Route.MyPage.path -> "MYPAGE"
-                        Route.ProjectCreate.path -> "CREATE PROJECT"
-                        Route.ProjectDetail.path -> projectDetailTitle ?: "PROJECT DETAIL"
-                        Route.ProjectSettings.path -> "PROJECT SETTINGS"
-                        Route.LogDetail.path -> "LOG DETAILS"
+                        Route.Logs.path -> "Logs"
+                        Route.Projects.path -> "Projects"
+                        Route.MyPage.path -> "My Page"
+                        Route.ProjectCreate.path -> "Create Project"
+                        Route.ProjectDetail.path -> projectDetailTitle ?: "Project Detail"
+                        Route.ProjectSettings.path -> "Project Settings"
+                        Route.LogDetail.path -> "Log Details"
                         else -> null
                     },
                     onBack = when (currentRoute) {
@@ -131,13 +131,13 @@ fun MainScaffold(
             BottomNavigationBar(navController = navController)
         }
     ) { paddingValues ->
-        val extraTop = mainNavHostExtraTopPaddingDp(currentRoute)
+        val extraTop = if (hideScaffoldTopBar) 0.dp else AppTheme.roles.layout.screenPadding
         MainNavHost(
             navController = navController,
             modifier = Modifier
                 .padding(paddingValues)
                 .then(
-                    if (extraTop > 0) Modifier.padding(top = extraTop.dp) else Modifier,
+                    if (extraTop > 0.dp) Modifier.padding(top = extraTop) else Modifier,
                 ),
             onLogout = onLogout,
             themeViewModel = themeViewModel,
@@ -154,7 +154,7 @@ private fun BottomNavigationBar(navController: NavHostController) {
         GnbItem(route = Route.Home, iconRes = DesignSystemR.drawable.ic_home, label = "Home", testTag = VisualQaTags.NavHome),
         GnbItem(route = Route.Logs, iconRes = DesignSystemR.drawable.ic_log, label = "Logs", testTag = VisualQaTags.NavLogs),
         GnbItem(route = Route.Projects, iconRes = DesignSystemR.drawable.ic_project, label = "Projects", testTag = VisualQaTags.NavProjects),
-        GnbItem(route = Route.MyPage, iconRes = DesignSystemR.drawable.ic_mypage, label = "MyPage", testTag = VisualQaTags.NavMyPage),
+        GnbItem(route = Route.MyPage, iconRes = DesignSystemR.drawable.ic_mypage, label = "My Page", testTag = VisualQaTags.NavMyPage),
     )
 
     NavigationBar(containerColor = AppTheme.colors.surface) {
