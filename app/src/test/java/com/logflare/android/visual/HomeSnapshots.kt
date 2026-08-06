@@ -30,6 +30,32 @@ class HomeSnapshots : VisualSnapshotTest() {
         }
     }
 
+    @Test fun home_loading_light() {
+        capture("home_loading", darkTheme = false) {
+            HomeScreenContent(
+                authState = SnapshotFixtures.auth(loading = true),
+                projectsState = SnapshotFixtures.projects(loading = true),
+                logsState = SnapshotFixtures.logs(loading = true),
+                onProjectSelected = { _ -> },
+                onViewMoreLogs = {},
+                onCreateProject = {},
+            )
+        }
+    }
+
+    @Test fun home_loading_dark() {
+        capture("home_loading", darkTheme = true) {
+            HomeScreenContent(
+                authState = SnapshotFixtures.auth(loading = true),
+                projectsState = SnapshotFixtures.projects(loading = true),
+                logsState = SnapshotFixtures.logs(loading = true),
+                onProjectSelected = { _ -> },
+                onViewMoreLogs = {},
+                onCreateProject = {},
+            )
+        }
+    }
+
     @Test fun home_empty_light() {
         capture("home_empty", darkTheme = false) {
             HomeScreenContent(
