@@ -50,10 +50,20 @@ data class AppLayoutRoles(
     val statePadding: Dp = 24.dp,
 )
 
+/**
+ * Surface roles intentionally own no colors: cards and fields resolve their
+ * colors through [AppTheme.colors] and their shape through [AppTheme.radius].
+ */
+@Immutable
+data class AppSurfaceRoles(
+    val radius: AppRadius = AppRadius(),
+)
+
 @Immutable
 data class AppRoles(
     val chrome: AppChromeRoles = AppChromeRoles(),
     val layout: AppLayoutRoles = AppLayoutRoles(),
+    val surface: AppSurfaceRoles = AppSurfaceRoles(),
 )
 
 // CompositionLocals for new systems
