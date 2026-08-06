@@ -2,10 +2,8 @@ package com.logflare.android.feature.project
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
 
 /**
@@ -22,8 +20,11 @@ fun LazyListScope.projectEditorFormItems(
             Text(
                 text = uiState.error.orEmpty(),
                 color = AppTheme.colors.red.default,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                style = AppTheme.typography.bodySmMedium,
+                modifier = Modifier.padding(
+                    horizontal = AppTheme.roles.layout.screenPadding,
+                    vertical = AppTheme.spacing.s1,
+                ),
             )
         }
     }

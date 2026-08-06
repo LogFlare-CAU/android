@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
@@ -27,7 +26,6 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.logflare.android.ui.VisualQaTags
@@ -61,7 +59,7 @@ fun ProjectCreateScreen(
                     snackbarData = data,
                     containerColor = AppTheme.colors.onSurface,
                     contentColor = AppTheme.colors.onPrimary,
-                    shape = RoundedCornerShape(8.dp),
+                    shape = AppTheme.radius.medium,
                 )
             }
         },
@@ -158,7 +156,7 @@ private fun ProjectCreateScreenContent(
     ) {
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(vertical = 12.dp),
+            contentPadding = PaddingValues(vertical = AppTheme.roles.layout.contentGap),
         ) {
             projectEditorFormItems(
                 uiState = uiState,

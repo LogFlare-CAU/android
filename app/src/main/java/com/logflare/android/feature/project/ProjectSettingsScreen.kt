@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.logflare.android.ui.VisualQaTags
@@ -107,7 +106,7 @@ fun ProjectSettingsScreen(
                     hostState = snackbarHostState,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 72.dp),
+                        .padding(top = AppTheme.roles.layout.sectionGap + AppTheme.roles.layout.statePadding * 2),
                 )
             }
         }
@@ -188,7 +187,7 @@ private fun ProjectSettingsScreenContent(
     ) {
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(vertical = 12.dp),
+            contentPadding = PaddingValues(vertical = AppTheme.roles.layout.contentGap),
         ) {
             projectEditorFormItems(
                 uiState = uiState,
