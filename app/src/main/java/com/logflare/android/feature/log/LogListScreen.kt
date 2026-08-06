@@ -2,7 +2,6 @@ package com.logflare.android.feature.log
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,16 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.model.ErrorlogDTO
@@ -87,25 +81,32 @@ fun LogListScreenContent(
             sortSelection = uiState.sortBy,
             onSortSelected = { selection -> onAction(LogListAction.ChangeSort(selection)) }
         )
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f, fill = true)
+                .weight(1f, fill = true),
         ) {
             when {
-                uiState.loading -> LoadingState()
-                uiState.error != null -> ErrorState(uiState.error!!)
-                uiState.errorLogs.isEmpty() -> Box(
+                uiState.loading -> ListLoadingState(
                     modifier = Modifier
                         .fillMaxSize()
-                        .testTag(VisualQaTags.Empty),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    EmptyState(
-                        projectFiltered = uiState.selectedProject != null,
-                        filter = uiState.filter,
-                    )
-                }
+                        .padding(top = AppTheme.roles.layout.statePadding * 2),
+                )
+                uiState.error != null -> ListErrorState(
+                    message = uiState.error!!,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = AppTheme.roles.layout.statePadding * 2),
+                )
+                uiState.errorLogs.isEmpty() -> ListEmptyState(
+                    title = if (uiState.selectedProject != null) {
+                        "No logs available"
+                    } else {
+                        "No logs for this Project / LogFile"
+                    },
+                    subtitle = if (uiState.filter.isNotEmpty()) "Try adjusting the filters" else null,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 else -> LogListContent(
                     logs = uiState.errorLogs,
                     projectNames = uiState.projectNames,
@@ -132,8 +133,8 @@ private fun FilterDropdownRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = AppTheme.roles.layout.screenPadding),
+        horizontalArrangement = Arrangement.spacedBy(AppTheme.roles.layout.contentGap)
     ) {
         CommonFilterDropdown(
             title = "Log Level",
@@ -199,32 +200,6 @@ private fun FilterDropdownRow(
 
 
 @Composable
-private fun LoadingState(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .testTag(VisualQaTags.Loading)
-            .padding(top = 48.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun ErrorState(message: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .testTag(VisualQaTags.Error)
-            .padding(top = 48.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = "Error: $message", color = MaterialTheme.colorScheme.error)
-    }
-}
-
-@Composable
 private fun LogListContent(
     logs: List<ErrorlogDTO>,
     projectNames: Map<Int, String>,
@@ -237,9 +212,12 @@ private fun LogListContent(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .padding(top = 12.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = AppTheme.roles.layout.screenPadding)
+            .padding(
+                top = AppTheme.roles.layout.contentGap,
+                bottom = AppTheme.roles.layout.screenPadding,
+            ),
+        verticalArrangement = Arrangement.spacedBy(AppTheme.roles.layout.contentGap)
     ) {
         items(items = logs, key = { it.id }) { log ->
             GlobalLogCard(

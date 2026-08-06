@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
@@ -332,7 +331,7 @@ private fun ErrorBanner(
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = AppTheme.colors.red.default.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(12.dp),
+        shape = AppTheme.radius.large,
     ) {
         Text(
             text = message,

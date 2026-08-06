@@ -4,12 +4,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
 
 /**
@@ -26,26 +24,26 @@ fun EditorSectionHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(top = if (showDivider) 8.dp else 4.dp),
+            .padding(horizontal = AppTheme.roles.layout.screenPadding)
+            .padding(top = if (showDivider) AppTheme.spacing.s2 else AppTheme.spacing.s1),
     ) {
         if (showDivider) {
             HorizontalDivider(
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = AppTheme.roles.layout.screenPadding),
                 color = AppTheme.colors.outline.copy(alpha = 0.35f),
             )
         }
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            style = AppTheme.typography.titleSection.copy(fontWeight = FontWeight.Bold),
             color = AppTheme.colors.onSurface,
         )
         if (description != null) {
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTheme.typography.bodySmMedium,
                 color = AppTheme.colors.muted,
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+                modifier = Modifier.padding(vertical = AppTheme.spacing.s1),
             )
         }
     }

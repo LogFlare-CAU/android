@@ -41,9 +41,14 @@ fun ProjectNameSection(
     val buttonLabel = if (saved) "Edit" else "Save"
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = "Project Name", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-        Spacer(modifier = Modifier.height(8.dp))
+    Column(
+        modifier = Modifier.padding(
+            horizontal = AppTheme.roles.layout.screenPadding,
+            vertical = AppTheme.spacing.s2,
+        ),
+    ) {
+        Text(text = "Project Name", style = AppTheme.typography.bodyMdBold)
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = name,
@@ -53,11 +58,11 @@ fun ProjectNameSection(
                     .height(56.dp),
                 singleLine = true,
                 placeholder = { Text("Project name") },
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.radius.medium,
                 isError = showError,
                 colors = logflareOutlinedTextFieldColors(isError = showError)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(AppTheme.roles.layout.contentGap))
             Button(
                 onClick = {
                     focusManager.clearFocus()
@@ -65,7 +70,7 @@ fun ProjectNameSection(
                     onSave()
                 },
                 enabled = buttonEnabled,
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.radius.medium,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (buttonEnabled) AppTheme.colors.primary.default else AppTheme.colors.primary.disabled,
                     contentColor = AppTheme.colors.onPrimary
@@ -77,12 +82,12 @@ fun ProjectNameSection(
                 Text(buttonLabel)
             }
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6 / 4))
         if (showError) {
             Text(
                 text = "Use English, Korean, and symbols only",
                 color = AppTheme.colors.red.default,
-                style = MaterialTheme.typography.bodySmall
+                style = AppTheme.typography.bodySmMedium
             )
         }
     }
@@ -93,20 +98,25 @@ fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit, enabled: 
     val options = LogLevel.getAllLabels()
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(
+        modifier = Modifier.padding(
+            horizontal = AppTheme.roles.layout.screenPadding,
+            vertical = AppTheme.spacing.s2,
+        ),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "Log Level",
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                style = AppTheme.typography.bodyMdMedium.copy(fontWeight = FontWeight.Medium),
                 color = AppTheme.colors.primary.default
             )
             Spacer(modifier = Modifier.weight(1f))
             Button(
                 onClick = { expanded = true },
                 colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surface),
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.radius.medium,
                 modifier = Modifier.height(44.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                contentPadding = PaddingValues(horizontal = AppTheme.roles.layout.screenPadding),
                 enabled = enabled
             ) {
                 Text(
@@ -145,16 +155,16 @@ fun PermissionsSection(
 ) {
     Column(
         modifier = Modifier
-            .padding(16.dp)
-            .background(AppTheme.colors.surfaceVariant, RoundedCornerShape(12.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(AppTheme.roles.layout.screenPadding)
+            .background(AppTheme.colors.surfaceVariant, AppTheme.radius.large)
+            .padding(AppTheme.roles.layout.screenPadding),
+        verticalArrangement = Arrangement.spacedBy(AppTheme.roles.layout.screenPadding)
     ) {
         if (permissions.isEmpty()) {
             Text(
                 text = "No members available yet",
                 color = AppTheme.colors.muted,
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTheme.typography.bodyMdMedium,
             )
         } else {
             permissions.forEachIndexed { index, state ->
@@ -181,16 +191,19 @@ private fun PermissionRow(state: PermissionToggleState, onToggle: (Boolean) -> U
     ) {
         Column {
             Text(text = state.username, color = AppTheme.colors.onSurface, fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(AppTheme.spacing.s1))
             Surface(
                 color = roleColor,
-                shape = RoundedCornerShape(8.dp)
+                shape = AppTheme.radius.medium
             ) {
                 Text(
                     text = state.role,
                     color = AppTheme.colors.onPrimary,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.labelSmall
+                    modifier = Modifier.padding(
+                        horizontal = AppTheme.spacing.s2,
+                        vertical = AppTheme.spacing.s1 / 2,
+                    ),
+                    style = AppTheme.typography.captionSmMedium
                 )
             }
         }
@@ -220,12 +233,17 @@ fun KeywordSection(
     enabled: Boolean = false,
 ) {
     val canSave = value.isNotBlank()
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(
+        modifier = Modifier.padding(
+            horizontal = AppTheme.roles.layout.screenPadding,
+            vertical = AppTheme.spacing.s2,
+        ),
+    ) {
         Text(
             text = "Exclusion Keywords",
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+            style = AppTheme.typography.bodyMdBold
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = value,
@@ -235,16 +253,16 @@ fun KeywordSection(
                     .height(56.dp),
                 placeholder = { Text("Enter keyword") },
                 singleLine = true,
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.radius.medium,
                 enabled = enabled,
                 isError = error != null,
                 colors = logflareOutlinedTextFieldColors(isError = error != null)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(AppTheme.roles.layout.contentGap))
             Button(
                 onClick = onSave,
                 enabled = canSave,
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.radius.medium,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (canSave) AppTheme.colors.primary.default else AppTheme.colors.primary.disabled,
                     contentColor = AppTheme.colors.onPrimary
@@ -256,11 +274,11 @@ fun KeywordSection(
                 Text("Save")
             }
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s6 / 4))
         Text(
             text = error ?: "Use English, number, and symbols only",
             color = if (error != null) AppTheme.colors.red.default else AppTheme.colors.muted,
-            style = MaterialTheme.typography.bodySmall
+            style = AppTheme.typography.bodySmMedium
         )
     }
 }
@@ -268,28 +286,39 @@ fun KeywordSection(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun KeywordList(keywords: List<String>, onRemove: (String) -> Unit) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = "Keywords", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium))
-        Spacer(modifier = Modifier.height(8.dp))
+    Column(
+        modifier = Modifier.padding(
+            horizontal = AppTheme.roles.layout.screenPadding,
+            vertical = AppTheme.spacing.s2,
+        ),
+    ) {
+        Text(
+            text = "Keywords",
+            style = AppTheme.typography.captionMdMedium.copy(fontWeight = FontWeight.Medium),
+        )
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
         if (keywords.isEmpty()) {
             Text(text = "No keywords added", color = AppTheme.colors.muted)
         } else {
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.roles.layout.contentGap),
+                verticalArrangement = Arrangement.spacedBy(AppTheme.roles.layout.contentGap),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 keywords.forEach { keyword ->
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = AppTheme.radius.full,
                         color = AppTheme.colors.chip
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            modifier = Modifier.padding(
+                                horizontal = AppTheme.roles.layout.contentGap,
+                                vertical = AppTheme.spacing.s6 / 4,
+                            )
                         ) {
                             Text(keyword, color = AppTheme.colors.onChip)
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(AppTheme.spacing.s2))
                             TextButton(onClick = { onRemove(keyword) }) {
                                 Text("🗑")
                             }
@@ -316,14 +345,14 @@ fun BottomActionBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(16.dp),
+                .padding(AppTheme.roles.layout.screenPadding),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
                 onClick = onDone,
                 enabled = enabled,
-                shape = RoundedCornerShape(12.dp),
+                shape = AppTheme.radius.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (enabled) AppTheme.colors.primary.default else AppTheme.colors.primary.disabled,
                     contentColor = AppTheme.colors.onPrimary,
@@ -336,7 +365,7 @@ fun BottomActionBar(
             ) {
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    style = AppTheme.typography.bodyLgBold
                 )
             }
         }
@@ -351,7 +380,7 @@ fun DeleteProjectButton(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp, horizontal = 16.dp),
+            .padding(AppTheme.roles.layout.screenPadding),
         contentAlignment = Alignment.Center,
     ) {
         LogFlareButton(
@@ -372,14 +401,19 @@ fun ProjectTokenSection(
     rotateEnabled: Boolean = true,
     placeholder: String = "Token will be generated when you save",
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(
+        modifier = Modifier.padding(
+            horizontal = AppTheme.roles.layout.screenPadding,
+            vertical = AppTheme.spacing.s2,
+        ),
+    ) {
         Text(
             text = "Project Token",
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            style = AppTheme.typography.bodyMdBold,
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
         Surface(
-            shape = RoundedCornerShape(8.dp),
+            shape = AppTheme.radius.medium,
             color = AppTheme.colors.surfaceVariant,
             modifier = Modifier
                 .fillMaxWidth()
@@ -387,14 +421,17 @@ fun ProjectTokenSection(
         ) {
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .padding(
+                        horizontal = AppTheme.roles.layout.contentGap,
+                        vertical = AppTheme.spacing.s2 + AppTheme.spacing.s1 / 2,
+                    )
                     .heightIn(min = 50.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = token ?: placeholder,
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTheme.typography.bodyMdMedium,
                     color = if (token != null) AppTheme.colors.onSurface else AppTheme.colors.muted,
                 )
                 Button(
@@ -407,14 +444,14 @@ fun ProjectTokenSection(
                         disabledContentColor = AppTheme.colors.onPrimary,
                     ),
                     modifier = Modifier.height(40.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    contentPadding = PaddingValues(horizontal = AppTheme.roles.layout.contentGap),
                 ) {
                     Text("Copy")
                 }
             }
         }
         if (onRotate != null) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AppTheme.spacing.s2))
             Button(
                 onClick = onRotate,
                 enabled = rotateEnabled,
@@ -427,7 +464,7 @@ fun ProjectTokenSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(40.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp),
+                contentPadding = PaddingValues(horizontal = AppTheme.roles.layout.contentGap),
             ) {
                 Text("Rotate Token")
             }
@@ -452,12 +489,12 @@ fun ProjectCard(
             containerColor = AppTheme.colors.surfaceVariant,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = AppTheme.radius.large,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(AppTheme.roles.layout.screenPadding),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -475,7 +512,7 @@ fun ProjectCard(
                         text = desc,
                         style = AppTheme.typography.bodySmMedium,
                         color = AppTheme.colors.muted,
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier.padding(top = AppTheme.spacing.s1),
                     )
                 }
             }
@@ -484,7 +521,7 @@ fun ProjectCard(
                 Surface(
                     modifier = Modifier
                         .size(12.dp)
-                        .padding(start = 8.dp),
+                        .padding(start = AppTheme.spacing.s2),
                     shape = CircleShape,
                     color = if (connectionHealthy) AppTheme.colors.success else AppTheme.colors.red.default,
                 ) {}
@@ -493,7 +530,7 @@ fun ProjectCard(
                     text = "›",
                     style = AppTheme.typography.bodyLgBold,
                     color = AppTheme.colors.muted,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = AppTheme.spacing.s2),
                 )
             }
         }

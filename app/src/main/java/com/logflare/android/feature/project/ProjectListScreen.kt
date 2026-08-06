@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -113,14 +112,17 @@ fun ProjectListScreenContent(
                 ) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = AppTheme.roles.layout.screenPadding,
+                            vertical = AppTheme.roles.layout.contentGap,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(AppTheme.roles.layout.contentGap),
                     ) {
                         item(key = "projects_header") {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 4.dp),
+                                    .padding(bottom = AppTheme.spacing.s1),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -147,7 +149,7 @@ fun ProjectListScreenContent(
                                     text = uiState.error.orEmpty(),
                                     color = AppTheme.colors.red.default,
                                     style = AppTheme.typography.bodySmMedium,
-                                    modifier = Modifier.padding(bottom = 4.dp),
+                                    modifier = Modifier.padding(bottom = AppTheme.spacing.s1),
                                 )
                             }
                         }

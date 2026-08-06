@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,7 +19,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.logflare.android.R
 import com.example.logflare.core.designsystem.AppTheme
@@ -54,7 +51,7 @@ fun LogDetailScreenContent(
                 .fillMaxSize()
                 .testTag(VisualQaTags.LogDetail)
                 .background(AppTheme.colors.surface)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(AppTheme.roles.layout.screenPadding),
         ) {
             Box(
                 modifier = Modifier
@@ -73,38 +70,38 @@ fun LogDetailScreenContent(
             .fillMaxSize()
             .testTag(VisualQaTags.LogDetail)
             .background(AppTheme.colors.surface)
-            .padding(bottom = 16.dp)
+            .padding(bottom = AppTheme.roles.layout.screenPadding)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(state = rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = AppTheme.roles.layout.screenPadding),
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = "Log Info",
-                style = MaterialTheme.typography.titleMedium
+                style = AppTheme.typography.titleSection
             )
-            Spacer(modifier = Modifier.height(8.dp).fillMaxWidth())
+            Spacer(modifier = Modifier.height(AppTheme.spacing.s2).fillMaxWidth())
             GlobalLogCard(log = log)
-            Spacer(modifier = Modifier.height(12.dp).fillMaxWidth())
+            Spacer(modifier = Modifier.height(AppTheme.roles.layout.contentGap).fillMaxWidth())
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = "Raw Data",
-                style = MaterialTheme.typography.titleMedium
+                style = AppTheme.typography.titleSection
             )
-            Spacer(modifier = Modifier.height(8.dp).fillMaxWidth())
+            Spacer(modifier = Modifier.height(AppTheme.spacing.s2).fillMaxWidth())
             Text(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(AppTheme.radius.large)
                     .background(color = AppTheme.colors.surfaceVariant)
-                    .padding(24.dp),
+                    .padding(AppTheme.roles.layout.statePadding),
                 text = log.message,
                 fontFamily = Cascadia,
-                style = MaterialTheme.typography.bodyMedium
+                style = AppTheme.typography.bodyMdMedium
             )
         }
     }

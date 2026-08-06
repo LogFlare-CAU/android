@@ -14,10 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -91,32 +88,11 @@ fun ProjectDetailScreenContent(
             .navigationBarsPadding(),
     ) {
         when {
-            uiState.loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag(VisualQaTags.Loading),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
+            uiState.loading -> ListLoadingState()
 
             // Only block the screen for fatal project-load errors.
             // Log-load failures use logsError and keep Settings reachable.
-            uiState.error != null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag(VisualQaTags.Error),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "Error: ${uiState.error}",
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
+            uiState.error != null -> ListErrorState(message = uiState.error!!)
 
             else -> ProjectDetailBody(
                 uiState = uiState,
@@ -162,11 +138,14 @@ private fun ProjectDetailBody(
         uiState.logsError?.let { message ->
             Text(
                 text = message,
-                color = MaterialTheme.colorScheme.error,
+                color = AppTheme.colors.red.default,
                 style = AppTheme.typography.bodyMdMedium,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(
+                        horizontal = AppTheme.roles.layout.screenPadding,
+                        vertical = AppTheme.spacing.s2,
+                    )
                     .testTag(VisualQaTags.Error),
             )
         }
@@ -176,13 +155,19 @@ private fun ProjectDetailBody(
                 .weight(1f, fill = true)
         ) {
             when {
-                uiState.logs.isEmpty() -> Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag(VisualQaTags.Empty),
-                ) {
-                    EmptyState(uiState.projectId > 0, uiState.filterState.selectedLevel)
-                }
+                uiState.logs.isEmpty() -> ListEmptyState(
+                    title = if (uiState.projectId > 0) {
+                        "No logs available"
+                    } else {
+                        "No logs for this Project / LogFile"
+                    },
+                    subtitle = if (uiState.filterState.selectedLevel.isNotEmpty()) {
+                        "Try adjusting the filters"
+                    } else {
+                        null
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
                 else -> LogsSection(
                     logs = uiState.logs,
                     showMoreLoading = uiState.showMoreLoading,
@@ -203,16 +188,16 @@ private fun ProjectSettingsCard(
 ) {
     Surface(
         modifier = modifier
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = AppTheme.roles.layout.screenPadding)
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = AppTheme.radius.large,
         color = AppTheme.colors.surfaceVariant
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(AppTheme.roles.layout.screenPadding),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -224,7 +209,7 @@ private fun ProjectSettingsCard(
             Box(
                 modifier = Modifier
                     .size(24.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.radius.medium)
                     .background(AppTheme.colors.surface.copy(alpha = 0.3f))
             )
         }
@@ -242,9 +227,12 @@ private fun LogsSection(
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(top = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = AppTheme.roles.layout.screenPadding)
+            .padding(
+                top = AppTheme.roles.layout.screenPadding,
+                bottom = AppTheme.roles.layout.screenPadding,
+            ),
+        verticalArrangement = Arrangement.spacedBy(AppTheme.roles.layout.contentGap)
     ) {
         items(items = logs, key = { it.id }) { log ->
             GlobalLogCard(
@@ -280,12 +268,12 @@ private fun FilterPanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 16.dp)
-            .padding(horizontal = 16.dp)
+            .padding(top = AppTheme.roles.layout.screenPadding)
+            .padding(horizontal = AppTheme.roles.layout.screenPadding)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(AppTheme.roles.layout.contentGap)
         ) {
             CommonFilterDropdown(
                 title = "Log Level",
