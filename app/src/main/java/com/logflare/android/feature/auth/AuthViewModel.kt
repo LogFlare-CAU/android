@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.logflare.core.network.host.MutableBaseUrlProvider
 import com.logflare.android.feature.usecase.AuthLoginUseCase
 import com.logflare.android.feature.usecase.AuthMeUseCase
+import com.logflare.android.feature.usecase.LoginResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,15 +86,23 @@ class AuthViewModel @Inject constructor(
     ) {
         _ui.value = _ui.value.copy(loading = true, loginError = null)
 
-        val ok = authLoginUseCase(username, password)
-        if (ok) {
-            _ui.value = _ui.value.copy(loading = false, loginError = null)
-            onSuccess()
-        } else {
-            _ui.value = _ui.value.copy(
-                loading = false,
-                loginError = "Login failed"
-            )
+        when (authLoginUseCase(username, password)) {
+            LoginResult.Success -> {
+                _ui.value = _ui.value.copy(loading = false, loginError = null)
+                onSuccess()
+            }
+            LoginResult.RateLimited -> {
+                _ui.value = _ui.value.copy(
+                    loading = false,
+                    loginError = "Too many login attempts. Try again later."
+                )
+            }
+            LoginResult.Failed -> {
+                _ui.value = _ui.value.copy(
+                    loading = false,
+                    loginError = "Login failed"
+                )
+            }
         }
     }
 

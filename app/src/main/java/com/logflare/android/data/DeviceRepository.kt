@@ -24,8 +24,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import retrofit2.HttpException
 
 private val Context.fcmDataStore by preferencesDataStore(name = "fcm")
+
+private fun Throwable.isFcmAlreadyRegistered(): Boolean =
+    this is HttpException && code() == 409
 
 @Singleton
 class DeviceRepository @Inject constructor(
@@ -74,7 +78,11 @@ class DeviceRepository @Inject constructor(
         runCatching {
             api.registerFcmToken(bearer, FcmTokenParams(fcmToken))
         }.onFailure { error ->
-            Log.w(TAG, "Failed to register FCM token", error)
+            if (error.isFcmAlreadyRegistered()) {
+                Log.i(TAG, "FCM token already registered")
+            } else {
+                Log.w(TAG, "Failed to register FCM token", error)
+            }
         }
     }
 
@@ -173,26 +181,29 @@ class DeviceRepository @Inject constructor(
         runCatching {
             api.registerFcmToken(bearer, FcmTokenParams(token))
         }.onFailure { error ->
-            Log.w(TAG, "Failed to register current Firebase token", error)
+            if (error.isFcmAlreadyRegistered()) {
+                Log.i(TAG, "FCM token already registered")
+            } else {
+                Log.w(TAG, "Failed to register current Firebase token", error)
+            }
         }
     }
 
     private fun buildFirebaseOptions(config: FcmConfig): FirebaseOptions {
-        val client = config.client.firstOrNull()
-            ?: error("FCM config missing client entry")
-        val clientInfo = client.clientInfo
-        val apiKey = client.apiKey.firstOrNull()?.currentKey
-            ?: error("FCM config missing API key")
-        val projectInfo = config.projectInfo
+        val applicationId = config.mobilesdkAppId?.takeIf { it.isNotBlank() }
+            ?: error("FCM config missing mobilesdk_app_id")
+        val apiKey = config.apiKey?.takeIf { it.isNotBlank() }
+            ?: error("FCM config missing api_key")
+        val senderId = config.messagingSenderId?.takeIf { it.isNotBlank() }
+            ?: error("FCM config missing messaging_sender_id")
+        val projectId = config.projectId?.takeIf { it.isNotBlank() }
+            ?: error("FCM config missing project_id")
 
         return FirebaseOptions.Builder()
-            .setApplicationId(clientInfo.mobileSdkAppId)
+            .setApplicationId(applicationId)
             .setApiKey(apiKey)
-            .setGcmSenderId(projectInfo.projectNumber)
-            .setProjectId(projectInfo.projectId)
-            .apply {
-                projectInfo.storageBucket?.takeIf { it.isNotBlank() }?.let { setStorageBucket(it) }
-            }
+            .setGcmSenderId(senderId)
+            .setProjectId(projectId)
             .build()
     }
 

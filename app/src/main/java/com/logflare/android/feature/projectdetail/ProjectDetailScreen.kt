@@ -102,6 +102,8 @@ fun ProjectDetailScreenContent(
                 }
             }
 
+            // Only block the screen for fatal project-load errors.
+            // Log-load failures use logsError and keep Settings reachable.
             uiState.error != null -> {
                 Box(
                     modifier = Modifier
@@ -157,6 +159,17 @@ private fun ProjectDetailBody(
             onLogfileSelected = onLogfileSelected,
             onSortSelected = onSortSelected
         )
+        uiState.logsError?.let { message ->
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                style = AppTheme.typography.bodyMdMedium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag(VisualQaTags.Error),
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()

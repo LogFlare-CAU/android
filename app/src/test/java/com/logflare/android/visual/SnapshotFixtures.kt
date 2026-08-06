@@ -55,6 +55,18 @@ object SnapshotFixtures {
         ),
     )
 
+    /** Intentionally huge bodies — Home must still keep Project List reachable. */
+    private val longHomeLogs: List<ErrorlogDTO> = (1..5).map { index ->
+        ErrorlogDTO(
+            id = 900 + index,
+            project_id = 101,
+            errortype = "VeryLongStackTraceException",
+            message = "Line $index " + ("STACKTRACE_PAYLOAD_".repeat(40)),
+            level = if (index % 2 == 0) "warning" else "error",
+            timestamp = "2026-01-15T10:3$index:00Z",
+        )
+    }
+
     private val sampleProjects: List<ProjectDTO> = listOf(
         ProjectDTO(id = 101, name = "QA Payments"),
         ProjectDTO(id = 202, name = "QA Platform"),
@@ -133,11 +145,13 @@ object SnapshotFixtures {
         error: String? = null,
         filteredEmpty: Boolean = false,
         loadingMore: Boolean = false,
+        longMessages: Boolean = false,
     ): LogsUiState =
         LogsUiState(
             loading = loading,
             errorLogs = when {
                 empty || loading || error != null || filteredEmpty -> emptyList()
+                longMessages -> longHomeLogs
                 else -> sampleLogs
             },
             error = error,
@@ -197,12 +211,17 @@ object SnapshotFixtures {
         empty: Boolean = false,
         loading: Boolean = false,
         error: String? = null,
+        logsError: String? = null,
     ): ProjectDetailUiState =
         ProjectDetailUiState(
             loading = loading,
             projectId = 101,
             projectName = "QA Payments",
-            logs = if (empty || loading || error != null) emptyList() else sampleDetailLogs,
+            logs = if (empty || loading || error != null || logsError != null) {
+                emptyList()
+            } else {
+                sampleDetailLogs
+            },
             filterState = ProjectDetailFilterState(
                 logfileOptions = listOf(
                     ProjectLogFileOption(id = 1, fileName = "Debug", selected = true),
@@ -210,6 +229,7 @@ object SnapshotFixtures {
                 ),
             ),
             error = error,
+            logsError = logsError,
         )
 
     fun myPage(

@@ -92,6 +92,12 @@ interface LogflareApi {
         @Body body: ProjectCreateParams
     ): ProjectResponse
 
+    @POST("/project/{projectid}/rotate-token")
+    suspend fun rotateProjectToken(
+        @Header("Authorization") bearer: String,
+        @Path("projectid") projectId: Int
+    ): ProjectResponseWithToken
+
     @GET("/project/{projectid}/perm")
     suspend fun getProjectPermissions(
         @Header("Authorization") bearer: String,

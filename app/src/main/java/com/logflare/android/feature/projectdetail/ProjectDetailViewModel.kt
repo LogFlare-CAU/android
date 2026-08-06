@@ -31,7 +31,10 @@ data class ProjectDetailUiState(
     val filterState: ProjectDetailFilterState = ProjectDetailFilterState(),
     val showMoreLoading: Boolean = false,
     val showMoreHasMore: Boolean = true,
+    /** Fatal: project missing — blocks the whole screen. */
     val error: String? = null,
+    /** Non-fatal: log fetch failed — Settings and filters stay reachable. */
+    val logsError: String? = null,
 )
 
 data class ProjectDetailLog(
@@ -178,8 +181,10 @@ class ProjectDetailViewModel @Inject constructor(
         val logfile = selectedLogfile
         if (logfile == null) {
             _ui.value = _ui.value.copy(
+                loading = false,
                 showMoreLoading = false,
-                error = _ui.value.error ?: "No log file selected",
+                logs = emptyList(),
+                logsError = "No log file selected",
             )
             return
         }
@@ -193,10 +198,14 @@ class ProjectDetailViewModel @Inject constructor(
             sortBy = sortBy
         )
         if (logs == null) {
+            if (offset == 0) {
+                allLogs = emptyList()
+            }
             _ui.value = _ui.value.copy(
                 loading = false,
                 showMoreLoading = false,
-                error = "Failed to load logs",
+                logs = if (offset == 0) emptyList() else _ui.value.logs,
+                logsError = "Failed to load logs",
             )
             return
         }
@@ -208,6 +217,7 @@ class ProjectDetailViewModel @Inject constructor(
         _ui.value = _ui.value.copy(
             showMoreLoading = false,
             showMoreHasMore = logs.size >= limit,
+            logsError = null,
         )
     }
 

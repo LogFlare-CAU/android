@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -19,12 +20,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.logflare.android.data.ThemePreference
 import com.logflare.android.feature.auth.LoginScreen
 import com.logflare.android.feature.main.MainScaffold
 import com.logflare.android.ui.VisualQaAppRoot
 import com.logflare.android.ui.navigation.Route
 import com.logflare.android.ui.theme.LogflareandroidTheme
 import com.logflare.android.viewmodel.AppViewModel
+import com.logflare.android.viewmodel.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint(ComponentActivity::class)
@@ -52,11 +55,20 @@ class MainActivity : Hilt_MainActivity() {
         }
 
         setContent {
-            LogflareandroidTheme {
+            val themeViewModel: ThemeViewModel = hiltViewModel()
+            val preference by themeViewModel.preference.collectAsState()
+            val systemDark = isSystemInDarkTheme()
+            val darkTheme = when (preference) {
+                ThemePreference.SYSTEM -> systemDark
+                ThemePreference.LIGHT -> false
+                ThemePreference.DARK -> true
+            }
+            LogflareandroidTheme(darkTheme = darkTheme) {
                 VisualQaAppRoot {
                     App(
                         intentProjectId = projectId,
                         intentErrorId = errorId,
+                        themeViewModel = themeViewModel,
                     )
                 }
             }
@@ -67,6 +79,7 @@ class MainActivity : Hilt_MainActivity() {
 @Composable
 fun App(
     vm: AppViewModel = hiltViewModel(),
+    themeViewModel: ThemeViewModel = hiltViewModel(),
     intentProjectId: Int? = null,
     intentErrorId: Int? = null
 ) {
@@ -91,11 +104,14 @@ fun App(
     }
     NavHost(navController = navController, startDestination = start) {
         composable(Route.Auth.path) {
-            LoginScreen(onLoginSuccess = {
-                navController.navigate(Route.Main.path) {
-                    popUpTo(Route.Auth.path) { inclusive = true }
-                }
-            })
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate(Route.Main.path) {
+                        popUpTo(Route.Auth.path) { inclusive = true }
+                    }
+                },
+                themeViewModel = themeViewModel,
+            )
         }
         composable(Route.Main.path) {
             MainScaffold(
@@ -106,7 +122,8 @@ fun App(
                     }
                 },
                 intentProjectId = intentProjectId,
-                intentErrorId = intentErrorId
+                intentErrorId = intentErrorId,
+                themeViewModel = themeViewModel,
             )
         }
     }

@@ -155,6 +155,36 @@ class ProjectDetailSnapshots : VisualSnapshotTest() {
         }
     }
 
+    @Test fun project_detail_logs_error_light() {
+        capture("project_detail_logs_error", darkTheme = false) {
+            ProjectDetailScreenContent(
+                uiState = SnapshotFixtures.projectDetail(logsError = "Failed to load logs"),
+                onBack = {},
+                onOpenProjectSettings = { _ -> },
+                onLevelSelected = { _ -> },
+                onLogfileSelected = { _ -> },
+                onSortSelected = { _ -> },
+                onLogClick = { _ -> },
+                onLoadMore = {},
+            )
+        }
+    }
+
+    @Test fun project_detail_logs_error_dark() {
+        capture("project_detail_logs_error", darkTheme = true) {
+            ProjectDetailScreenContent(
+                uiState = SnapshotFixtures.projectDetail(logsError = "Failed to load logs"),
+                onBack = {},
+                onOpenProjectSettings = { _ -> },
+                onLevelSelected = { _ -> },
+                onLogfileSelected = { _ -> },
+                onSortSelected = { _ -> },
+                onLogClick = { _ -> },
+                onLoadMore = {},
+            )
+        }
+    }
+
     @Test fun project_detail_loading_light() {
         capture("project_detail_loading", darkTheme = false) {
             ProjectDetailScreenContent(

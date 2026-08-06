@@ -47,6 +47,8 @@ import com.example.logflare.core.designsystem.theme.AppTheme
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
 import com.logflare.android.ui.VisualQaTags
+import com.logflare.android.data.ThemePreference
+import com.logflare.android.viewmodel.ThemeViewModel
 
 @Composable
 fun MyPageScreen(
@@ -56,8 +58,10 @@ fun MyPageScreen(
     onEditMember: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MyPageViewModel = hiltViewModel(),
+    themeViewModel: ThemeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.ui.collectAsState()
+    val themePreference by themeViewModel.preference.collectAsState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -74,10 +78,12 @@ fun MyPageScreen(
 
     MyPageContent(
         uiState = uiState,
+        themePreference = themePreference,
         onLogout = onLogout,
         onAddMember = onAddMember,
         onEditMember = onEditMember,
         onSelectLogLevel = viewModel::selectLogLevel,
+        onSelectTheme = themeViewModel::setPreference,
         modifier = modifier,
     )
 }
@@ -89,6 +95,8 @@ fun MyPageContent(
     onAddMember: () -> Unit,
     onEditMember: (String) -> Unit,
     onSelectLogLevel: (LogLevel) -> Unit,
+    themePreference: ThemePreference = ThemePreference.SYSTEM,
+    onSelectTheme: (ThemePreference) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -138,6 +146,42 @@ fun MyPageContent(
                                             .padding(horizontal = AppTheme.spacing.s4)
                                             .padding(top = AppTheme.spacing.s3)
                                             .testTag(VisualQaTags.Error),
+                                    )
+                                }
+                            }
+
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(
+                                            horizontal = AppTheme.spacing.s4,
+                                            vertical = AppTheme.spacing.s8,
+                                        ),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "Appearance",
+                                        style = AppTheme.typography.bodyMdBold,
+                                        color = AppTheme.colors.onSurface,
+                                    )
+
+                                    LogFlareDropdown(
+                                        items = ThemePreference.entries.toList(),
+                                        selectedItem = themePreference,
+                                        onItemSelected = onSelectTheme,
+                                        itemLabelMapper = {
+                                            when (it) {
+                                                ThemePreference.SYSTEM -> "System"
+                                                ThemePreference.LIGHT -> "Light"
+                                                ThemePreference.DARK -> "Dark"
+                                            }
+                                        },
+                                        placeholder = "Theme",
+                                        size = DropdownSize.Large,
+                                        modifier = Modifier.width(140.dp),
+                                        showCheckboxInMenu = false,
                                     )
                                 }
                             }

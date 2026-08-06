@@ -1,19 +1,32 @@
 package com.logflare.android.feature.project
 
 import android.content.ClipData
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
@@ -29,6 +42,7 @@ fun ProjectCreateScreen(
     val clipboard: Clipboard = LocalClipboard.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var confirmRotate by remember { mutableStateOf(false) }
 
     LaunchedEffect(ui.snackbar) {
         ui.snackbar?.let {
@@ -39,6 +53,8 @@ fun ProjectCreateScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        containerColor = AppTheme.colors.background,
+        contentColor = AppTheme.colors.onBackground,
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(
@@ -72,11 +88,14 @@ fun ProjectCreateScreen(
                     ProjectEditorAction.CopyToken -> {
                         ui.token?.let { token ->
                             scope.launch {
-                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Project Token", token)))
+                                clipboard.setClipEntry(
+                                    ClipEntry(ClipData.newPlainText("Project Token", token)),
+                                )
                                 snackbarHostState.showSnackbar("Token copied")
                             }
                         }
                     }
+                    ProjectEditorAction.RotateToken -> confirmRotate = true
                     ProjectEditorAction.Delete -> Unit
                 }
             },
@@ -84,6 +103,31 @@ fun ProjectCreateScreen(
                 if (ui.saved) vm.editProject() else vm.saveProject()
             },
             modifier = Modifier.padding(paddingValues),
+        )
+    }
+
+    if (confirmRotate) {
+        AlertDialog(
+            onDismissRequest = { confirmRotate = false },
+            title = { Text("Rotate token?") },
+            text = {
+                Text("Clients using the current token will stop working until they get the new one.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmRotate = false
+                        vm.rotateToken()
+                    },
+                ) {
+                    Text("Rotate")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRotate = false }) {
+                    Text("Cancel")
+                }
+            },
         )
     }
 }
@@ -116,122 +160,18 @@ private fun ProjectCreateScreenContent(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(vertical = 12.dp),
         ) {
-            item {
-                if (uiState.error != null) {
-                    Text(
-                        text = uiState.error ?: "",
-                        color = AppTheme.colors.red.default,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                }
-            }
-
-            item {
-                ProjectNameSection(
-                    name = uiState.name,
-                    isValid = uiState.nameValid,
-                    loading = uiState.loading,
-                    saved = uiState.saved,
-                    onChange = { value -> onAction(ProjectEditorAction.NameChanged(value)) },
-                    onSave = onNameSave,
-                )
-            }
-
-            item {
-                TokenSection(
-                    token = uiState.token,
-                    onCopy = { onAction(ProjectEditorAction.CopyToken) },
-                )
-            }
-
-            item {
-                KeywordSection(
-                    value = uiState.keywordInput,
-                    error = uiState.keywordError,
-                    onValueChange = { value -> onAction(ProjectEditorAction.KeywordChanged(value)) },
-                    onSave = { onAction(ProjectEditorAction.AddKeyword) },
-                    enabled = uiState.saved,
-                )
-            }
-
-            item {
-                KeywordList(
-                    keywords = uiState.keywords,
-                    onRemove = { keyword -> onAction(ProjectEditorAction.RemoveKeyword(keyword)) },
-                )
-            }
-
-            item {
-                LogLevelSection(
-                    selected = uiState.alertLevels,
-                    onToggle = { level -> onAction(ProjectEditorAction.ToggleLevel(level)) },
-                    enabled = uiState.saved,
-                )
-            }
-
-            item {
-                PermissionsSection(
-                    permissions = uiState.permissions,
-                    onToggle = { index, _ ->
-                        uiState.permissions.getOrNull(index)?.username?.let { username ->
-                            onAction(ProjectEditorAction.TogglePermission(username))
-                        }
-                    },
-                    enabled = uiState.saved,
-                )
-            }
+            projectEditorFormItems(
+                uiState = uiState,
+                onAction = onAction,
+                onNameSave = onNameSave,
+                showDelete = false,
+            )
         }
 
         BottomActionBar(
             onDone = { onAction(ProjectEditorAction.Submit) },
             enabled = uiState.token != null,
+            label = "Done",
         )
-    }
-}
-
-@Composable
-private fun TokenSection(token: String?, onCopy: () -> Unit) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(
-            text = "Project Token",
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = AppTheme.colors.surfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = token != null) { onCopy() },
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .heightIn(min = 50.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = token ?: "Token will be generated when you save",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (token != null) AppTheme.colors.onSurface else AppTheme.colors.muted,
-                )
-                Button(
-                    onClick = onCopy,
-                    enabled = token != null,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppTheme.colors.secondary.pressed,
-                        contentColor = AppTheme.colors.onPrimary,
-                        disabledContainerColor = AppTheme.colors.secondary.disabled,
-                        disabledContentColor = AppTheme.colors.onPrimary,
-                    ),
-                    modifier = Modifier.height(40.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp),
-                ) {
-                    Text("Copy")
-                }
-            }
-        }
     }
 }

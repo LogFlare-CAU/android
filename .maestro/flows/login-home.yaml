@@ -3,6 +3,11 @@ appId: com.logflare.android
 - runFlow: _login.yaml
 - assertVisible:
     id: "home_screen"
+- assertVisible: "Recent Logs"
+- assertVisible: "Project List"
+- scrollUntilVisible:
+    element:
+      text: "Project List"
 - takeScreenshot:
     path: ${QA_OUTPUT_DIR}/home_${QA_THEME}
     cropOn:
