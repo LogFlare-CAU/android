@@ -29,8 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.logflare.android.R
@@ -110,6 +108,9 @@ fun LoginScreenContent(
 ) {
     val isServerValid = form.serverUrlError == null
     val colors = AppTheme.colors
+    val layout = AppTheme.roles.layout
+    val spacing = AppTheme.spacing
+    val typography = AppTheme.typography
 
     Box(
         modifier = Modifier
@@ -122,7 +123,7 @@ fun LoginScreenContent(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(8.dp),
+                    .padding(spacing.s2),
             ) {
                 Text(
                     text = if (isDarkTheme) "Light" else "Dark",
@@ -134,17 +135,17 @@ fun LoginScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(horizontal = layout.screenPadding),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 painter = painterResource(id = R.drawable.logowithlabel),
                 contentDescription = "LogFlare Logo",
-                modifier = Modifier.size(140.dp)
+                modifier = Modifier.size(spacing.s8 * 4)
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(layout.sectionGap + spacing.s4))
 
             OutlinedTextField(
                 value = form.serverUrl,
@@ -157,17 +158,17 @@ fun LoginScreenContent(
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(spacing.s1))
             Text(
                 text = form.serverUrlError ?: " ",
                 color = if (form.serverUrlError != null) colors.red.default else Color.Transparent,
-                fontSize = 11.sp,
+                style = typography.captionMdMedium,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 4.dp)
+                    .padding(start = spacing.s1)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(spacing.s2))
 
             OutlinedTextField(
                 value = form.username,
@@ -178,17 +179,17 @@ fun LoginScreenContent(
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(spacing.s1))
             Text(
                 text = uiState.loginError ?: " ",
                 color = if (uiState.loginError != null) colors.red.default else Color.Transparent,
-                fontSize = 11.sp,
+                style = typography.captionMdMedium,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 4.dp)
+                    .padding(start = spacing.s1)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(spacing.s2))
 
             OutlinedTextField(
                 value = form.password,
@@ -200,17 +201,17 @@ fun LoginScreenContent(
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(spacing.s1))
             Text(
                 text = uiState.loginError ?: " ",
                 color = if (uiState.loginError != null) colors.red.default else Color.Transparent,
-                fontSize = 11.sp,
+                style = typography.captionMdMedium,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 4.dp)
+                    .padding(start = spacing.s1)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(spacing.s6))
 
             Button(
                 onClick = onSignIn,
