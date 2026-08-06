@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.button.ButtonType
 import com.example.logflare.core.designsystem.components.button.ButtonVariant
@@ -55,7 +53,7 @@ fun ProjectNameSection(
                 onValueChange = onChange,
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp),
+                    .height(AppTheme.roles.chrome.topBarHeight),
                 singleLine = true,
                 placeholder = { Text("Project name") },
                 shape = AppTheme.radius.medium,
@@ -76,8 +74,8 @@ fun ProjectNameSection(
                     contentColor = AppTheme.colors.onPrimary
                 ),
                 modifier = Modifier
-                    .height(50.dp)
-                    .width(88.dp)
+                    .height(AppTheme.roles.chrome.topBarHeight - AppTheme.spacing.s6 / 4)
+                    .width(AppTheme.roles.chrome.topBarHeight + AppTheme.spacing.s8)
             ) {
                 Text(buttonLabel)
             }
@@ -115,7 +113,7 @@ fun LogLevelSection(selected: Set<String>, onToggle: (String) -> Unit, enabled: 
                 onClick = { expanded = true },
                 colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surface),
                 shape = AppTheme.radius.medium,
-                modifier = Modifier.height(44.dp),
+                modifier = Modifier.height(AppTheme.roles.chrome.topBarHeight - AppTheme.roles.layout.contentGap),
                 contentPadding = PaddingValues(horizontal = AppTheme.roles.layout.screenPadding),
                 enabled = enabled
             ) {
@@ -250,7 +248,7 @@ fun KeywordSection(
                 onValueChange = onValueChange,
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp),
+                    .height(AppTheme.roles.chrome.topBarHeight),
                 placeholder = { Text("Enter keyword") },
                 singleLine = true,
                 shape = AppTheme.radius.medium,
@@ -268,8 +266,8 @@ fun KeywordSection(
                     contentColor = AppTheme.colors.onPrimary
                 ),
                 modifier = Modifier
-                    .height(50.dp)
-                    .width(88.dp)
+                    .height(AppTheme.roles.chrome.topBarHeight - AppTheme.spacing.s6 / 4)
+                    .width(AppTheme.roles.chrome.topBarHeight + AppTheme.spacing.s8)
             ) {
                 Text("Save")
             }
@@ -339,7 +337,7 @@ fun BottomActionBar(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = AppTheme.colors.surface,
-        shadowElevation = 16.dp
+        shadowElevation = AppTheme.roles.layout.screenPadding
     ) {
         Row(
             modifier = Modifier
@@ -361,7 +359,7 @@ fun BottomActionBar(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(AppTheme.roles.chrome.topBarHeight)
             ) {
                 Text(
                     text = label,
@@ -425,7 +423,7 @@ fun ProjectTokenSection(
                         horizontal = AppTheme.roles.layout.contentGap,
                         vertical = AppTheme.spacing.s2 + AppTheme.spacing.s1 / 2,
                     )
-                    .heightIn(min = 50.dp),
+                    .heightIn(min = AppTheme.roles.chrome.topBarHeight - AppTheme.spacing.s6 / 4),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -443,7 +441,7 @@ fun ProjectTokenSection(
                         disabledContainerColor = AppTheme.colors.secondary.disabled,
                         disabledContentColor = AppTheme.colors.onPrimary,
                     ),
-                    modifier = Modifier.height(40.dp),
+                    modifier = Modifier.height(AppTheme.roles.chrome.topBarHeight - AppTheme.roles.layout.screenPadding),
                     contentPadding = PaddingValues(horizontal = AppTheme.roles.layout.contentGap),
                 ) {
                     Text("Copy")
@@ -463,7 +461,7 @@ fun ProjectTokenSection(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp),
+                    .height(AppTheme.roles.chrome.topBarHeight - AppTheme.roles.layout.screenPadding),
                 contentPadding = PaddingValues(horizontal = AppTheme.roles.layout.contentGap),
             ) {
                 Text("Rotate Token")
@@ -488,7 +486,9 @@ fun ProjectCard(
         colors = CardDefaults.cardColors(
             containerColor = AppTheme.colors.surfaceVariant,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = AppTheme.spacing.s1 - AppTheme.spacing.s1,
+        ),
         shape = AppTheme.radius.large,
     ) {
         Row(
@@ -520,7 +520,7 @@ fun ProjectCard(
             if (connectionHealthy != null) {
                 Surface(
                     modifier = Modifier
-                        .size(12.dp)
+                        .size(AppTheme.roles.layout.contentGap)
                         .padding(start = AppTheme.spacing.s2),
                     shape = CircleShape,
                     color = if (connectionHealthy) AppTheme.colors.success else AppTheme.colors.red.default,

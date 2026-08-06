@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.logflare.core.designsystem.AppTheme
 import com.example.logflare.core.designsystem.components.button.ButtonSize
@@ -100,8 +99,8 @@ fun AddMemberScreenContent(
         },
         bottomBar = {
             Surface(
-                tonalElevation = 4.dp,
-                shadowElevation = 4.dp,
+                tonalElevation = AppTheme.spacing.s1,
+                shadowElevation = AppTheme.spacing.s1,
                 color = AppTheme.colors.surface,
             ) {
                 Box(
@@ -230,7 +229,9 @@ private fun AddMemberForm(
                 onItemSelected = onPermissionChange,
                 itemLabelMapper = { it.label },
                 size = DropdownSize.Large,
-                modifier = Modifier.width(140.dp),
+                modifier = Modifier.width(
+                    AppTheme.roles.layout.screenPadding * 9 - AppTheme.spacing.s1,
+                ),
             )
         }
 
