@@ -1,5 +1,6 @@
 package com.logflare.android.data.session
 
+import android.util.Log
 import com.logflare.android.data.store.CacheStore
 import com.logflare.android.data.store.attempt
 import com.logflare.android.push.NotificationHistory
@@ -30,7 +31,13 @@ class SignOutUseCase @Inject constructor(
         // write it back.
         if (session != null) {
             attempt { notificationHistory.clear(session.key) }
+                .onFailure { Log.w(TAG, "Clearing notification history failed", it) }
             attempt { cacheStore.clear(session.key) }
+                .onFailure { Log.w(TAG, "Clearing session cache failed", it) }
         }
+    }
+
+    private companion object {
+        const val TAG = "SignOutUseCase"
     }
 }

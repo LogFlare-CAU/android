@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 sealed interface SessionState {
     /** Stored session not read from disk yet. The splash screen stays up while in this state. */
@@ -70,10 +72,14 @@ class SessionRepository @Inject constructor(
         }
     }
 
-    /** [token] is stored verbatim and must already include the `Bearer ` prefix. */
+    /**
+     * [token] is stored verbatim and must already include the `Bearer ` prefix. Returns once
+     * [state] is the new session, so the next request already carries the new token.
+     */
     suspend fun signIn(serverUrl: String, token: String, user: UserDTO) {
         switchServer(serverUrl)
         auth.setSession(token, user)
+        awaitSignedIn(token, SessionKey.of(serverUrl, user.idx))
     }
 
     /**
@@ -83,11 +89,12 @@ class SessionRepository @Inject constructor(
     suspend fun signIn(serverUrl: String, token: String, username: String) {
         switchServer(serverUrl)
         auth.setTokenAndUsername(token, username)
+        awaitSignedIn(token, SessionKey.of(serverUrl, null, username))
     }
 
     private suspend fun switchServer(serverUrl: String) {
         // Never let a new server URL pair up with a previous user's token, even transiently.
-        if (_state.value is SessionState.SignedIn) auth.clearToken()
+        if (_state.value is SessionState.SignedIn) signOut()
         baseUrlProvider.setBaseUrl(serverUrl)
     }
 
@@ -95,9 +102,28 @@ class SessionRepository @Inject constructor(
         auth.setUserProfile(user)
     }
 
-    /** Clears the token and user identity; the server URL is kept for the next login. */
+    /**
+     * Clears the token and user identity; the server URL is kept for the next login. Returns once
+     * [state] has left [SessionState.SignedIn], so no request after it carries the old token.
+     */
     suspend fun signOut() {
         auth.clearToken()
+        awaitState { it !is SessionState.SignedIn }
+    }
+
+    private suspend fun awaitSignedIn(token: String, key: SessionKey) =
+        awaitState { it is SessionState.SignedIn && it.token == token && it.key == key }
+
+    /**
+     * [state] follows disk asynchronously; waits until it reflects a write just made. Bounded so a
+     * concurrent write by someone else (old screens, the 401 handler) can't hang the caller.
+     */
+    private suspend fun awaitState(predicate: (SessionState) -> Boolean) {
+        withTimeoutOrNull(STATE_WAIT_MS) { _state.first(predicate) }
+    }
+
+    private companion object {
+        const val STATE_WAIT_MS = 5_000L
     }
 
     override fun currentToken(): String? = (_state.value as? SessionState.SignedIn)?.token

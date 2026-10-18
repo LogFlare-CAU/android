@@ -40,7 +40,7 @@ interface PushTokenSource {
  * Keeps this device's FCM token registered with the server for the signed-in session, in the
  * background — never on a screen's loading path.
  *
- * After [start], every new signed-in [SessionKey] registers once (HTTP 200 and 409 "already
+ * After [start], every new sign-in (new [SessionKey] or new bearer) registers once (HTTP 200 and 409 "already
  * registered" both count). A token refresh ([onNewToken]) re-registers. [unregister] runs before
  * sign-out, while the session's bearer is still available to the auth interceptor.
  */
@@ -67,6 +67,13 @@ class PushRegistrar internal constructor(
     /** Serializes register/unregister calls so a DELETE never overlaps a POST. */
     private val lock = Mutex()
 
+    /**
+     * Bearer of the session being signed out: set by [unregister] so a token refresh
+     * ([onNewToken]) can't register again after the DELETE. A later sign-in has a new bearer.
+     */
+    @Volatile
+    private var closedBearer: String? = null
+
     /** FCM token the server last accepted, so [unregister] doesn't depend on Firebase. */
     @Volatile
     private var registeredToken: String? = null
@@ -81,7 +88,9 @@ class PushRegistrar internal constructor(
         if (!started.compareAndSet(false, true)) return
         scope.launch {
             sessions.map { it as? SessionState.SignedIn }
-                .distinctUntilChangedBy { it?.key }
+                // A new sign-in has a new bearer even for the same key, so it registers again
+                // even if the SignedOut in between was conflated away.
+                .distinctUntilChangedBy { it?.let { s -> s.key to s.token } }
                 .collect { session ->
                     registration.getAndSet(null)?.cancel()
                     _registeredFor.value = null
@@ -101,6 +110,7 @@ class PushRegistrar internal constructor(
      * still signed in. Returns whether the server confirmed it.
      */
     suspend fun unregister(timeoutMs: Long = 3_000): Boolean = withTimeoutOrNull(timeoutMs) {
+        closedBearer = (sessions.value as? SessionState.SignedIn)?.token
         // A registration landing after the DELETE would leave the device registered.
         registration.getAndSet(null)?.cancelAndJoin()
         lock.withLock {
@@ -122,7 +132,7 @@ class PushRegistrar internal constructor(
 
     private suspend fun register(session: SessionState.SignedIn, token: String) = lock.withLock {
         // The session may have changed while Firebase was getting ready.
-        if ((sessions.value as? SessionState.SignedIn)?.key != session.key) return@withLock
+        if ((sessions.value as? SessionState.SignedIn)?.key != session.key || session.token == closedBearer) return@withLock
         val accepted = attempt { api.registerFcmToken(session.token, FcmTokenParams(token)) }
             .fold(
                 onSuccess = { it.success || it.errorCode == HTTP_CONFLICT },

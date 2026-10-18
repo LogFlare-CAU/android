@@ -147,6 +147,27 @@ class PushRegistrarTest {
     }
 
     @Test
+    fun onNewToken_duringSignOut_cannotRegisterAfterUnregister() = runTest {
+        val registrar = registrar()
+        registrar.start()
+        sessions.value = signedIn(A, token = "Bearer a")
+        runCurrent()
+        assertTrue(registrar.unregister())
+
+        // Firebase refreshes the token between the DELETE and the token being cleared.
+        registrar.onNewToken("fcm-2")
+        assertEquals(1, api.count("registerFcmToken"))
+        assertNull(registrar.registeredFor.value)
+
+        // The same user signing in again gets a new bearer and registers normally, even if the
+        // SignedOut in between is never observed.
+        sessions.value = signedIn(A, token = "Bearer a2")
+        runCurrent()
+        assertEquals(2, api.count("registerFcmToken"))
+        assertEquals(A, registrar.registeredFor.value)
+    }
+
+    @Test
     fun unregister_cancelsPendingRegistration() = runTest {
         tokens.ready = { awaitCancellation() }
         val registrar = registrar()

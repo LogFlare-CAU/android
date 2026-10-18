@@ -1,6 +1,8 @@
 package com.logflare.android.data.session
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ApplicationProvider
 import com.example.logflare.core.designsystem.v2.LfLevel
 import com.example.logflare.core.model.StringResponse
@@ -21,6 +23,10 @@ import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -30,6 +36,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -71,12 +78,19 @@ class SignInOutUseCaseTest {
         val signIn: SignInUseCase,
     )
 
-    private fun TestScope.env(): Env {
+    /** Delivers every value of [delegate] [delayMs] late, like a slow session-state collector. */
+    private class DelayedStore(private val delegate: DataStore<Preferences>, delayMs: Long) : DataStore<Preferences> {
+        override val data: Flow<Preferences> = delegate.data.onEach { delay(delayMs) }
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
+            delegate.updateData(transform)
+    }
+
+    private fun TestScope.env(authDelayMs: Long = 0): Env {
         fun store(name: String) = PreferenceDataStoreFactory.create(
             scope = backgroundScope,
             produceFile = { File(tmp.root, "$name.preferences_pb") },
         )
-        val auth = AuthRepository(store("auth"))
+        val auth = AuthRepository(if (authDelayMs > 0) DelayedStore(store("auth"), authDelayMs) else store("auth"))
         val serverConfig = ServerConfigRepository(store("config"))
         val baseUrl = DataStoreBaseUrlProvider(serverConfig, backgroundScope)
         val session = SessionRepository(auth, serverConfig, baseUrl, backgroundScope)
@@ -176,6 +190,9 @@ class SignInOutUseCaseTest {
         api.authenticateResult = { StringResponse(true, "ok", data = "") }
         assertEquals(SignInResult.InvalidCredentials, env.signIn("logs.example.com", "alice", "bad"))
 
+        api.authenticateResult = { StringResponse(false, "slow down", 429) }
+        assertEquals(SignInResult.RateLimited, env.signIn("logs.example.com", "alice", "bad"))
+
         assertEquals(SessionState.SignedOut, env.session.state.first { it != SessionState.Loading })
         assertEquals("a failed sign-in remembers nothing", emptyList<String>(), env.recent.servers.first())
         assertEquals(0, api.count("getme"))
@@ -194,6 +211,44 @@ class SignInOutUseCaseTest {
         val result = env.signIn("   ", "alice", "pw")
         assertTrue(result is SignInResult.ServerUnreachable)
         assertEquals(SessionState.SignedOut, env.session.state.first { it != SessionState.Loading })
+    }
+
+    @After
+    fun resetTheme() = runBlocking {
+        ThemeRepository(ApplicationProvider.getApplicationContext()).setPreference(ThemePreference.SYSTEM)
+    }
+
+    @Test
+    fun signIn_failure_keepsSavedServerUrl() = runTest {
+        val env = env()
+        env.signIn("https://saved.example.com", "alice", "pw")
+        env.signOut()
+        api.authenticateResult = { throw IOException("no route") }
+
+        assertTrue(env.signIn("https://typo.example.com", "alice", "pw") is SignInResult.ServerUnreachable)
+
+        assertEquals("https://saved.example.com/", env.serverConfig.serverUrl.first())
+        assertEquals("https://saved.example.com/", env.baseUrl.getBaseUrl())
+    }
+
+    @Test
+    fun signIn_switchingAccount_neverSendsPreviousBearer() = runTest {
+        val env = env(authDelayMs = 500)
+        env.signIn("a.example.com", "alice", "pw")
+        assertEquals("Bearer jwt-alice", env.session.currentToken())
+        var bearerAtAuth: String? = "not called"
+        api.authenticateResult = {
+            bearerAtAuth = env.session.currentToken()
+            StringResponse(true, "ok", data = "jwt-${it.username}")
+        }
+        api.me = { UserResponse(true, "ok", data = UserDTO(8, "bob", 1)) }
+
+        assertEquals(SignInResult.Success, env.signIn("b.example.com", "bob", "pw"))
+
+        assertNull("the interceptor must have no token for POST /user/auth", bearerAtAuth)
+        val state = env.session.state.value as SessionState.SignedIn
+        assertEquals("Bearer jwt-bob", state.token)
+        assertEquals(SessionKey.of("http://b.example.com/", 8), state.key)
     }
 
     @Test
@@ -231,7 +286,6 @@ class SignInOutUseCaseTest {
         env.signIn("logs.example.com", "alice", "pw")
         assertEquals(alice.key, env.signedIn().key)
         assertEquals(emptyList<HistoryEntry>(), env.history.entries.first())
-        theme.setPreference(ThemePreference.SYSTEM)
     }
 
     @Test

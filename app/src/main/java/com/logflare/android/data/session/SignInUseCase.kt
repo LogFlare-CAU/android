@@ -41,6 +41,16 @@ class SignInUseCase @Inject constructor(
         // before requests go to the new server.
         if (sessionRepository.state.value is SessionState.SignedIn) signOut()
 
+        val previousUrl = baseUrlProvider.getBaseUrl()
+        val result = signIn(url, username, password)
+        // A failed attempt doesn't replace the saved server. (With none saved there is nothing to restore.)
+        if (result != SignInResult.Success && previousUrl != null && previousUrl != url) {
+            attempt { baseUrlProvider.setBaseUrl(previousUrl) }
+        }
+        return result
+    }
+
+    private suspend fun signIn(url: String, username: String, password: String): SignInResult {
         val response = attempt {
             baseUrlProvider.setBaseUrl(url)
             api.authenticate(UserAuthParams(username, password, keep_logged_in = true))

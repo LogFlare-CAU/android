@@ -10,9 +10,11 @@ import com.logflare.android.data.DataStoreBaseUrlProvider
 import com.logflare.android.data.ServerConfigRepository
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -45,9 +47,17 @@ class SessionRepositoryTest {
             throw IOException("corrupt store")
     }
 
+    /** Delivers every value of [delegate] [delayMs] late, like a slow state collector. */
+    private class DelayedStore(private val delegate: DataStore<Preferences>, delayMs: Long) : DataStore<Preferences> {
+        override val data: Flow<Preferences> = delegate.data.onEach { delay(delayMs) }
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
+            delegate.updateData(transform)
+    }
+
     private fun TestScope.env(
         brokenAuth: Boolean = false,
         brokenConfig: Boolean = false,
+        authDelayMs: Long = 0,
     ): Env {
         fun store(name: String) = PreferenceDataStoreFactory.create(
             scope = backgroundScope,
@@ -55,7 +65,13 @@ class SessionRepositoryTest {
         )
         val serverConfig = ServerConfigRepository(if (brokenConfig) BrokenStore else store("config"))
         return Env(
-            auth = AuthRepository(if (brokenAuth) BrokenStore else store("auth")),
+            auth = AuthRepository(
+                when {
+                    brokenAuth -> BrokenStore
+                    authDelayMs > 0 -> DelayedStore(store("auth"), authDelayMs)
+                    else -> store("auth")
+                },
+            ),
             serverConfig = serverConfig,
             baseUrl = DataStoreBaseUrlProvider(serverConfig, backgroundScope),
             scope = this,
@@ -194,6 +210,39 @@ class SessionRepositoryTest {
             assertNotEquals(aliceKey, bob.key)
             expectNoEvents()
         }
+    }
+
+    @Test
+    fun signOut_returnsOnlyAfterStateLeftSignedIn() = runTest {
+        val env = env(authDelayMs = 500)
+        env.serverConfig.setServerUrl("https://logs.example.com")
+        env.auth.setSession("Bearer alice", UserDTO(idx = 1, username = "alice", permission = 1))
+        val repo = env.session()
+        repo.state.first { it is SessionState.SignedIn }
+
+        repo.signOut()
+
+        assertNull("no request after signOut() may carry the old token", repo.currentToken())
+        assertEquals(SessionState.SignedOut, repo.state.value)
+    }
+
+    @Test
+    fun signIn_returnsOnlyAfterStateShowsNewSession() = runTest {
+        val env = env(authDelayMs = 500)
+        env.serverConfig.setServerUrl("https://a.example.com")
+        env.auth.setSession("Bearer alice", UserDTO(idx = 1, username = "alice", permission = 1))
+        val repo = env.session()
+        repo.state.first { it is SessionState.SignedIn }
+
+        repo.signIn("https://b.example.com", "Bearer bob", UserDTO(idx = 2, username = "bob", permission = 1))
+        var state = repo.state.value as SessionState.SignedIn
+        assertEquals("Bearer bob", state.token)
+        assertEquals(SessionKey.of("https://b.example.com/", 2), state.key)
+
+        repo.signIn("https://b.example.com", "Bearer carol", "carol")
+        state = repo.state.value as SessionState.SignedIn
+        assertEquals("Bearer carol", state.token)
+        assertEquals(SessionKey.of("https://b.example.com/", null, "carol"), state.key)
     }
 
     @Test
