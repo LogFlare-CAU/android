@@ -295,12 +295,13 @@ class CachedResourceTest {
     @Test
     fun put_updatesStoreAndOpenStreams_withoutFetching() = runTest {
         val store = newStore()
-        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now)
+        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now - 5)
         val res = resource(store)
+        val expected = store.read(a, "projects", String.serializer())
 
         res.stream(a).test {
             assertEquals("cached", awaitItem().data)
-            res.put(a, "appended", fetchedAt = now - 5)
+            assertTrue(res.put(a, "appended", expected, store.generation(a)))
             assertEquals(Resource("appended", refreshing = false, error = null, fetchedAt = now - 5), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
@@ -315,8 +316,61 @@ class CachedResourceTest {
         val generation = store.generation(a)
         store.clear(a)
 
-        res.put(a, "stale", generation = generation)
+        assertFalse(res.put(a, "stale", expected = null, generation = generation))
 
         assertNull(store.read(a, "projects", String.serializer()))
+    }
+
+    @Test
+    fun put_afterCacheChanged_isDropped() = runTest {
+        val store = newStore()
+        store.write(a, "projects", "old", String.serializer(), fetchedAt = now - 5)
+        val res = resource(store)
+        val expected = store.read(a, "projects", String.serializer())
+        res.refresh(a) // the cache now holds "fresh"
+
+        assertFalse(res.put(a, "old+more", expected, store.generation(a)))
+
+        assertEquals(Cached("fresh", now), store.read(a, "projects", String.serializer()))
+    }
+
+    @Test
+    fun put_duringFetch_keepsRefreshing_untilFetchEnds() = runTest {
+        val store = newStore()
+        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now - 60_000)
+        val gate = CompletableDeferred<String>()
+        val res = resource(store) { gate.await() }
+        val expected = store.read(a, "projects", String.serializer())
+
+        res.stream(a).test {
+            assertEquals(Resource("cached", refreshing = true, error = null, fetchedAt = now - 60_000), awaitItem())
+            runCurrent()
+            assertTrue(res.put(a, "appended", expected, store.generation(a)))
+            assertEquals(Resource("appended", refreshing = true, error = null, fetchedAt = now - 60_000), awaitItem())
+            gate.complete("fresh")
+            assertEquals(Resource("fresh", refreshing = false, error = null, fetchedAt = now), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun awaitInFlight_joinsRunningFetch_andNeverStartsOne() = runTest {
+        val store = newStore()
+        val gate = CompletableDeferred<String>()
+        val res = resource(store) { gate.await() }
+
+        res.awaitInFlight(a) // nothing running: returns at once
+        assertEquals(0, fetchCount)
+
+        val collector = backgroundScope.launch { res.stream(a).collect {} }
+        runCurrent()
+        val waiter = backgroundScope.launch { res.awaitInFlight(a) }
+        runCurrent()
+        assertFalse(waiter.isCompleted)
+        gate.complete("fresh")
+        runCurrent()
+        assertTrue(waiter.isCompleted)
+        assertEquals(1, fetchCount)
+        collector.cancel()
     }
 }

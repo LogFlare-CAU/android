@@ -37,8 +37,7 @@ class MemberStore internal constructor(
     private val serializer = ListSerializer(UserDTO.serializer())
 
     private val resource = CachedResource(KEY, serializer, store, clock, scope) { session ->
-        val token = sessions.tokenFor(session)
-        api.getAllUsers(token).let { requireData(it.success, it.message, it.error_code, it.data) }
+        sessions.fetchAs(session) { api.getAllUsers(it) }.let { requireData(it.success, it.message, it.error_code, it.data) }
     }
 
     fun members(force: Boolean = false): Flow<Resource<List<Member>>> =

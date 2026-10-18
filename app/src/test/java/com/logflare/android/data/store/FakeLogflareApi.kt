@@ -127,23 +127,65 @@ class FakeLogflareApi : LogflareApi {
         return RemovedResponse(true, "ok")
     }
 
-    override suspend fun createUser(token: String, body: UserCreateParams): UserResponse = TODO()
+    /** When set, every mutation endpoint throws it (e.g. no network). */
+    var mutationError: Exception? = null
+
+    /** When true, every mutation endpoint answers `success: false` with [REJECTED]. */
+    var mutationRejected = false
+
+    private suspend fun <T> mutation(method: String, token: String?, ok: () -> T, rejected: () -> T): T {
+        record(method, token)
+        mutationError?.let { throw it }
+        return if (mutationRejected) rejected() else ok()
+    }
+
+    override suspend fun changeProjectName(bearer: String, projectId: Int, body: ProjectCreateParams): ProjectResponse =
+        mutation("changeProjectName", bearer, { ProjectResponse(true, "ok", data = ProjectDTO(projectId, body.name)) }) {
+            ProjectResponse(false, REJECTED, 400)
+        }
+
+    override suspend fun deleteProject(bearer: String, projectId: Int): StringResponse =
+        mutation("deleteProject", bearer, { StringResponse(true, "ok") }) { StringResponse(false, REJECTED, 404) }
+
+    override suspend fun rotateProjectToken(bearer: String, projectId: Int): ProjectResponseWithToken =
+        mutation(
+            "rotateProjectToken",
+            bearer,
+            { ProjectResponseWithToken(true, "ok", data = ProjectDTOWithToken(projectId, "p$projectId", token = "rotated-$projectId")) },
+        ) { ProjectResponseWithToken(false, REJECTED, 403) }
+
+    override suspend fun resetProjectPerms(bearer: String, body: ProjectPermsBatchParams): ProjectPermsSequenceResponse =
+        mutation("resetProjectPerms", bearer, { ProjectPermsSequenceResponse(true, "ok", data = emptyList()) }) {
+            ProjectPermsSequenceResponse(false, REJECTED, 400)
+        }
+
+    override suspend fun createUser(token: String, body: UserCreateParams): UserResponse =
+        mutation("createUser", token, { UserResponse(true, "ok", data = UserDTO(50, body.username, body.permission)) }) {
+            UserResponse(false, REJECTED, 409)
+        }
+
+    override suspend fun updateUser(token: String, userId: Int, body: UserUpdateParams): UserResponse =
+        mutation(
+            "updateUser",
+            token,
+            { UserResponse(true, "ok", data = UserDTO(userId, body.username ?: "unchanged", body.permission ?: 0)) },
+        ) { UserResponse(false, REJECTED, 404) }
+
+    override suspend fun deleteUser(token: String, userId: Int): UserResponse =
+        mutation("deleteUser", token, { UserResponse(true, "ok") }) { UserResponse(false, REJECTED, 404) }
+
     override suspend fun authenticate(body: UserAuthParams): StringResponse = TODO()
     override suspend fun getUserByUsername(token: String, username: String): UserResponse = TODO()
-    override suspend fun updateUser(token: String, userId: Int, body: UserUpdateParams): UserResponse = TODO()
-    override suspend fun deleteUser(token: String, userId: Int): UserResponse = TODO()
-    override suspend fun deleteProject(bearer: String, projectId: Int): StringResponse = TODO()
-    override suspend fun changeProjectName(bearer: String, projectId: Int, body: ProjectCreateParams): ProjectResponse = TODO()
-    override suspend fun rotateProjectToken(bearer: String, projectId: Int): ProjectResponseWithToken = TODO()
     override suspend fun getProjectPermissions(bearer: String, projectId: Int): ProjectPermsSequenceResponse = TODO()
     override suspend fun getErrors(bearer: String, projectId: Int?, limit: Int, offset: Int, sortby: String?): ErrorSequenceResponse = TODO()
     override suspend fun postError(projectKey: String, projectName: String, body: ErrorParams): Response<Unit> = TODO()
     override suspend fun getProjectLogFile(bearer: String, projectId: Int, logfileid: Int, limit: Int, offset: Int, sortBy: String?): StringSequenceResponse = TODO()
-    override suspend fun resetProjectPerms(bearer: String, body: ProjectPermsBatchParams): ProjectPermsSequenceResponse = TODO()
     override suspend fun getLogEvent(id: Int): LogEventDetailResponse = TODO()
     override suspend fun getProjectToken(projectId: Int): ProjectResponseWithToken = TODO()
 
     companion object {
+        const val REJECTED = "rejected by server"
+
         fun project(id: Int, name: String) = ProjectDTO(id = id, name = name)
 
         fun ok(projects: List<ProjectDTO>) = ProjectSequenceResponse(true, "ok", data = projects)

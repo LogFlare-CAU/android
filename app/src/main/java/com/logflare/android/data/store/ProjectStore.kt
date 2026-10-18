@@ -44,7 +44,9 @@ class ProjectStore internal constructor(
 
     /**
      * Caches the raw (project list, summary) responses; they are merged on read. The fetch merges
-     * once too, so a response that can't be mapped fails the fetch instead of the stream.
+     * once too, so a response that can't be mapped fails the fetch instead of the stream. The
+     * summary half also backs `summary(null)`, so Home makes one summary call and every
+     * mutation that refreshes the list refreshes the global counts too.
      */
     private val projectsResource = CachedResource(
         key = "projects",
@@ -53,16 +55,18 @@ class ProjectStore internal constructor(
         clock = clock,
         scope = scope,
     ) { session ->
-        val token = sessions.tokenFor(session)
-        val cache = coroutineScope {
-            val list = async { api.listProjects(token).let { requireData(it.success, it.message, it.error_code, it.data) } }
-            val summary = async { api.getLogSummary(null).let { requireData(it.success, it.message, it.errorCode, it.data) } }
-            list.await() to summary.await()
+        val cache = sessions.fetchAs(session) { token ->
+            coroutineScope {
+                val list = async { api.listProjects(token).let { requireData(it.success, it.message, it.error_code, it.data) } }
+                val summary = async { api.getLogSummary(null).let { requireData(it.success, it.message, it.errorCode, it.data) } }
+                list.await() to summary.await()
+            }
         }
         cache.also { mergeProjects(it.first, it.second) }
     }
 
-    private val summaries = ConcurrentHashMap<String, CachedResource<LogSummaryDTO>>()
+    /** Per-project summaries; the all-projects one lives in [projectsResource]. */
+    private val summaries = ConcurrentHashMap<Int, CachedResource<LogSummaryDTO>>()
 
     fun projects(force: Boolean = false): Flow<Resource<List<ProjectItem>>> =
         sessions.whileSignedIn { session ->
@@ -72,7 +76,11 @@ class ProjectStore internal constructor(
     /** Counts for all of the user's projects, or for [projectId] only. */
     fun summary(projectId: Int? = null, force: Boolean = false): Flow<Resource<HomeSummary>> =
         sessions.whileSignedIn { session ->
-            summaryResource(projectId).stream(session, force).map { r -> r.mapData { it.toHomeSummary() } }
+            if (projectId == null) {
+                projectsResource.stream(session, force).map { r -> r.mapData { it.second.toHomeSummary() } }
+            } else {
+                summaryResource(projectId).stream(session, force).map { r -> r.mapData { it.toHomeSummary() } }
+            }
         }
 
     suspend fun create(name: String): Result<ProjectWithToken> = mutate {
@@ -115,15 +123,13 @@ class ProjectStore internal constructor(
             .let { r -> requireSuccess(r.success, r.message, r.error_code) }
     }
 
-    private fun summaryResource(projectId: Int?): CachedResource<LogSummaryDTO> {
-        val key = "summary:${projectId ?: "all"}"
-        return summaries.getOrPut(key) {
-            CachedResource(key, LogSummaryDTO.serializer(), store, clock, scope) { session ->
-                sessions.tokenFor(session)
-                api.getLogSummary(projectId).let { requireData(it.success, it.message, it.errorCode, it.data) }
+    private fun summaryResource(projectId: Int): CachedResource<LogSummaryDTO> =
+        summaries.getOrPut(projectId) {
+            CachedResource("summary:$projectId", LogSummaryDTO.serializer(), store, clock, scope) { session ->
+                sessions.fetchAs(session) { api.getLogSummary(projectId) }
+                    .let { requireData(it.success, it.message, it.errorCode, it.data) }
             }
         }
-    }
 
     /** Runs [block] with the session token, then refreshes the project list on success. */
     private suspend fun <T> mutate(block: suspend (token: String) -> T): Result<T> {

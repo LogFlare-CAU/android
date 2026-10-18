@@ -32,8 +32,7 @@ class AccountStore internal constructor(
     ) : this(api, sessionRepository.state, store, scope, System::currentTimeMillis)
 
     private val resource = CachedResource("me", UserDTO.serializer(), store, clock, scope) { session ->
-        val token = sessions.tokenFor(session)
-        api.getme(token).let { requireData(it.success, it.message, it.error_code, it.data) }
+        sessions.fetchAs(session) { api.getme(it) }.let { requireData(it.success, it.message, it.error_code, it.data) }
     }
 
     fun me(force: Boolean = false): Flow<Resource<Member>> =

@@ -1,6 +1,7 @@
 package com.logflare.android.data.store
 
 import com.example.logflare.core.designsystem.v2.LfLevel
+import com.example.logflare.core.model.LogEventDTO
 import com.example.logflare.core.model.LogEventDetailDTO
 import com.example.logflare.core.model.LogEventPageDTO
 import com.example.logflare.core.network.LogflareApi
@@ -52,28 +53,32 @@ class LogStore internal constructor(
     fun recent(limit: Int = 5): Flow<Resource<List<LogEvent>>> =
         events(RECENT_QUERY).map { r -> r.mapData { it.items.take(limit) } }
 
-    fun events(query: LogQuery): Flow<Resource<LogPage>> =
+    /** The first page (plus any pages [loadMore] appended). [force] refetches the first page. */
+    fun events(query: LogQuery, force: Boolean = false): Flow<Resource<LogPage>> =
         sessions.whileSignedIn { session ->
-            pageResource(query).stream(session).map { r -> r.mapData { it.toLogPage() } }
+            pageResource(query).stream(session, force).map { r -> r.mapData { it.toLogPage() } }
         }
 
     /**
      * Fetches the page after the cached ones and appends it, updating open [events] streams.
      * Does nothing when there is no cached first page or no next page.
+     *
+     * A first-page refresh wins over a load-more: a running one is awaited first, so the next
+     * page continues the fresh list; one that lands while the next page is loading makes the
+     * append a no-op (compare-and-set in [CachedResource.put]), so stale rows never come back.
      */
     suspend fun loadMore(query: LogQuery): Result<Unit> = attempt {
         val session = sessions.signedIn().key
         val resource = pageResource(query)
         loadMoreLock.withLock {
-            // Taken before the request: a sign-out while it runs drops the merged page.
+            resource.awaitInFlight(session)
+            // Taken before the read: a sign-out from here on drops the merged page.
             val generation = store.generation(session)
             val cached = store.read(session, eventsKey(query), LogEventPageDTO.serializer()) ?: return@withLock
             val cursor = cached.value.nextCursor ?: return@withLock
             val next = fetchPage(session, query, cursor)
-            val seen = cached.value.items.mapTo(HashSet()) { it.id }
-            val merged = LogEventPageDTO(cached.value.items + next.items.filter { it.id !in seen }, next.nextCursor)
-            // Keep the first page's fetchedAt: staleness is about when the list was (re)loaded.
-            resource.put(session, merged, fetchedAt = cached.fetchedAt, generation = generation)
+            // Keeps the first page's fetchedAt: staleness is about when the list was (re)loaded.
+            resource.put(session, cached.value.append(next), expected = cached, generation = generation)
         }
     }
 
@@ -95,26 +100,36 @@ class LogStore internal constructor(
     private fun detailResource(id: Int): CachedResource<LogEventDetailDTO> =
         details.getOrPut(id) {
             CachedResource("event:$id", LogEventDetailDTO.serializer(), store, clock, scope) { session ->
-                sessions.tokenFor(session)
-                api.getLogEvent(id)
+                sessions.fetchAs(session) { api.getLogEvent(id) }
                     .let { requireData(it.success, it.message, it.errorCode, it.data) }
                     .also { it.toLogEventDetail() } // Fails the fetch, not the stream, on bad data.
             }
         }
 
-    private suspend fun fetchPage(session: SessionKey, query: LogQuery, cursor: String?): LogEventPageDTO {
-        sessions.tokenFor(session) // The interceptor adds the header; make sure it is this session's.
-        return api.getLogEvents(
-            projectId = query.projectId,
-            minLevel = query.apiMinLevel,
-            logfileId = query.logFileId,
-            query = query.apiText,
-            sort = query.sort.api,
-            cursor = cursor,
-        )
+    private suspend fun fetchPage(session: SessionKey, query: LogQuery, cursor: String?): LogEventPageDTO =
+        sessions.fetchAs(session) {
+            api.getLogEvents(
+                projectId = query.projectId,
+                minLevel = query.apiMinLevel,
+                logfileId = query.logFileId,
+                query = query.apiText,
+                sort = query.sort.api,
+                cursor = cursor,
+            )
+        }
             .let { requireData(it.success, it.message, it.errorCode, it.data) }
             .also { it.toLogPage() } // Fails the fetch, not the stream, on bad data.
+
+    /**
+     * Appends [next], skipping groups already listed. A group is (project, type, message), not
+     * the row id: its id changes when a new row arrives between pages.
+     */
+    private fun LogEventPageDTO.append(next: LogEventPageDTO): LogEventPageDTO {
+        val seen = items.mapTo(HashSet()) { it.groupKey() }
+        return LogEventPageDTO(items + next.items.filter { it.groupKey() !in seen }, next.nextCursor)
     }
+
+    private fun LogEventDTO.groupKey() = Triple(projectId, errortype, message)
 
     private fun eventsKey(query: LogQuery) = "events:" + query.hashKey()
 

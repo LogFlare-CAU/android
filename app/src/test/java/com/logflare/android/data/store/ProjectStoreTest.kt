@@ -15,11 +15,13 @@ import com.logflare.android.data.store.model.HomeSummary
 import com.logflare.android.data.store.model.LogFileRef
 import com.logflare.android.data.store.model.ProjectItem
 import com.logflare.android.data.store.model.ProjectWithToken
+import java.io.IOException
 import java.time.Instant
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -27,6 +29,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -156,6 +159,119 @@ class ProjectStoreTest {
         val summary = store.summary().first { it.data != null }.data
 
         assertEquals(HomeSummary(errors24h = 4, warnings24h = 2, projectCount = 2), summary)
+    }
+
+    @Test
+    fun projectsAndSummary_shareOneSummaryCall_andCreateUpdatesBoth() = runTest {
+        api.summary = { summaryOf(projects = listOf(ProjectSummaryDTO(1, 0, 0))) }
+        val store = newStore()
+        val projects = backgroundScope.launch { store.projects().collect {} }
+        val summary = store.summary().first { it.data != null && !it.refreshing }.data
+        projects.cancel()
+
+        assertEquals(HomeSummary(0, 0, projectCount = 1), summary)
+        assertEquals(1, api.count("getLogSummary"))
+        assertEquals(1, api.count("listProjects"))
+
+        api.projects = { ok(listOf(project(1, "alpha"), project(99, "gamma"))) }
+        api.summary = { summaryOf(projects = listOf(ProjectSummaryDTO(1, 0, 0), ProjectSummaryDTO(99, 0, 0))) }
+        assertTrue(store.create("gamma").isSuccess)
+
+        assertEquals(2, store.summary().first().data?.projectCount)
+        assertEquals(2, api.count("getLogSummary"))
+    }
+
+    @Test
+    fun summaryForProject_usesItsOwnCall() = runTest {
+        api.summary = { id -> summaryOf(counts = mapOf("ERROR" to (id ?: -1)), projects = listOf(ProjectSummaryDTO(id ?: 0, 0, 0))) }
+        val store = newStore()
+
+        assertEquals(HomeSummary(5, 0, 1), store.summary(projectId = 5).first { it.data != null }.data)
+        assertEquals(1, api.count("getLogSummary"))
+        assertEquals(0, api.count("listProjects"))
+    }
+
+    @Test
+    fun rename_success_refreshesProjects() = runTest {
+        val store = newStore()
+        assertTrue(store.rename(1, "renamed").isSuccess)
+        assertEquals(1, api.count("changeProjectName"))
+        assertEquals(1, api.count("listProjects"))
+    }
+
+    @Test
+    fun rename_failure_isResult() = runTest {
+        api.mutationRejected = true
+        val result = newStore().rename(1, "renamed")
+        assertEquals(FakeLogflareApi.REJECTED, (result.exceptionOrNull() as ApiException).message)
+        assertEquals(0, api.count("listProjects"))
+    }
+
+    @Test
+    fun delete_success_refreshesProjects() = runTest {
+        assertTrue(newStore().delete(1).isSuccess)
+        assertEquals(1, api.count("deleteProject"))
+        assertEquals(1, api.count("listProjects"))
+    }
+
+    @Test
+    fun delete_failure_isResult() = runTest {
+        val offline = IOException("offline")
+        api.mutationError = offline
+        assertSame(offline, newStore().delete(1).exceptionOrNull())
+    }
+
+    @Test
+    fun rotateToken_success_returnsNewToken() = runTest {
+        assertEquals(Result.success("rotated-3"), newStore().rotateToken(3))
+        assertEquals(listOf(TOKEN), api.tokens)
+    }
+
+    @Test
+    fun rotateToken_failure_isResult() = runTest {
+        api.mutationRejected = true
+        assertTrue(newStore().rotateToken(3).exceptionOrNull() is ApiException)
+    }
+
+    @Test
+    fun setMembers_success_refreshesProjects() = runTest {
+        assertTrue(newStore().setMembers(1, setOf("alice")).isSuccess)
+        assertEquals(1, api.count("resetProjectPerms"))
+        assertEquals(1, api.count("listProjects"))
+    }
+
+    @Test
+    fun setMembers_failure_isResult() = runTest {
+        val offline = IOException("offline")
+        api.mutationError = offline
+        assertSame(offline, newStore().setMembers(1, setOf("alice")).exceptionOrNull())
+    }
+
+    @Test
+    fun mutation_whileSignedOut_isNotSignedInFailure() = runTest {
+        sessions.value = SessionState.SignedOut
+        assertTrue(newStore().create("x").exceptionOrNull() is NotSignedInException)
+        assertEquals(0, api.calls.size)
+    }
+
+    @Test
+    fun sessionChangeMidFetch_resultIsNotCached() = runTest {
+        val list = CompletableDeferred<ProjectSequenceResponse>()
+        api.projects = { list.await() }
+        val store = newStore()
+        val collector = backgroundScope.launch { store.projects().collect {} }
+        runCurrent()
+        assertEquals(1, api.count("listProjects"))
+
+        sessions.value = signedIn().copy(userIdx = 8, key = SessionKey("bbbbbbbbbbbbbbbb"))
+        list.complete(ok(listOf(project(1, "alpha"))))
+        runCurrent()
+        collector.cancel()
+
+        // Back to the first user: nothing was cached for them from the rejected fetch.
+        api.projects = { ok(emptyList()) }
+        sessions.value = signedIn()
+        assertTrue(store.projects().first().isInitialLoad)
     }
 
     companion object {

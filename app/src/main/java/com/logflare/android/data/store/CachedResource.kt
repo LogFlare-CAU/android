@@ -58,6 +58,8 @@ class CachedResource<T>(
             .collect { event ->
                 when (event) {
                     is FetchEvent.Started -> latestStarted = maxOf(latestStarted, event.fetchId)
+                    // A put() is not a fetch: it never ends one, so it is never "older" either.
+                    is FetchEvent.Replaced -> Unit
                     // The end of an older fetch while a newer one runs: keep showing "refreshing".
                     else -> if (event.fetchId < latestStarted) return@collect
                 }
@@ -77,22 +79,36 @@ class CachedResource<T>(
         fetchShared(session).await()
     }
 
+    /** Waits for the fetch of [session] that is running now, if any, without starting one. */
+    suspend fun awaitInFlight(session: SessionKey) {
+        mutex.withLock { inFlight[inFlightId(session)]?.takeIf { it.isActive } }?.await()
+    }
+
     /**
-     * Replaces the cached value of [session] without fetching (e.g. a list with a "load more"
-     * page appended) and pushes it to every active [stream] of [session]. Like a fetch result,
-     * it is dropped when [session] was cleared since [generation] was taken, so take the
-     * generation before any request whose result goes into [value].
+     * Compare-and-set: replaces the cached value of [session] with [value] (e.g. a list with a
+     * "load more" page appended) only if the cache still holds exactly [expected], i.e. no
+     * fetch or other put landed since [expected] was read; then pushes it to every active
+     * [stream] of [session] without ending an in-flight fetch's "refreshing". Like a fetch
+     * result, it is dropped when [session] was cleared since [generation] was taken, so take
+     * the generation before reading [expected].
+     *
+     * @return whether [value] was stored.
      */
     suspend fun put(
         session: SessionKey,
         value: T,
-        fetchedAt: Long = clock(),
-        generation: Long = store.generation(session),
-    ) {
-        store.write(session, key, value, serializer, fetchedAt, generation)
-        if (store.generation(session) != generation) return
-        val fetchId = mutex.withLock { nextFetchId++ }
-        events.emit(FetchEvent.Succeeded(session, fetchId, Cached(value, fetchedAt)))
+        expected: Cached<T>?,
+        generation: Long,
+        fetchedAt: Long = expected?.fetchedAt ?: clock(),
+    ): Boolean {
+        return mutex.withLock {
+            if (store.generation(session) != generation) return@withLock false
+            if (store.read(session, key, serializer) != expected) return@withLock false
+            store.write(session, key, value, serializer, fetchedAt, generation)
+            // Still under the mutex: a fetch that writes after us also announces after us.
+            events.emit(FetchEvent.Replaced(session, Cached(value, fetchedAt)))
+            true
+        }
     }
 
     private fun isStale(cached: Cached<T>): Boolean {
@@ -101,7 +117,7 @@ class CachedResource<T>(
     }
 
     private suspend fun fetchShared(session: SessionKey): Deferred<Result<Cached<T>>> = mutex.withLock {
-        val id = "${session.value}|$key"
+        val id = inFlightId(session)
         inFlight[id]?.takeIf { it.isActive }?.let { return@withLock it }
         val fetchId = nextFetchId++
         // Taken before the request so a clear() (sign-out) during it makes the write a no-op.
@@ -114,7 +130,8 @@ class CachedResource<T>(
                 result = try {
                     val value = fetch(session)
                     val fetchedAt = clock()
-                    store.write(session, key, value, serializer, fetchedAt, generation)
+                    // Under the mutex, so a put() compare-and-set can't interleave with it.
+                    mutex.withLock { store.write(session, key, value, serializer, fetchedAt, generation) }
                     Result.success(Cached(value, fetchedAt))
                 } catch (e: Throwable) {
                     // Only our own cancellation propagates; e.g. a withTimeout inside fetch is a failure.
@@ -137,10 +154,13 @@ class CachedResource<T>(
         }.also { inFlight[id] = it }
     }
 
+    private fun inFlightId(session: SessionKey) = "${session.value}|$key"
+
     private fun Resource<T>.apply(event: FetchEvent<T>): Resource<T> = when (event) {
         is FetchEvent.Started -> copy(refreshing = true, error = null)
         is FetchEvent.Succeeded -> Resource(event.cached.value, refreshing = false, error = null, fetchedAt = event.cached.fetchedAt)
         is FetchEvent.Failed -> copy(refreshing = false, error = event.error)
+        is FetchEvent.Replaced -> copy(data = event.cached.value, fetchedAt = event.cached.fetchedAt)
     }
 
     companion object {
@@ -158,4 +178,9 @@ private sealed interface FetchEvent<out T> {
     data class Started(override val session: SessionKey, override val fetchId: Long) : FetchEvent<Nothing>
     data class Succeeded<T>(override val session: SessionKey, override val fetchId: Long, val cached: Cached<T>) : FetchEvent<T>
     data class Failed(override val session: SessionKey, override val fetchId: Long, val error: Throwable) : FetchEvent<Nothing>
+
+    /** A put(); not tied to any fetch. */
+    data class Replaced<T>(override val session: SessionKey, val cached: Cached<T>) : FetchEvent<T> {
+        override val fetchId: Long get() = -1
+    }
 }
