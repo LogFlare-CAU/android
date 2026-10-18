@@ -24,14 +24,16 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -70,6 +72,8 @@ import com.logflare.android.ui.format.levelLabel
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.ceil
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * The Logs tab. [entryState] is the Logs back-stack entry's SavedStateHandle, where Home's stat
@@ -241,16 +245,18 @@ private fun LogList(
     modifier: Modifier,
 ) {
     val listState = rememberLazyListState()
-    val nearEnd by remember {
-        derivedStateOf {
+    // Driven by layout, not by state: a page that lands below the viewport changes the item
+    // count but not what is visible, so it never chains into the next load by itself. A list that
+    // still ends on screen after a page lands asks again (the pair changes).
+    val hasMore by rememberUpdatedState(state.hasMore)
+    val endReached by rememberUpdatedState(onEndReached)
+    LaunchedEffect(listState) {
+        snapshotFlow {
             val info = listState.layoutInfo
-            val last = info.visibleItemsInfo.lastOrNull()?.index ?: return@derivedStateOf false
-            last >= info.totalItemsCount - END_THRESHOLD
+            (info.visibleItemsInfo.lastOrNull()?.index ?: -1) to info.totalItemsCount
         }
-    }
-    // Re-checked after each page lands (count), in case the list still doesn't fill the screen.
-    LaunchedEffect(nearEnd, state.hasMore, state.count) {
-        if (nearEnd && state.hasMore) onEndReached()
+            .distinctUntilChanged()
+            .collect { (last, total) -> if (hasMore && total > 0 && last >= total - END_THRESHOLD) endReached() }
     }
     // A new query starts from the top (not a recreated screen: it keeps its scroll position).
     val shownQuery = remember { mutableStateOf(state.query) }
@@ -303,7 +309,7 @@ private fun LazyListScope.rows(state: LogsUiState, names: Map<Int, String>, zone
     // Rows of the selected project needn't repeat its name.
     val showProject = state.query.projectId == null
     state.groups.forEach { group ->
-        item(key = "day:${group.label}") { DayHeader(group.label) }
+        item(key = "day:${group.items.first().id}") { DayHeader(group.label) }
         items(group.items, key = { "log:${it.id}" }) { log ->
             LogRow(
                 log = log,
@@ -411,26 +417,50 @@ private fun LogRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Row {
-                    if (projectName != null) {
-                        Text(
-                            projectName,
-                            style = Lf.type.secondary,
-                            color = Lf.colors.textMuted,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                    }
-                    Text(
-                        if (projectName != null) stringResource(R.string.logs_meta_after_project, tail) else tail,
-                        style = Lf.type.secondary,
-                        color = Lf.colors.textMuted,
-                        maxLines = 1,
-                    )
+                if (projectName != null) {
+                    ProjectThenTail(projectName, stringResource(R.string.logs_meta_after_project, tail))
+                } else {
+                    Text(tail, style = Lf.type.secondary, color = Lf.colors.textMuted, maxLines = 1)
                 }
             }
             if (log.occurrences > 1) CountBadge(log.occurrences, StatTone.Neutral)
+        }
+    }
+}
+
+/**
+ * "[project][tail]" on one line: the tail (" · 15:40") always shows in full and the project
+ * ellipsizes. The tail follows the project's visible end, not its box: an ellipsized Text keeps
+ * the full width offered, which would leave a gap before the tail.
+ */
+@Composable
+private fun ProjectThenTail(project: String, tail: String) {
+    val projectEnd = remember { FloatArray(1) }
+    Layout(
+        content = {
+            Text(
+                project,
+                style = Lf.type.secondary,
+                color = Lf.colors.textMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { projectEnd[0] = it.getLineRight(0) },
+            )
+            Text(tail, style = Lf.type.secondary, color = Lf.colors.textMuted, maxLines = 1)
+        },
+    ) { (projectText, tailText), constraints ->
+        val loose = constraints.copy(minWidth = 0)
+        val tailPlaceable = tailText.measure(loose)
+        val projectPlaceable = projectText.measure(
+            loose.copy(maxWidth = (constraints.maxWidth - tailPlaceable.width).coerceAtLeast(0)),
+        )
+        // onTextLayout ran during that measure; it isn't called again when the layout is cached,
+        // and then the stored end is still the current one.
+        val projectWidth = ceil(projectEnd[0]).toInt().coerceIn(0, projectPlaceable.width)
+        val height = maxOf(projectPlaceable.height, tailPlaceable.height)
+        layout(projectWidth + tailPlaceable.width, height) {
+            projectPlaceable.placeRelative(0, 0)
+            tailPlaceable.placeRelative(projectWidth, 0)
         }
     }
 }

@@ -1,13 +1,21 @@
 package com.logflare.android.feature.log
 
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import com.example.logflare.core.designsystem.v2.LfLevel
 import com.example.logflare.core.designsystem.v2.LogFlareTheme
+import com.logflare.android.data.store.model.LogEvent
 import com.logflare.android.ui.VisualQaTags
+import java.time.Instant
+import java.time.LocalDate
 import com.logflare.android.visual.LogsFixtures
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -24,8 +32,11 @@ class LogsContentTest {
 
     private val calls = mutableListOf<String>()
 
-    private fun show(state: LogsUiState) {
+    private fun show(state: LogsUiState) = show(mutableStateOf(state))
+
+    private fun show(holder: MutableState<LogsUiState>) {
         compose.setContent {
+            val state by holder
             LogFlareTheme(darkTheme = false) {
                 LogsContent(
                     state = state,
@@ -63,6 +74,38 @@ class LogsContentTest {
             listOf("log:2", "sheet:Project", "sheet:Level", "sheet:Sort", "toggleSearch"),
             calls.filter { it != "end" },
         )
+    }
+
+    private fun manyRows(n: Int): List<LogEvent> = (1..n).map { i ->
+        val seen = Instant.parse("2026-10-18T12:00:00Z").minusSeconds(i * 60L)
+        LogEvent(i, 1, null, null, "message $i", LfLevel.Error, seen, seen, 1)
+    }
+
+    private fun page(rows: Int) = LogsUiState(
+        groups = groupByDay(manyRows(rows), LocalDate.of(2026, 10, 18), LogsFixtures.ZONE),
+        count = rows,
+        hasMore = true,
+        initialLoad = false,
+    )
+
+    @Test
+    fun endReached_onceAtEnd_notAgainWhenAPageLandsBelow() {
+        val holder = mutableStateOf(page(3))
+        show(holder)
+        compose.waitForIdle()
+        // Three rows fill nothing: the end is in view.
+        assertEquals(1, calls.count { it == "end" })
+
+        // The next page lands; the user is still at the top, far from the new end.
+        holder.value = page(60)
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+        assertEquals(1, calls.count { it == "end" })
+
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(62)
+        compose.waitForIdle()
+        assertEquals(2, calls.count { it == "end" })
     }
 
     @Test

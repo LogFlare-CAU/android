@@ -69,18 +69,20 @@ class LogGroupingTest {
     }
 
     @Test
-    fun groupByDay_levelSort_keepsServerOrderWithinAndAcrossDays() {
-        // Highest level first: a day can only head the list where its first row does.
+    fun groupByDay_levelSort_keepsServerOrder() {
+        // Highest level first: rows are never moved up into an earlier group of the same day, so
+        // the list keeps the sort (and rows of a later page never land above what was shown).
         val items = listOf(
             log(1, "2026-10-17T03:00:00Z"),
-            log(2, "2026-10-18T01:00:00Z"),
-            log(3, "2026-10-17T05:00:00Z"),
+            log(2, "2026-10-17T04:00:00Z"),
+            log(3, "2026-10-18T01:00:00Z"),
+            log(4, "2026-10-17T05:00:00Z"),
         )
 
         val groups = groupByDay(items, today, zone)
 
-        assertEquals(listOf(DayLabel.Yesterday, DayLabel.Today), groups.map { it.label })
-        assertEquals(listOf(listOf(1, 3), listOf(2)), groups.map { g -> g.items.map { it.id } })
+        assertEquals(listOf(DayLabel.Yesterday, DayLabel.Today, DayLabel.Yesterday), groups.map { it.label })
+        assertEquals(listOf(listOf(1, 2), listOf(3), listOf(4)), groups.map { g -> g.items.map { it.id } })
     }
 
     @Test

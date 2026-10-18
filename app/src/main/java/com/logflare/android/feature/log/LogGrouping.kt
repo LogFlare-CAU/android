@@ -16,14 +16,21 @@ sealed interface DayLabel {
 data class DayGroup(val label: DayLabel, val items: List<LogEvent>)
 
 /**
- * Splits [items] by the local day (in [zone]) of their `lastSeen`. The list's order is kept, within
- * and across groups: days come in the order their first row appears, so newest-first lists start
- * with Today and an Oldest sort keeps ascending days.
+ * Splits [items] into runs of rows from the same local day (in [zone]) of their `lastSeen`,
+ * keeping the list's order: a row joins the group before it only when it is from that group's
+ * day. Newest-first lists start with Today, an Oldest sort keeps ascending days, and a level sort
+ * keeps its order (a day can then appear more than once); rows of a later page never move up
+ * into a group above them.
  */
-fun groupByDay(items: List<LogEvent>, today: LocalDate, zone: ZoneId): List<DayGroup> =
-    items
-        .groupBy { it.lastSeen.atZone(zone).toLocalDate() } // LinkedHashMap: first-appearance order.
-        .map { (day, rows) -> DayGroup(labelOf(day, today), rows) }
+fun groupByDay(items: List<LogEvent>, today: LocalDate, zone: ZoneId): List<DayGroup> {
+    val groups = mutableListOf<Pair<LocalDate, MutableList<LogEvent>>>()
+    for (item in items) {
+        val day = item.lastSeen.atZone(zone).toLocalDate()
+        val last = groups.lastOrNull()
+        if (last != null && last.first == day) last.second += item else groups += day to mutableListOf(item)
+    }
+    return groups.map { (day, rows) -> DayGroup(labelOf(day, today), rows) }
+}
 
 private fun labelOf(day: LocalDate, today: LocalDate): DayLabel = when (day) {
     today -> DayLabel.Today

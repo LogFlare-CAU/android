@@ -17,22 +17,21 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 enum class LogsSheet { Project, Level, Sort }
@@ -54,8 +53,8 @@ data class LogsUiState(
     val projects: List<ProjectItem> = emptyList(),
     val sheet: LogsSheet? = null,
 ) {
-    /** Any filter or search differs from the default list (offers "Clear filters"). */
-    val filtered: Boolean get() = query != LogQuery() || search.isNotBlank()
+    /** The list shown is filtered or searched (offers "Clear filters"); typed text counts once applied. */
+    val filtered: Boolean get() = query != LogQuery()
 }
 
 sealed interface LogsEvent {
@@ -70,7 +69,7 @@ internal const val LOGS_SEARCH_DEBOUNCE_MS = 300L
  * infinite scroll. Filters and search text live in [savedState], so they survive process death;
  * an open sheet does not.
  */
-@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LogsViewModel @Inject constructor(
     private val savedState: SavedStateHandle,
@@ -78,12 +77,8 @@ class LogsViewModel @Inject constructor(
     projectStore: ProjectStore,
 ) : ViewModel() {
 
-    private val projectId = savedState.getStateFlow<Int?>(KEY_PROJECT, null)
-    private val minLevel = savedState.getStateFlow<String?>(KEY_LEVEL, null)
-    private val sort = savedState.getStateFlow(KEY_SORT, LogSortOrder.Newest.name)
-    private val search = savedState.getStateFlow(KEY_SEARCH, "")
-    private val searchOpen = savedState.getStateFlow(KEY_SEARCH_OPEN, false)
-
+    /** Every filter in one value, so a reset is one change (no transient mixed query). */
+    private val filters = MutableStateFlow(readFilters())
     private val sheet = MutableStateFlow<LogsSheet?>(null)
     private val refreshing = MutableStateFlow(false)
     private var loadingMore = false
@@ -92,27 +87,29 @@ class LogsViewModel @Inject constructor(
     val events: Flow<LogsEvent> = _events.receiveAsFlow()
 
     /**
-     * Search text as it joins the query. Typing is debounced; the current text on start (e.g.
-     * restored after process death) and a blank text apply at once, so the first state is never
-     * held back and clearing the search never shows stale results.
+     * The query to show. A change of the search text alone waits [LOGS_SEARCH_DEBOUNCE_MS] (and
+     * restarts while typing); anything else applies at once, together with the text typed so far.
+     * A blank text is never held back, so clearing the search never shows stale results, and the
+     * first value (e.g. restored after process death) is not held back either.
      */
-    private val appliedSearch: Flow<String> = flow {
-        emit(search.value)
-        emitAll(search.drop(1).debounce { if (it.isBlank()) 0L else LOGS_SEARCH_DEBOUNCE_MS })
-    }
-
-    private val filters = combine(projectId, minLevel, sort) { p, l, s ->
-        LogQuery(projectId = p, minLevel = l?.let(LfLevel::parse), sort = LogSortOrder.valueOf(s))
-    }
-
-    private val query: Flow<LogQuery> =
-        combine(filters, appliedSearch) { f, text -> f.copy(text = text.takeIf { it.isNotBlank() }) }
-            .distinctUntilChanged()
+    private val query: Flow<LogQuery> = flow {
+        var shown: Filters? = null
+        emitAll(
+            filters.transformLatest { f ->
+                val prev = shown
+                if (prev != null && f.search.isNotBlank() && f.toQuery().copy(text = null) == prev.toQuery().copy(text = null)) {
+                    delay(LOGS_SEARCH_DEBOUNCE_MS)
+                }
+                shown = f
+                emit(f.toQuery())
+            },
+        )
+    }.distinctUntilChanged()
 
     private val page: Flow<Pair<LogQuery, Resource<LogPage>>> =
         query.flatMapLatest { q -> logStore.events(q).map { q to it } }
 
-    private val local = combine(sheet, refreshing, search, searchOpen) { sh, r, s, o -> Local(sh, r, s, o) }
+    private val local = combine(sheet, refreshing, filters) { sh, r, f -> Local(sh, r, f.search, f.searchOpen) }
 
     val state: StateFlow<LogsUiState> = combine(page, projectStore.projects(), local) { (q, res), projects, l ->
         val items = res.data?.items.orEmpty()
@@ -133,7 +130,7 @@ class LogsViewModel @Inject constructor(
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
-        LogsUiState(query = currentFilters(), searchOpen = searchOpen.value, search = search.value),
+        filters.value.let { LogsUiState(query = it.toQuery(), searchOpen = it.searchOpen, search = it.search) },
     )
 
     /**
@@ -146,35 +143,24 @@ class LogsViewModel @Inject constructor(
     suspend fun collectPresets(entryState: SavedStateHandle) {
         entryState.getStateFlow<String?>(Destinations.LogsMinLevelArg, null).collect { raw ->
             if (raw == null) return@collect
-            resetFilters(minLevel = LfLevel.parse(raw))
+            update { Filters(minLevel = LfLevel.parse(raw)) }
             entryState[Destinations.LogsMinLevelArg] = null
         }
     }
 
-    fun setProject(id: Int?) {
-        savedState[KEY_PROJECT] = id
-    }
+    fun setProject(id: Int?) = update { it.copy(projectId = id) }
 
-    fun setMinLevel(level: LfLevel?) {
-        savedState[KEY_LEVEL] = level?.name
-    }
+    fun setMinLevel(level: LfLevel?) = update { it.copy(minLevel = level) }
 
-    fun setSort(order: LogSortOrder) {
-        savedState[KEY_SORT] = order.name
-    }
+    fun setSort(order: LogSortOrder) = update { it.copy(sort = order) }
 
     /** Opens the search field, or closes it and drops its text. */
-    fun toggleSearch() {
-        val open = !searchOpen.value
-        if (!open) savedState[KEY_SEARCH] = ""
-        savedState[KEY_SEARCH_OPEN] = open
-    }
+    fun toggleSearch() = update { if (it.searchOpen) it.copy(searchOpen = false, search = "") else it.copy(searchOpen = true) }
 
-    fun onSearch(text: String) {
-        savedState[KEY_SEARCH] = text
-    }
+    fun onSearch(text: String) = update { it.copy(search = text) }
 
-    fun clearFilters() = resetFilters(minLevel = null)
+    /** Back to the unfiltered list; an open search field stays open, emptied. */
+    fun clearFilters() = update { Filters(searchOpen = it.searchOpen) }
 
     fun openSheet(target: LogsSheet) {
         sheet.value = target
@@ -208,19 +194,34 @@ class LogsViewModel @Inject constructor(
         }
     }
 
-    private fun resetFilters(minLevel: LfLevel?) {
-        savedState[KEY_PROJECT] = null
-        savedState[KEY_LEVEL] = minLevel?.name
-        savedState[KEY_SORT] = LogSortOrder.Newest.name
-        savedState[KEY_SEARCH] = ""
+    private fun update(change: (Filters) -> Filters) {
+        val next = change(filters.value)
+        filters.value = next
+        savedState[KEY_PROJECT] = next.projectId
+        savedState[KEY_LEVEL] = next.minLevel?.name
+        savedState[KEY_SORT] = next.sort.name
+        savedState[KEY_SEARCH] = next.search
+        savedState[KEY_SEARCH_OPEN] = next.searchOpen
     }
 
-    private fun currentFilters() = LogQuery(
-        projectId = projectId.value,
-        minLevel = minLevel.value?.let(LfLevel::parse),
-        text = search.value.takeIf { it.isNotBlank() },
-        sort = LogSortOrder.valueOf(sort.value),
+    private fun readFilters() = Filters(
+        projectId = savedState[KEY_PROJECT],
+        minLevel = savedState.get<String>(KEY_LEVEL)?.let(LfLevel::parse),
+        sort = savedState.get<String>(KEY_SORT)?.let(LogSortOrder::valueOf) ?: LogSortOrder.Newest,
+        search = savedState[KEY_SEARCH] ?: "",
+        searchOpen = savedState[KEY_SEARCH_OPEN] ?: false,
     )
+
+    /** What the user picked; [search] is the text as typed. */
+    private data class Filters(
+        val projectId: Int? = null,
+        val minLevel: LfLevel? = null,
+        val sort: LogSortOrder = LogSortOrder.Newest,
+        val search: String = "",
+        val searchOpen: Boolean = false,
+    ) {
+        fun toQuery() = LogQuery(projectId, minLevel, text = search.takeIf { it.isNotBlank() }, sort = sort)
+    }
 
     private class Local(val sheet: LogsSheet?, val refreshing: Boolean, val search: String, val searchOpen: Boolean)
 

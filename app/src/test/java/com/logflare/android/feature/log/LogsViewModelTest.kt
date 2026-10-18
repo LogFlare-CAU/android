@@ -134,16 +134,44 @@ class LogsViewModelTest {
         vm.onSearch("db")
         settle()
         assertTrue(vm.state.value.filtered)
+        val before = api.eventsCalls.size
 
         vm.clearFilters()
         runCurrent()
+        settle()
+        // One request for the default list: no transient mix of old and cleared filters.
+        assertEquals(listOf(EventsDefaults), api.eventsCalls.drop(before).map { Triple(it.projectId, it.minLevel, it.query) })
 
         val s = vm.state.value
         assertEquals(LogQuery(), s.query)
         assertEquals("", s.search)
         assertFalse(s.filtered)
+    }
+
+    @Test
+    fun filtered_followsAppliedQuery_notTypedText() = runTest {
+        val vm = newVm()
         settle()
-        assertEquals(EventsDefaults, api.eventsCalls.last().let { Triple(it.projectId, it.minLevel, it.query) })
+        vm.toggleSearch()
+        vm.onSearch("db")
+        runCurrent()
+        // Typed but not applied yet: the list still shows the unfiltered query.
+        assertEquals("db", vm.state.value.search)
+        assertFalse(vm.state.value.filtered)
+        settle()
+        assertTrue(vm.state.value.filtered)
+    }
+
+    @Test
+    fun filterChange_whileTyping_appliesTypedTextWithIt() = runTest {
+        val vm = newVm()
+        settle()
+        vm.toggleSearch()
+        vm.onSearch("db")
+        runCurrent()
+        vm.setMinLevel(LfLevel.Error)
+        runCurrent()
+        assertEquals(LogQuery(minLevel = LfLevel.Error, text = "db"), vm.state.value.query)
     }
 
     @Test
@@ -191,6 +219,8 @@ class LogsViewModelTest {
         val entry = SavedStateHandle()
         val vm = newVm()
         vm.setProject(2)
+        vm.toggleSearch()
+        vm.onSearch("db")
         backgroundScope.launch { vm.collectPresets(entry) }
         settle()
 
@@ -199,6 +229,8 @@ class LogsViewModelTest {
         settle()
 
         assertEquals(LogQuery(minLevel = LfLevel.Error), vm.state.value.query)
+        assertFalse(vm.state.value.searchOpen)
+        assertEquals("", vm.state.value.search)
         assertEquals("ERROR", api.eventsCalls.last().minLevel)
         assertNull(api.eventsCalls.last().projectId)
         // Consumed: a recreated screen doesn't apply it again.
