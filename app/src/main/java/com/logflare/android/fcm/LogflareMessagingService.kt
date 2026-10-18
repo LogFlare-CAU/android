@@ -18,6 +18,7 @@ import com.logflare.android.push.AlertSettingsRepository
 import com.logflare.android.push.NotificationHistory
 import com.logflare.android.push.PushDecision
 import com.logflare.android.push.PushMessage
+import com.logflare.android.push.PushRegistrar
 import com.logflare.android.push.decideIncoming
 import com.logflare.android.push.from
 import com.logflare.android.push.toHistoryEntry
@@ -51,6 +52,9 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
     lateinit var notificationHistory: NotificationHistory
 
     @Inject
+    lateinit var pushRegistrar: PushRegistrar
+
+    @Inject
     @ApplicationScope
     lateinit var appScope: CoroutineScope
 
@@ -58,15 +62,8 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.i(TAG, "FCM token: $token")
-        // fire-and-forget register using DeviceRepository
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                deviceRepository.registerDevice(token)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to register device token", e)
-            }
-        }
+        Log.i(TAG, "FCM token refreshed")
+        appScope.launch { pushRegistrar.onNewToken(token) }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

@@ -13,6 +13,7 @@ import com.example.logflare.core.network.LogflareApi
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.messaging.FirebaseMessaging
+import com.logflare.android.push.PushTokenSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +38,7 @@ class DeviceRepository @Inject constructor(
     private val auth: AuthRepository,
     @ApplicationContext private val context: Context,
     private val json: Json
-) {
+) : PushTokenSource {
 
     companion object {
         private val KEY_FCM_CONFIG: Preferences.Key<String> = stringPreferencesKey("config")
@@ -51,11 +52,20 @@ class DeviceRepository @Inject constructor(
      */
     suspend fun syncConfigAndRegister() {
         val bearer = auth.token.firstOrNull() ?: return
-        val remoteConfig = fetchRemoteConfig(bearer)
+        if (!ensureFirebase()) return
+        registerCurrentToken(bearer)
+    }
+
+    /**
+     * Fetches the FCM config from the backend (falling back to the persisted copy), persists it,
+     * and initializes Firebase if needed. Returns whether Firebase is ready.
+     */
+    override suspend fun ensureFirebase(): Boolean {
+        val remoteConfig = auth.token.firstOrNull()?.let { fetchRemoteConfig(it) }
         val config = remoteConfig ?: loadPersistedConfig()
         if (config == null) {
             Log.w(TAG, "No FCM config available from backend or cache")
-            return
+            return false
         }
 
         if (remoteConfig != null) {
@@ -64,10 +74,9 @@ class DeviceRepository @Inject constructor(
 
         if (!initializeFirebase(config)) {
             Log.w(TAG, "Firebase initialization failed")
-            return
+            return false
         }
-
-        registerCurrentToken(bearer)
+        return true
     }
 
     /**
@@ -86,7 +95,7 @@ class DeviceRepository @Inject constructor(
         }
     }
 
-    suspend fun getFcmTokenOrNull(): String? {
+    override suspend fun getFcmTokenOrNull(): String? {
         return runCatching {
             FirebaseMessaging.getInstance().token.await()
         }.onFailure { error ->

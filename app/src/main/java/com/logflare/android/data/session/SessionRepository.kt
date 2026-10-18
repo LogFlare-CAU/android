@@ -72,10 +72,23 @@ class SessionRepository @Inject constructor(
 
     /** [token] is stored verbatim and must already include the `Bearer ` prefix. */
     suspend fun signIn(serverUrl: String, token: String, user: UserDTO) {
+        switchServer(serverUrl)
+        auth.setSession(token, user)
+    }
+
+    /**
+     * Sign-in whose profile couldn't be loaded: the session key falls back to [username] until
+     * the profile is known. [token] must already include the `Bearer ` prefix.
+     */
+    suspend fun signIn(serverUrl: String, token: String, username: String) {
+        switchServer(serverUrl)
+        auth.setTokenAndUsername(token, username)
+    }
+
+    private suspend fun switchServer(serverUrl: String) {
         // Never let a new server URL pair up with a previous user's token, even transiently.
         if (_state.value is SessionState.SignedIn) auth.clearToken()
         baseUrlProvider.setBaseUrl(serverUrl)
-        auth.setSession(token, user)
     }
 
     suspend fun updateProfile(user: UserDTO) {

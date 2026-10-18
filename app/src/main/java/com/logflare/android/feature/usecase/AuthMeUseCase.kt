@@ -3,7 +3,6 @@ package com.logflare.android.feature.usecase
 import com.example.logflare.core.model.UserDTO
 import com.example.logflare.core.network.LogflareApi
 import com.logflare.android.data.AuthRepository
-import com.logflare.android.data.DeviceRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,7 +10,6 @@ import javax.inject.Singleton
 class AuthMeUseCase @Inject constructor(
     private val api: LogflareApi,
     private val authRepository: AuthRepository,
-    private val deviceRepository: DeviceRepository
 ) {
     suspend operator fun invoke(): Result<UserDTO> {
         val token = runCatching { authRepository.getToken() }
@@ -27,10 +25,8 @@ class AuthMeUseCase @Inject constructor(
 
         val user = response.data ?: return Result.failure(IllegalStateException("Empty profile response"))
 
-        try {
-            deviceRepository.syncConfigAndRegister()
-        } catch (_: Exception) {
-        }
+        // Push registration is no longer part of loading a screen: PushRegistrar does it in the
+        // background once per session.
         try {
             authRepository.setUsername(user.username)
         } catch (_: Exception) {

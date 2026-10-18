@@ -117,14 +117,29 @@ class FakeLogflareApi : LogflareApi {
         return FcmConfigResponse(true, "ok")
     }
 
+    /** FCM tokens sent to [registerFcmToken] / [unregisterFcmToken], in call order. */
+    val fcmTokens = mutableListOf<String>()
+    var registerFcm: suspend (FcmTokenParams) -> FcmTokenResponse = { FcmTokenResponse(true, "ok") }
+    var unregisterFcm: suspend (FcmTokenParams) -> RemovedResponse = { RemovedResponse(true, "ok") }
+    var authenticateResult: suspend (UserAuthParams) -> StringResponse = { StringResponse(true, "ok", data = "jwt-${it.username}") }
+    val authCalls = mutableListOf<UserAuthParams>()
+
     override suspend fun registerFcmToken(bearer: String, body: FcmTokenParams): FcmTokenResponse {
         record("registerFcmToken", bearer)
-        return FcmTokenResponse(true, "ok")
+        fcmTokens += body.fcmToken
+        return registerFcm(body)
     }
 
     override suspend fun unregisterFcmToken(body: FcmTokenParams): RemovedResponse {
         record("unregisterFcmToken")
-        return RemovedResponse(true, "ok")
+        fcmTokens += body.fcmToken
+        return unregisterFcm(body)
+    }
+
+    override suspend fun authenticate(body: UserAuthParams): StringResponse {
+        record("authenticate")
+        authCalls += body
+        return authenticateResult(body)
     }
 
     /** When set, every mutation endpoint throws it (e.g. no network). */
@@ -174,7 +189,6 @@ class FakeLogflareApi : LogflareApi {
     override suspend fun deleteUser(token: String, userId: Int): UserResponse =
         mutation("deleteUser", token, { UserResponse(true, "ok") }) { UserResponse(false, REJECTED, 404) }
 
-    override suspend fun authenticate(body: UserAuthParams): StringResponse = TODO()
     override suspend fun getUserByUsername(token: String, username: String): UserResponse = TODO()
     override suspend fun getProjectPermissions(bearer: String, projectId: Int): ProjectPermsSequenceResponse = TODO()
     override suspend fun getErrors(bearer: String, projectId: Int?, limit: Int, offset: Int, sortby: String?): ErrorSequenceResponse = TODO()
