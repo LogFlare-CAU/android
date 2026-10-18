@@ -191,7 +191,13 @@ class FakeLogflareApi : LogflareApi {
         mutation("deleteUser", token, { UserResponse(true, "ok") }) { UserResponse(false, REJECTED, 404) }
 
     override suspend fun getUserByUsername(token: String, username: String): UserResponse = TODO()
-    override suspend fun getProjectPermissions(bearer: String, projectId: Int): ProjectPermsSequenceResponse = TODO()
+    var projectPerms: suspend (Int) -> ProjectPermsSequenceResponse = { ProjectPermsSequenceResponse(true, "ok", data = emptyList()) }
+
+    override suspend fun getProjectPermissions(bearer: String, projectId: Int): ProjectPermsSequenceResponse {
+        record("getProjectPermissions", bearer)
+        return projectPerms(projectId)
+    }
+
     override suspend fun getErrors(bearer: String, projectId: Int?, limit: Int, offset: Int, sortby: String?): ErrorSequenceResponse = TODO()
     override suspend fun postError(projectKey: String, projectName: String, body: ErrorParams): Response<Unit> = TODO()
     override suspend fun getProjectLogFile(bearer: String, projectId: Int, logfileid: Int, limit: Int, offset: Int, sortBy: String?): StringSequenceResponse = TODO()
@@ -202,7 +208,14 @@ class FakeLogflareApi : LogflareApi {
         return eventDetail(id)
     }
 
-    override suspend fun getProjectToken(projectId: Int): ProjectResponseWithToken = TODO()
+    var projectToken: suspend (Int) -> ProjectResponseWithToken = { id ->
+        ProjectResponseWithToken(true, "ok", data = ProjectDTOWithToken(id, "p$id", token = "tok-$id"))
+    }
+
+    override suspend fun getProjectToken(projectId: Int): ProjectResponseWithToken {
+        record("getProjectToken")
+        return projectToken(projectId)
+    }
 
     companion object {
         const val REJECTED = "rejected by server"

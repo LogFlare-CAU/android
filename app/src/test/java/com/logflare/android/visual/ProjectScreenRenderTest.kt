@@ -2,8 +2,8 @@ package com.logflare.android.visual
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import com.logflare.android.feature.project.ProjectEditorUiState
-import com.logflare.android.feature.project.ProjectSettingsScreenContent
+import com.logflare.android.feature.project.ProjectSettingsActions
+import com.logflare.android.feature.project.ProjectSettingsContent
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.theme.LogflareandroidTheme
 import org.junit.Rule
@@ -18,13 +18,9 @@ class ProjectScreenRenderTest {
     @Test fun projectSettingsRendersFromStateOnly() {
         compose.setContent {
             LogflareandroidTheme(false) {
-                ProjectSettingsScreenContent(
-                    uiState = ProjectEditorUiState(
-                        name = "Payments",
-                        nameValid = true,
-                        saved = true,
-                    ),
-                    onAction = { _ -> },
+                ProjectSettingsContent(
+                    state = ProjectSettingsFixtures.admin,
+                    actions = ProjectSettingsActions(),
                 )
             }
         }

@@ -8,46 +8,10 @@ import com.logflare.android.feature.mypage.InputValidationUiState
 import com.logflare.android.feature.mypage.LogoutUiState
 import com.logflare.android.feature.mypage.MyPageMemberUiModel
 import com.logflare.android.feature.mypage.MyPageUiState
-import com.logflare.android.feature.project.ProjectEditorUiState
-import com.logflare.android.feature.project.ProjectPermissionUiFactory
 import com.logflare.android.ui.component.common.MemberFieldStatus
 
 object SnapshotFixtures {
     private const val BASE_TIMESTAMP = "2026-01-15T10:30:00Z"
-
-    fun projectEditor(
-        saved: Boolean = false,
-        loading: Boolean = false,
-        error: String? = null,
-        invalid: Boolean = false,
-    ): ProjectEditorUiState =
-        ProjectEditorUiState(
-            id = if (saved) 101 else 0,
-            name = when {
-                invalid -> "Bad/Name?"
-                saved || loading -> "QA Payments"
-                else -> ""
-            },
-            nameValid = when {
-                invalid -> false
-                saved || loading -> true
-                else -> false // blank initial matches production default
-            },
-            loading = loading,
-            token = if (saved) "qa-token-101-abcdef" else null,
-            error = error,
-            keywords = if (saved) listOf("timeout", "retry") else emptyList(),
-            alertLevels = if (saved) setOf("Error", "Critical") else emptySet(),
-            saved = saved,
-            permissions = if (saved) {
-                listOf(
-                    ProjectPermissionUiFactory.adminUser(username = "qa-admin"),
-                    ProjectPermissionUiFactory.memberUser(username = "qa-member", active = true),
-                )
-            } else {
-                emptyList()
-            },
-        )
 
     fun myPage(
         empty: Boolean = false,

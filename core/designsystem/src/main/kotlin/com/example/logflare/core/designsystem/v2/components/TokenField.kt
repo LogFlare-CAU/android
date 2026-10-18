@@ -34,10 +34,15 @@ fun TokenField(
     onCopy: () -> Unit,
     onRotate: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    /** A line under the "Project token" title (e.g. what the token is for). */
+    description: String? = null,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Project token", style = Lf.type.sectionTitle, color = Lf.colors.textPrimary, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Project token", style = Lf.type.sectionTitle, color = Lf.colors.textPrimary)
+                if (description != null) Text(description, style = Lf.type.caption, color = Lf.colors.textMuted)
+            }
             Box(
                 Modifier
                     .defaultMinSize(minHeight = 44.dp)

@@ -24,7 +24,7 @@ import com.logflare.android.feature.mypage.EditMemberScreen
 import com.logflare.android.feature.mypage.LogoutScreen
 import com.logflare.android.feature.mypage.MyPageScreen
 import com.logflare.android.feature.project.ProjectCreateRoute
-import com.logflare.android.feature.project.ProjectSettingsScreen
+import com.logflare.android.feature.project.ProjectSettingsRoute
 import com.logflare.android.feature.project.ProjectsRoute
 import com.logflare.android.feature.projectdetail.ProjectDetailRoute
 
@@ -115,11 +115,14 @@ private fun NavHostController.leaveLogin() {
     }
 }
 
-/** Pops back to the nearest list a deleted project could have been opened from. */
+/**
+ * After a project was deleted: back to the Projects tab root, dropping its detail and settings.
+ * Opened from another tab, that tab is first popped to its root so it doesn't keep the project.
+ */
 private fun NavHostController.popToProjectList() {
-    if (!popBackStack(Destinations.Projects, inclusive = false)) {
-        popBackStack(Destinations.Home, inclusive = false)
-    }
+    if (popBackStack(Destinations.Projects, inclusive = false)) return
+    popBackStack(Destinations.Home, inclusive = false)
+    navigateToTab(Destinations.Projects)
 }
 
 /**
@@ -164,10 +167,9 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             onOpenSettings = { nav.navigate(Destinations.projectSettings(it)) },
             onOpenLog = { nav.navigate(Destinations.logDetail(it)) },
         )
-        Destinations.ProjectSettingsPattern -> ProjectSettingsScreen(
-            projectId = entry.arguments?.getInt(Destinations.ProjectIdArg) ?: return,
+        Destinations.ProjectSettingsPattern -> ProjectSettingsRoute(
             onBack = back,
-            onDelete = { nav.popToProjectList() },
+            onDeleted = { nav.popToProjectList() },
         )
         Destinations.LogDetailPattern -> LogDetailRoute(
             onBack = back,

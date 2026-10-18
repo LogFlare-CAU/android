@@ -238,7 +238,7 @@ private fun Form(
 }
 
 @Composable
-private fun nameProblemText(problem: NameProblem): String = stringResource(
+internal fun nameProblemText(problem: NameProblem): String = stringResource(
     when (problem) {
         NameProblem.Spaces -> R.string.project_name_spaces
         NameProblem.Characters -> R.string.project_name_characters
