@@ -4,6 +4,8 @@ import com.example.logflare.core.network.BuildConfig
 import com.example.logflare.core.network.HttpUnauthorizedAction
 import com.example.logflare.core.network.LogflareApi
 import com.example.logflare.core.network.UnauthorizedResponseInterceptor
+import com.example.logflare.core.network.auth.AuthHeaderInterceptor
+import com.example.logflare.core.network.auth.AuthTokenProvider
 import com.example.logflare.core.network.host.BaseUrlProvider
 import com.example.logflare.core.network.host.HostSelectionInterceptor
 import dagger.Module
@@ -33,6 +35,7 @@ object NetworkModule {
     @Singleton
     fun provideOkHttp(
         baseUrlProvider: BaseUrlProvider,
+        authTokenProvider: AuthTokenProvider,
         httpUnauthorizedAction: HttpUnauthorizedAction,
     ): OkHttpClient =
         OkHttpClient.Builder()
@@ -45,6 +48,7 @@ object NetworkModule {
                     }
                 }
             )
+            .addInterceptor(AuthHeaderInterceptor(authTokenProvider))
             .addInterceptor(HostSelectionInterceptor(baseUrlProvider))
             .addInterceptor(UnauthorizedResponseInterceptor(httpUnauthorizedAction))
             .build()

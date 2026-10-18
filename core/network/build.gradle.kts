@@ -50,4 +50,8 @@ dependencies {
     // Hilt annotations are consumed in the app, but modules can declare Dagger modules
     // Without bringing the whole Hilt plugin here.
     kapt(libs.hilt.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

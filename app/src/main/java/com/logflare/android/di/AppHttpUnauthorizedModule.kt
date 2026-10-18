@@ -7,18 +7,19 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppHttpUnauthorizedModule {
     @Provides
     @Singleton
-    fun provideHttpUnauthorizedAction(auth: AuthRepository): HttpUnauthorizedAction =
+    fun provideHttpUnauthorizedAction(
+        auth: AuthRepository,
+        @ApplicationScope scope: CoroutineScope,
+    ): HttpUnauthorizedAction =
         HttpUnauthorizedAction {
-            runBlocking(Dispatchers.IO) {
-                auth.clearToken()
-            }
+            scope.launch { auth.clearToken() }
         }
 }

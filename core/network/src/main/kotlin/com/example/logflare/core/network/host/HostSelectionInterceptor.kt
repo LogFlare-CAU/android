@@ -10,7 +10,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  * that API interface definitions remain unchanged.
  *
  * Security considerations: Only http/https schemes are permitted. If the provided base URL
- * is malformed or uses an unsupported scheme the original request is executed unmodified.
+ * is missing, malformed or uses an unsupported scheme the request fails fast with
+ * [ServerNotConfiguredException] rather than reaching the placeholder retrofit host.
  */
 class HostSelectionInterceptor(
     private val baseUrlProvider: BaseUrlProvider
@@ -19,14 +20,12 @@ class HostSelectionInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val override = baseUrlProvider.getBaseUrl()?.trim()?.takeIf { it.isNotEmpty() }
-        if (override.isNullOrBlank()) {
-            return chain.proceed(original)
-        }
+        if (override.isNullOrBlank()) throw ServerNotConfiguredException()
 
         val normalized = if (override.endsWith("/")) override else "$override/"
         val newBase = normalized.toHttpUrlOrNull()
         if (newBase == null || (newBase.scheme != "http" && newBase.scheme != "https")) {
-            return chain.proceed(original)
+            throw ServerNotConfiguredException()
         }
 
         val oldUrl = original.url
