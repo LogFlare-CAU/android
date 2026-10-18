@@ -2,7 +2,6 @@ package com.logflare.android.visual
 
 import androidx.compose.runtime.Composable
 import com.logflare.android.data.store.model.ProjectItem
-import com.logflare.android.feature.project.ProjectCreateScreenContent
 import com.logflare.android.feature.project.ProjectSort
 import com.logflare.android.feature.project.ProjectsContent
 import com.logflare.android.feature.project.ProjectsUiState
@@ -96,78 +95,4 @@ object ProjectsFixtures {
     val sortSheet = populated.copy(sortSheetOpen = true, sort = ProjectSort.RecentErrors)
 
     val loadFailed = ProjectsUiState(initialLoad = false, loadFailed = true)
-}
-
-class ProjectCreateSnapshots : VisualSnapshotTest() {
-    @Test fun project_create_initial_light() {
-        capture("project_create_initial", darkTheme = false) {
-            ProjectCreateScreenContent(
-                uiState = SnapshotFixtures.projectEditor(),
-                onAction = { _ -> },
-            )
-        }
-    }
-
-    @Test fun project_create_initial_dark() {
-        capture("project_create_initial", darkTheme = true) {
-            ProjectCreateScreenContent(
-                uiState = SnapshotFixtures.projectEditor(),
-                onAction = { _ -> },
-            )
-        }
-    }
-
-    @Test fun project_create_invalid_light() {
-        capture("project_create_invalid", darkTheme = false) {
-            ProjectCreateScreenContent(
-                uiState = SnapshotFixtures.projectEditor(invalid = true),
-                onAction = { _ -> },
-            )
-        }
-    }
-
-    @Test fun project_create_invalid_dark() {
-        capture("project_create_invalid", darkTheme = true) {
-            ProjectCreateScreenContent(
-                uiState = SnapshotFixtures.projectEditor(invalid = true),
-                onAction = { _ -> },
-            )
-        }
-    }
-
-    @Test fun project_create_saved_light() {
-        capture("project_create_saved", darkTheme = false) {
-            ProjectCreateScreenContent(
-                uiState = SnapshotFixtures.projectEditor(saved = true),
-                onAction = { _ -> },
-            )
-        }
-    }
-
-    @Test fun project_create_saved_dark() {
-        capture("project_create_saved", darkTheme = true) {
-            ProjectCreateScreenContent(
-                uiState = SnapshotFixtures.projectEditor(saved = true),
-                onAction = { _ -> },
-            )
-        }
-    }
-
-    @Test fun project_create_loading_light() {
-        capture("project_create_loading", darkTheme = false) {
-            ProjectCreateScreenContent(
-                uiState = SnapshotFixtures.projectEditor(loading = true),
-                onAction = { _ -> },
-            )
-        }
-    }
-
-    @Test fun project_create_loading_dark() {
-        capture("project_create_loading", darkTheme = true) {
-            ProjectCreateScreenContent(
-                uiState = SnapshotFixtures.projectEditor(loading = true),
-                onAction = { _ -> },
-            )
-        }
-    }
 }

@@ -25,8 +25,8 @@ open class ProjectEditorViewModel(
     private val getUsersUseCase: GetUsersUseCase,
     private val getProjectpermsUseCase: GetProjectPermsUseCase,
 ) : ViewModel() {
-    private val _ui = MutableStateFlow(ProjectCreateUiState())
-    val ui: StateFlow<ProjectCreateUiState> = _ui
+    private val _ui = MutableStateFlow(ProjectEditorUiState())
+    val ui: StateFlow<ProjectEditorUiState> = _ui
 
     init {
         initPermissions()
@@ -35,7 +35,7 @@ open class ProjectEditorViewModel(
 
     private var projectId: Int? = null
 
-    private fun updateUi(block: ProjectCreateUiState.() -> ProjectCreateUiState) {
+    private fun updateUi(block: ProjectEditorUiState.() -> ProjectEditorUiState) {
         _ui.update { current ->
             current.block()
         }

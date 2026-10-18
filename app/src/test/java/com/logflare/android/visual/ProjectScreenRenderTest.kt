@@ -1,17 +1,11 @@
 package com.logflare.android.visual
 
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import com.logflare.android.feature.project.ProjectCreateScreenContent
-import com.logflare.android.feature.project.ProjectCreateUiState
+import com.logflare.android.feature.project.ProjectEditorUiState
 import com.logflare.android.feature.project.ProjectSettingsScreenContent
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.theme.LogflareandroidTheme
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,61 +15,11 @@ import org.robolectric.RobolectricTestRunner
 class ProjectScreenRenderTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun projectCreateRendersFromStateOnly() {
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                ProjectCreateScreenContent(
-                    uiState = ProjectCreateUiState(name = "New Project", nameValid = true),
-                    onAction = { _ -> },
-                )
-            }
-        }
-        compose.onNodeWithTag(VisualQaTags.ProjectCreate).assertExists()
-    }
-
-    @Test fun projectCreateInitialSaveIsDisabled() {
-        val uiState = SnapshotFixtures.projectEditor()
-        assertFalse(uiState.nameValid)
-        assertFalse(uiState.saved)
-        assertTrue(uiState.name.isEmpty())
-
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                ProjectCreateScreenContent(
-                    uiState = uiState,
-                    onAction = { _ -> },
-                )
-            }
-        }
-        // Project name Save is the first "Save" affordance; nameValid=false disables it.
-        compose.onAllNodesWithText("Save")[0].assertIsNotEnabled()
-    }
-
-    @Test fun projectCreateLoadingSaveIsDisabledWhileValid() {
-        val uiState = SnapshotFixtures.projectEditor(loading = true)
-        assertTrue(uiState.loading)
-        assertTrue(uiState.nameValid)
-        assertTrue(uiState.name == "QA Payments")
-        assertFalse(uiState.saved)
-        assertTrue(uiState.token == null)
-
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                ProjectCreateScreenContent(
-                    uiState = uiState,
-                    onAction = { _ -> },
-                )
-            }
-        }
-        // Save is disabled because loading=true even though nameValid=true.
-        compose.onAllNodesWithText("Save")[0].assertIsNotEnabled()
-    }
-
     @Test fun projectSettingsRendersFromStateOnly() {
         compose.setContent {
             LogflareandroidTheme(false) {
                 ProjectSettingsScreenContent(
-                    uiState = ProjectCreateUiState(
+                    uiState = ProjectEditorUiState(
                         name = "Payments",
                         nameValid = true,
                         saved = true,

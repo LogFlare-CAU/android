@@ -13,7 +13,7 @@ sealed interface ProjectEditorAction {
     data object Delete : ProjectEditorAction
 }
 
-data class ProjectCreateUiState(
+data class ProjectEditorUiState(
     val id: Int = 0,
     val name: String = "",
     val nameValid: Boolean = false,

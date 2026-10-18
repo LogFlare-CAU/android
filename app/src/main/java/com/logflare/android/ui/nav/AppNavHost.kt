@@ -23,7 +23,7 @@ import com.logflare.android.feature.mypage.AddMemberScreen
 import com.logflare.android.feature.mypage.EditMemberScreen
 import com.logflare.android.feature.mypage.LogoutScreen
 import com.logflare.android.feature.mypage.MyPageScreen
-import com.logflare.android.feature.project.ProjectCreateScreen
+import com.logflare.android.feature.project.ProjectCreateRoute
 import com.logflare.android.feature.project.ProjectSettingsScreen
 import com.logflare.android.feature.project.ProjectsRoute
 import com.logflare.android.feature.projectdetail.ProjectDetailRoute
@@ -150,10 +150,13 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             onAddMember = { nav.navigate(Destinations.AddMember) },
             onEditMember = { nav.navigate(Destinations.editMember(it)) },
         )
-        Destinations.ProjectCreate -> ProjectCreateScreen(
-            onCreated = {
-                nav.popBackStack()
-                nav.navigateToTab(Destinations.Projects)
+        Destinations.ProjectCreate -> ProjectCreateRoute(
+            onBack = back,
+            // Replaces the create screen, so Back from the project lands on the list it came from.
+            onOpenProject = {
+                nav.navigate(Destinations.projectDetail(it)) {
+                    popUpTo(Destinations.ProjectCreate) { inclusive = true }
+                }
             },
         )
         Destinations.ProjectDetailPattern -> ProjectDetailRoute(

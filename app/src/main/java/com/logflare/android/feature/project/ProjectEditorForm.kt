@@ -10,7 +10,7 @@ import com.example.logflare.core.designsystem.AppTheme
  * Shared Create/Settings form body. Screens own chrome (scaffold, dialogs, bottom bar).
  */
 fun LazyListScope.projectEditorFormItems(
-    uiState: ProjectCreateUiState,
+    uiState: ProjectEditorUiState,
     onAction: (ProjectEditorAction) -> Unit,
     onNameSave: () -> Unit,
     showDelete: Boolean,

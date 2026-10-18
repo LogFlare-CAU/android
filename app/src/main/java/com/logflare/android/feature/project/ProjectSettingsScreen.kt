@@ -163,7 +163,7 @@ fun ProjectSettingsScreen(
 
 @Composable
 fun ProjectSettingsScreenContent(
-    uiState: ProjectCreateUiState,
+    uiState: ProjectEditorUiState,
     onAction: (ProjectEditorAction) -> Unit,
 ) {
     ProjectSettingsScreenContent(
@@ -175,7 +175,7 @@ fun ProjectSettingsScreenContent(
 
 @Composable
 private fun ProjectSettingsScreenContent(
-    uiState: ProjectCreateUiState,
+    uiState: ProjectEditorUiState,
     onAction: (ProjectEditorAction) -> Unit,
     onNameSave: () -> Unit,
     modifier: Modifier = Modifier,

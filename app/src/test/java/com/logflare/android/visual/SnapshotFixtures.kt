@@ -8,7 +8,7 @@ import com.logflare.android.feature.mypage.InputValidationUiState
 import com.logflare.android.feature.mypage.LogoutUiState
 import com.logflare.android.feature.mypage.MyPageMemberUiModel
 import com.logflare.android.feature.mypage.MyPageUiState
-import com.logflare.android.feature.project.ProjectCreateUiState
+import com.logflare.android.feature.project.ProjectEditorUiState
 import com.logflare.android.feature.project.ProjectPermissionUiFactory
 import com.logflare.android.ui.component.common.MemberFieldStatus
 
@@ -20,8 +20,8 @@ object SnapshotFixtures {
         loading: Boolean = false,
         error: String? = null,
         invalid: Boolean = false,
-    ): ProjectCreateUiState =
-        ProjectCreateUiState(
+    ): ProjectEditorUiState =
+        ProjectEditorUiState(
             id = if (saved) 101 else 0,
             name = when {
                 invalid -> "Bad/Name?"
