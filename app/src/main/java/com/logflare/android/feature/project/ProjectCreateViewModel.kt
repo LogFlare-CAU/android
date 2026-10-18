@@ -1,5 +1,6 @@
 package com.logflare.android.feature.project
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import com.logflare.android.data.store.ProjectStore
 import com.logflare.android.push.AlertSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,10 +50,12 @@ sealed interface ProjectCreateEvent {
     data object CreateFailed : ProjectCreateEvent
     data object TokenRotated : ProjectCreateEvent
     data object RotateFailed : ProjectCreateEvent
+    data object AlertSettingsFailed : ProjectCreateEvent
 }
 
 private val DEFAULT_LEVEL = LfLevel.Warning
 
+private const val TAG = "ProjectCreate"
 private const val KEY_NAME = "name"
 private const val KEY_LEVEL = "level"
 private const val KEY_KEYWORDS = "keywords"
@@ -133,10 +137,16 @@ class ProjectCreateViewModel internal constructor(
                 _events.send(ProjectCreateEvent.CreateFailed)
                 return@launch
             }
-            // The server side is done; a failed local save only loses the (default) alert setup.
-            runCatching {
+            // The server side is done: a failed local save doesn't undo the project, it only
+            // loses the alert setup (reported by a toast).
+            try {
                 alerts.setProjectLevel(project.id, f.level)
                 alerts.setMutedKeywords(project.id, f.keywords.toSet())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Saving alert settings for project ${project.id} failed", e)
+                _events.send(ProjectCreateEvent.AlertSettingsFailed)
             }
             val created = CreatedProject(project.id, project.name, project.token)
             writeCreated(created)

@@ -15,8 +15,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Shared project create/settings editor logic. Screen-specific [ProjectCreateViewModel] and
- * [ProjectSettingsViewModel] extend this so each navigation destination gets its own instance.
+ * Project settings editor logic, extended by [ProjectSettingsViewModel] (to be replaced when the
+ * settings screen is rebuilt). New projects have their own [ProjectCreateViewModel].
  */
 open class ProjectEditorViewModel(
     private val repo: ProjectsRepository,

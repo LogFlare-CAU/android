@@ -160,6 +160,7 @@ fun ConfirmSheet(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     confirmEnabled: Boolean = true,
+    dismissLabel: String = "Cancel",
     extra: (@Composable ColumnScope.() -> Unit)? = null,
 ) = LfSheetFrame(title, onDismiss) { dismiss ->
     Text(
@@ -174,7 +175,7 @@ fun ConfirmSheet(
     }
     Spacer(Modifier.height(20.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        SecondaryButton(text = "Cancel", onClick = dismiss, modifier = Modifier.weight(1f))
+        SecondaryButton(text = dismissLabel, onClick = dismiss, modifier = Modifier.weight(1f))
         if (destructive) {
             // onPrimaryAction is white in light and near-black in dark: readable on both error tones.
             LfButton(

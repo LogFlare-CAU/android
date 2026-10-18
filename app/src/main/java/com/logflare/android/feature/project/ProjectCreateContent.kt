@@ -63,6 +63,7 @@ fun ProjectCreateRoute(
     val createFailed = stringResource(R.string.project_create_failed)
     val rotated = stringResource(R.string.project_create_token_rotated)
     val rotateFailed = stringResource(R.string.project_create_rotate_failed)
+    val alertsFailed = stringResource(R.string.project_create_alerts_failed)
     val copied = stringResource(R.string.project_create_token_copied)
     LaunchedEffect(viewModel) {
         viewModel.events.collect {
@@ -71,6 +72,7 @@ fun ProjectCreateRoute(
                 ProjectCreateEvent.CreateFailed -> toast.show(createFailed)
                 ProjectCreateEvent.TokenRotated -> toast.show(rotated)
                 ProjectCreateEvent.RotateFailed -> toast.show(rotateFailed)
+                ProjectCreateEvent.AlertSettingsFailed -> toast.show(alertsFailed)
             }
         }
     }
@@ -143,6 +145,7 @@ fun ProjectCreateContent(
             title = stringResource(R.string.project_create_discard_title),
             body = stringResource(R.string.project_create_discard_body),
             confirmLabel = stringResource(R.string.project_create_discard),
+            dismissLabel = stringResource(R.string.project_create_keep_editing),
             destructive = true,
             onConfirm = onConfirmDiscard,
             onDismiss = onDismissSheet,
@@ -180,7 +183,7 @@ private fun Form(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             GroupedCard(contentPadding = PaddingValues(20.dp)) {
-                val invalid = (state.nameCheck as? NameCheck.Invalid)?.message
+                val invalid = (state.nameCheck as? NameCheck.Invalid)?.let { nameProblemText(it.reason) }
                 AppTextField(
                     value = state.name,
                     onValueChange = onName,
@@ -235,6 +238,16 @@ private fun Form(
 }
 
 @Composable
+private fun nameProblemText(problem: NameProblem): String = stringResource(
+    when (problem) {
+        NameProblem.Spaces -> R.string.project_name_spaces
+        NameProblem.Characters -> R.string.project_name_characters
+        NameProblem.Duplicate -> R.string.project_name_duplicate
+        NameProblem.TooLong -> R.string.project_name_too_long
+    },
+)
+
+@Composable
 private fun SectionHeader(title: Int, body: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(stringResource(title), style = Lf.type.sectionTitle, color = Lf.colors.textPrimary)
@@ -283,7 +296,7 @@ private fun Created(
                     onRotate = onOpenRotate,
                 )
             }
-            GroupedCard(contentPadding = PaddingValues(20.dp)) {
+            if (state.serverUrl.isNotBlank()) GroupedCard(contentPadding = PaddingValues(20.dp)) {
                 Text(stringResource(R.string.project_create_first_log), style = Lf.type.sectionTitle, color = Lf.colors.textPrimary)
                 Text(
                     curlSnippet(state.serverUrl, created.name, created.token),

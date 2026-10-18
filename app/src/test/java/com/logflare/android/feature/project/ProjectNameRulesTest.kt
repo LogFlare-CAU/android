@@ -20,19 +20,19 @@ class ProjectNameRulesTest {
     }
 
     @Test fun checkProjectName_leadingOrTrailingSpace() {
-        val expected = NameCheck.Invalid("Remove spaces at the start or end.")
+        val expected = NameCheck.Invalid(NameProblem.Spaces)
         assertEquals(expected, check(" api"))
         assertEquals(expected, check("api "))
         assertEquals(expected, check("   "))
     }
 
     @Test fun checkProjectName_forbiddenCharacters() {
-        val expected = NameCheck.Invalid("Don't use < > / \\ in names.")
+        val expected = NameCheck.Invalid(NameProblem.Characters)
         for (c in listOf("<", ">", "/", "\\")) assertEquals(expected, check("a${c}b"))
     }
 
     @Test fun checkProjectName_duplicateIsCaseInsensitive() {
-        val expected = NameCheck.Invalid("Name already in use.")
+        val expected = NameCheck.Invalid(NameProblem.Duplicate)
         assertEquals(expected, check("api-server"))
         assertEquals(expected, check("WORKER"))
     }
@@ -45,7 +45,7 @@ class ProjectNameRulesTest {
 
     @Test fun checkProjectName_lengthLimit() {
         assertEquals(NameCheck.Valid, check("a".repeat(64)))
-        assertEquals(NameCheck.Invalid("Use 64 characters or fewer."), check("a".repeat(65)))
+        assertEquals(NameCheck.Invalid(NameProblem.TooLong), check("a".repeat(65)))
     }
 
     @Test fun curlSnippet_usesServerUrlAndMaskedToken() {

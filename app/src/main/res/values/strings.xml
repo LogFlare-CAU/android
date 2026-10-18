@@ -203,4 +203,10 @@
     <string name="project_create_rotate_title">Rotate token?</string>
     <string name="project_create_rotate_body">The old token stops working immediately.</string>
     <string name="project_create_rotate">Rotate</string>
+    <string name="project_name_spaces">Remove spaces at the start or end.</string>
+    <string name="project_name_characters">Don\'t use &lt; &gt; / \\ in names.</string>
+    <string name="project_name_duplicate">Name already in use.</string>
+    <string name="project_name_too_long">Use 64 characters or fewer.</string>
+    <string name="project_create_keep_editing">Keep editing</string>
+    <string name="project_create_alerts_failed">Couldn\'t save alert settings</string>
 </resources>

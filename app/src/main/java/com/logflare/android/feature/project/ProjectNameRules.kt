@@ -5,8 +5,10 @@ import com.example.logflare.core.designsystem.v2.components.maskToken
 sealed interface NameCheck {
     data object Empty : NameCheck
     data object Valid : NameCheck
-    data class Invalid(val message: String) : NameCheck
+    data class Invalid(val reason: NameProblem) : NameCheck
 }
+
+enum class NameProblem { Spaces, Characters, Duplicate, TooLong }
 
 private const val MAX_NAME_LENGTH = 64
 private val FORBIDDEN_NAME_CHARS = setOf('<', '>', '/', '\\')
@@ -18,11 +20,11 @@ private val FORBIDDEN_NAME_CHARS = setOf('<', '>', '/', '\\')
  */
 fun checkProjectName(name: String, existing: Collection<String>, current: String? = null): NameCheck = when {
     name.isEmpty() -> NameCheck.Empty
-    name != name.trim() -> NameCheck.Invalid("Remove spaces at the start or end.")
-    name.any { it in FORBIDDEN_NAME_CHARS } -> NameCheck.Invalid("Don't use < > / \\ in names.")
+    name != name.trim() -> NameCheck.Invalid(NameProblem.Spaces)
+    name.any { it in FORBIDDEN_NAME_CHARS } -> NameCheck.Invalid(NameProblem.Characters)
     existing.any { it.equals(name, ignoreCase = true) && !it.equals(current, ignoreCase = true) } ->
-        NameCheck.Invalid("Name already in use.")
-    name.length > MAX_NAME_LENGTH -> NameCheck.Invalid("Use 64 characters or fewer.")
+        NameCheck.Invalid(NameProblem.Duplicate)
+    name.length > MAX_NAME_LENGTH -> NameCheck.Invalid(NameProblem.TooLong)
     else -> NameCheck.Valid
 }
 

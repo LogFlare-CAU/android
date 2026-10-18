@@ -5,6 +5,7 @@ import com.example.logflare.core.designsystem.v2.LfLevel
 import com.logflare.android.feature.project.CreateSheet
 import com.logflare.android.feature.project.CreatedProject
 import com.logflare.android.feature.project.NameCheck
+import com.logflare.android.feature.project.NameProblem
 import com.logflare.android.feature.project.ProjectCreateContent
 import com.logflare.android.feature.project.ProjectCreateUiState
 import com.logflare.android.visual.ds.DsSnapshotTest
@@ -48,7 +49,7 @@ object ProjectCreateFixtures {
 
     val invalid = ProjectCreateUiState(
         name = "api/server",
-        nameCheck = NameCheck.Invalid("Don't use < > / \\ in names."),
+        nameCheck = NameCheck.Invalid(NameProblem.Characters),
         dirty = true,
     )
 
