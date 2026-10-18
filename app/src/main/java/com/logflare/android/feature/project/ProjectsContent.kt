@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,8 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,7 +31,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,8 +41,10 @@ import com.example.logflare.core.designsystem.v2.components.CountBadge
 import com.example.logflare.core.designsystem.v2.components.EmptyState
 import com.example.logflare.core.designsystem.v2.components.GroupedCard
 import com.example.logflare.core.designsystem.v2.components.HeaderIconButton
+import com.example.logflare.core.designsystem.v2.components.HeaderPillButton
 import com.example.logflare.core.designsystem.v2.components.LargeTitleHeader
 import com.example.logflare.core.designsystem.v2.components.ListRow
+import com.example.logflare.core.designsystem.v2.components.ListToolbar
 import com.example.logflare.core.designsystem.v2.components.LfPullToRefresh
 import com.example.logflare.core.designsystem.v2.components.LfToastHost
 import com.example.logflare.core.designsystem.v2.components.LfToastState
@@ -125,7 +122,15 @@ fun ProjectsContent(
                         Modifier
                     },
                 )
-                if (state.canCreate) NewButton(onCreateProject)
+                if (state.canCreate) {
+                    HeaderPillButton(
+                        text = stringResource(R.string.projects_new),
+                        onClick = onCreateProject,
+                        icon = LfIcons.Add,
+                        contentDescription = stringResource(R.string.projects_new_description),
+                        modifier = Modifier.testTag(VisualQaTags.CreateProject),
+                    )
+                }
             }
             if (state.searchOpen) SearchBar(state.search, onSearch)
             if (!state.initialLoad && !state.loadFailed && state.total > 0) {
@@ -147,28 +152,6 @@ fun ProjectsContent(
     }
 }
 
-/** The dark "+ New" pill next to the search button; admins only. */
-@Composable
-private fun NewButton(onClick: () -> Unit) {
-    val label = stringResource(R.string.projects_new)
-    Row(
-        Modifier
-            .padding(start = 4.dp)
-            .heightIn(min = 40.dp)
-            .clip(CircleShape)
-            .background(Lf.colors.primaryAction)
-            .clickable(role = Role.Button, onClick = onClick)
-            .testTag(VisualQaTags.CreateProject)
-            .semantics { contentDescription = label }
-            .padding(start = 10.dp, end = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Icon(Icons.Filled.Add, contentDescription = null, tint = Lf.colors.onPrimaryAction, modifier = Modifier.size(18.dp))
-        Text(label, style = Lf.type.secondary.copy(fontWeight = FontWeight.Bold), color = Lf.colors.onPrimaryAction)
-    }
-}
-
 @Composable
 private fun SearchBar(text: String, onSearch: (String) -> Unit) {
     val focus = remember { FocusRequester() }
@@ -187,40 +170,16 @@ private fun SearchBar(text: String, onSearch: (String) -> Unit) {
 
 @Composable
 private fun CountAndSort(state: ProjectsUiState, onOpenSort: () -> Unit) {
-    val filtered = state.search.isNotBlank()
-    Row(
-        Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            if (filtered) {
-                stringResource(R.string.projects_count_filtered, state.items.size, state.total)
-            } else {
-                pluralStringResource(R.plurals.projects_count, state.total, state.total)
-            },
-            style = Lf.type.caption.copy(fontWeight = FontWeight.Bold),
-            color = Lf.colors.textMuted,
-            modifier = Modifier.weight(1f),
-        )
-        Row(
-            Modifier
-                .heightIn(min = 44.dp)
-                .clip(Lf.shapes.input)
-                .clickable(role = Role.Button, onClick = onOpenSort)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Icon(LfIcons.SwapVert, contentDescription = null, tint = Lf.colors.textSecondary, modifier = Modifier.size(16.dp))
-            Text(
-                sortLabel(state.sort),
-                style = Lf.type.secondary.copy(fontWeight = FontWeight.Bold),
-                color = Lf.colors.textSecondary,
-                maxLines = 1,
-            )
-        }
-    }
+    ListToolbar(
+        label = if (state.search.isNotBlank()) {
+            stringResource(R.string.projects_count_filtered, state.items.size, state.total)
+        } else {
+            pluralStringResource(R.plurals.projects_count, state.total, state.total)
+        },
+        actionText = sortLabel(state.sort),
+        onAction = onOpenSort,
+        actionIcon = LfIcons.SwapVert,
+    )
 }
 
 @Composable

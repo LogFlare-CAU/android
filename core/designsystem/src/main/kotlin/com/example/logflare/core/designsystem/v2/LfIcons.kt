@@ -40,6 +40,10 @@ object LfIcons {
         )
     }
 
+    val Add: ImageVector by lazy {
+        icon("Filled.Add", "M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z")
+    }
+
     val SwapVert: ImageVector by lazy {
         icon(
             "Filled.SwapVert",

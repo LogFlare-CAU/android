@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -127,6 +128,90 @@ fun HeaderIconButton(
                     .clip(CircleShape)
                     .background(Lf.colors.error)
                     .border(2.dp, Lf.colors.background, CircleShape),
+            )
+        }
+    }
+}
+
+/**
+ * Dark "+ New" pill for a tab header's actions (admin-only create). [contentDescription] defaults
+ * to [text]; a null [icon] leaves the text alone.
+ */
+@Composable
+fun HeaderPillButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    contentDescription: String? = null,
+) {
+    val description = contentDescription ?: text
+    Row(
+        modifier
+            .padding(start = 4.dp)
+            .heightIn(min = 40.dp)
+            .clip(CircleShape)
+            .background(Lf.colors.primaryAction)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { this.contentDescription = description }
+            .padding(start = if (icon != null) 10.dp else 16.dp, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = Lf.colors.onPrimaryAction, modifier = Modifier.size(18.dp))
+        }
+        Text(
+            text,
+            style = Lf.type.secondary.copy(fontWeight = FontWeight.Bold),
+            color = Lf.colors.onPrimaryAction,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * Line under a tab header: a muted [label] (e.g. "5 projects") and, at the end, a text action
+ * with an optional [actionIcon] (e.g. the sort picker).
+ */
+@Composable
+fun ListToolbar(
+    label: String,
+    actionText: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+    actionIcon: ImageVector? = null,
+) {
+    Row(
+        modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            label,
+            style = Lf.type.caption.copy(fontWeight = FontWeight.Bold),
+            color = Lf.colors.textMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Row(
+            Modifier
+                .heightIn(min = 44.dp)
+                .clip(Lf.shapes.input)
+                .clickable(role = Role.Button, onClick = onAction)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (actionIcon != null) {
+                Icon(actionIcon, contentDescription = null, tint = Lf.colors.textSecondary, modifier = Modifier.size(16.dp))
+            }
+            Text(
+                actionText,
+                style = Lf.type.secondary.copy(fontWeight = FontWeight.Bold),
+                color = Lf.colors.textSecondary,
+                maxLines = 1,
             )
         }
     }

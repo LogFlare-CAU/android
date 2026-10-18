@@ -187,6 +187,15 @@ class ProjectsViewModelTest {
     }
 
     @Test
+    fun restoredSearch_filtersWithoutAdvancingTime() = runTest {
+        seed()
+        val saved = SavedStateHandle(mapOf("projects.search" to "alp", "projects.searchOpen" to true))
+        val vm = newVm(saved)
+        settle()
+        assertEquals(listOf("alpha"), vm.state.value.items.map { it.name })
+    }
+
+    @Test
     fun warmStart_showsContentWithoutAdvancingTime() = runTest {
         seed()
         newVm()
