@@ -26,7 +26,7 @@ import com.logflare.android.feature.mypage.MyPageScreen
 import com.logflare.android.feature.project.ProjectCreateScreen
 import com.logflare.android.feature.project.ProjectSettingsScreen
 import com.logflare.android.feature.project.ProjectsRoute
-import com.logflare.android.feature.projectdetail.ProjectDetailScreen
+import com.logflare.android.feature.projectdetail.ProjectDetailRoute
 
 /** Draws the screen registered under route pattern `route`; tests pass a stub. */
 typealias DestinationContent =
@@ -156,10 +156,10 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
                 nav.navigateToTab(Destinations.Projects)
             },
         )
-        Destinations.ProjectDetailPattern -> ProjectDetailScreen(
+        Destinations.ProjectDetailPattern -> ProjectDetailRoute(
             onBack = back,
-            onOpenProjectSettings = { nav.navigate(Destinations.projectSettings(it)) },
-            onLogClick = { nav.navigate(Destinations.logDetail(it)) },
+            onOpenSettings = { nav.navigate(Destinations.projectSettings(it)) },
+            onOpenLog = { nav.navigate(Destinations.logDetail(it)) },
         )
         Destinations.ProjectSettingsPattern -> ProjectSettingsScreen(
             projectId = entry.arguments?.getInt(Destinations.ProjectIdArg) ?: return,

@@ -10,33 +10,10 @@ import com.logflare.android.feature.mypage.MyPageMemberUiModel
 import com.logflare.android.feature.mypage.MyPageUiState
 import com.logflare.android.feature.project.ProjectCreateUiState
 import com.logflare.android.feature.project.ProjectPermissionUiFactory
-import com.logflare.android.feature.projectdetail.ProjectDetailFilterState
-import com.logflare.android.feature.projectdetail.ProjectDetailLog
-import com.logflare.android.feature.projectdetail.ProjectDetailUiState
-import com.logflare.android.feature.projectdetail.ProjectLogFileOption
 import com.logflare.android.ui.component.common.MemberFieldStatus
 
 object SnapshotFixtures {
     private const val BASE_TIMESTAMP = "2026-01-15T10:30:00Z"
-
-    private val sampleDetailLogs: List<ProjectDetailLog> = listOf(
-        ProjectDetailLog(
-            id = 1,
-            level = LogLevel.ERROR,
-            timestamp = BASE_TIMESTAMP,
-            message = "Unable to resolve host qa-server.local",
-            projectName = "QA Payments",
-            fileName = "Debug",
-        ),
-        ProjectDetailLog(
-            id = 2,
-            level = LogLevel.WARNING,
-            timestamp = "2026-01-15T10:30:01Z",
-            message = "Request timed out after 30 seconds",
-            projectName = "QA Payments",
-            fileName = "Warning",
-        ),
-    )
 
     fun projectEditor(
         saved: Boolean = false,
@@ -70,31 +47,6 @@ object SnapshotFixtures {
             } else {
                 emptyList()
             },
-        )
-
-    fun projectDetail(
-        empty: Boolean = false,
-        loading: Boolean = false,
-        error: String? = null,
-        logsError: String? = null,
-    ): ProjectDetailUiState =
-        ProjectDetailUiState(
-            loading = loading,
-            projectId = 101,
-            projectName = "QA Payments",
-            logs = if (empty || loading || error != null || logsError != null) {
-                emptyList()
-            } else {
-                sampleDetailLogs
-            },
-            filterState = ProjectDetailFilterState(
-                logfileOptions = listOf(
-                    ProjectLogFileOption(id = 1, fileName = "Debug", selected = true),
-                    ProjectLogFileOption(id = 2, fileName = "Warning"),
-                ),
-            ),
-            error = error,
-            logsError = logsError,
         )
 
     fun myPage(

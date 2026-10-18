@@ -30,26 +30,36 @@ internal fun LogFilterSheet(
             onSelect = onSelectProject,
             onDismiss = onDismiss,
         )
-        LogsSheet.Level -> SelectionSheet(
-            title = stringResource(R.string.logs_sheet_level),
-            options = listOf(
-                SheetOption<LfLevel?>(null, stringResource(R.string.logs_all_levels)),
-                SheetOption<LfLevel?>(LfLevel.Warning, stringResource(R.string.logs_level_warning_up)),
-                SheetOption<LfLevel?>(LfLevel.Error, stringResource(R.string.logs_level_error_up)),
-                SheetOption<LfLevel?>(LfLevel.Critical, stringResource(R.string.logs_level_critical_only)),
-            ),
-            selected = query.minLevel,
-            onSelect = onSelectLevel,
-            onDismiss = onDismiss,
-        )
-        LogsSheet.Sort -> SelectionSheet(
-            title = stringResource(R.string.logs_sheet_sort),
-            options = LogSortOrder.entries.map { SheetOption(it, sortLabel(it)) },
-            selected = query.sort,
-            onSelect = onSelectSort,
-            onDismiss = onDismiss,
-        )
+        LogsSheet.Level -> LevelSheet(query.minLevel, onSelectLevel, onDismiss)
+        LogsSheet.Sort -> SortSheet(query.sort, onSelectSort, onDismiss)
     }
+}
+
+@Composable
+internal fun LevelSheet(selected: LfLevel?, onSelect: (LfLevel?) -> Unit, onDismiss: () -> Unit) {
+    SelectionSheet(
+        title = stringResource(R.string.logs_sheet_level),
+        options = listOf(
+            SheetOption<LfLevel?>(null, stringResource(R.string.logs_all_levels)),
+            SheetOption<LfLevel?>(LfLevel.Warning, stringResource(R.string.logs_level_warning_up)),
+            SheetOption<LfLevel?>(LfLevel.Error, stringResource(R.string.logs_level_error_up)),
+            SheetOption<LfLevel?>(LfLevel.Critical, stringResource(R.string.logs_level_critical_only)),
+        ),
+        selected = selected,
+        onSelect = onSelect,
+        onDismiss = onDismiss,
+    )
+}
+
+@Composable
+internal fun SortSheet(selected: LogSortOrder, onSelect: (LogSortOrder) -> Unit, onDismiss: () -> Unit) {
+    SelectionSheet(
+        title = stringResource(R.string.logs_sheet_sort),
+        options = LogSortOrder.entries.map { SheetOption(it, sortLabel(it)) },
+        selected = selected,
+        onSelect = onSelect,
+        onDismiss = onDismiss,
+    )
 }
 
 @Composable

@@ -3,296 +3,191 @@ package com.logflare.android.feature.projectdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.logflare.core.model.LogFileDTO
-import com.example.logflare.core.model.ProjectData
-import com.logflare.android.enums.LogLevel
-import com.logflare.android.enums.LogSort
-import com.logflare.android.feature.usecase.GetProjectDetailUseCase
-import com.logflare.android.feature.usecase.GetProjectLogsUseCase
+import com.example.logflare.core.designsystem.v2.LfLevel
+import com.logflare.android.data.store.LogStore
+import com.logflare.android.data.store.ProjectStore
+import com.logflare.android.data.store.Resource
+import com.logflare.android.data.store.model.HomeSummary
+import com.logflare.android.data.store.model.LogEvent
+import com.logflare.android.data.store.model.LogPage
+import com.logflare.android.data.store.model.LogQuery
+import com.logflare.android.data.store.model.LogSortOrder
+import com.logflare.android.data.store.model.ProjectItem
+import com.logflare.android.ui.nav.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * UI model for the upcoming Project Detail surface. The current implementation
- * focuses on presenting a rich layout that mirrors the wireframe so we can
- * iterate on visuals before wiring real data sources.
- */
+enum class ProjectDetailSheet { File, Level, Sort }
+
 data class ProjectDetailUiState(
-    val loading: Boolean = true,
-    val projectId: Int = 0,
-    val projectName: String = "",
-    val settingsLabel: String = "Project Settings",
-    val logs: List<ProjectDetailLog> = emptyList(),
-    val filterState: ProjectDetailFilterState = ProjectDetailFilterState(),
-    val showMoreLoading: Boolean = false,
-    val showMoreHasMore: Boolean = true,
-    /** Fatal: project missing — blocks the whole screen. */
-    val error: String? = null,
-    /** Non-fatal: log fetch failed — Settings and filters stay reachable. */
-    val logsError: String? = null,
-)
-
-data class ProjectDetailLog(
-    val id: Int,
-    val level: LogLevel,
-    val timestamp: String,
-    val message: String,
-    val projectName: String,
-    val fileName: String
-)
-
-data class ProjectDetailFilterState(
-    val selectedLevel: List<LogLevel> = emptyList(),
-    val logfileOptions: List<ProjectLogFileOption> = defaultLogFileOptions(),
-    val sortBy: LogSort = LogSort.NEWEST,
+    val project: ProjectItem? = null,
+    /** Last-24h counts of this project; null until loaded. */
+    val summary: HomeSummary? = null,
+    val query: LogQuery = LogQuery(),
+    val items: List<LogEvent> = emptyList(),
+    val hasMore: Boolean = false,
+    val initialLoad: Boolean = true,
+    /** The server's project list has no such project (deleted, or no access). */
+    val notFound: Boolean = false,
+    /** Nothing cached and the first load failed: show the retry state, not "no logs". */
+    val loadFailed: Boolean = false,
+    val refreshing: Boolean = false,
+    val sheet: ProjectDetailSheet? = null,
 ) {
-    companion object {
-        private fun defaultLogFileOptions() = listOf(
-            ProjectLogFileOption(id = 1, fileName = "Debug", selected = true),
-            ProjectLogFileOption(id = 2, fileName = "Warning"),
-            ProjectLogFileOption(id = 3, fileName = "NetWork"),
-            ProjectLogFileOption(id = 4, fileName = "Frontend")
-        )
-    }
+    /** A file or level filter is applied (offers "Clear filters"); the sort order is not a filter. */
+    val filtered: Boolean get() = query.minLevel != null || query.logFileId != null
 }
 
-data class ProjectLogFileOption(
-    val id: Int,
-    val fileName: String,
-    val selected: Boolean = false
-)
+sealed interface ProjectDetailEvent {
+    data object RefreshFailed : ProjectDetailEvent
+    data object LoadMoreFailed : ProjectDetailEvent
+}
 
+/**
+ * One project's page: its name, last-24h counts and log files from [ProjectStore], and its events
+ * from [LogStore] filtered by log file, minimum level and sort, with infinite scroll. The project
+ * comes from the nav argument; the filters live in [savedState] so they survive process death (an
+ * open sheet does not).
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ProjectDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val getProjectDetailUseCase: GetProjectDetailUseCase,
-    private val getProjectLogsUseCase: GetProjectLogsUseCase,
+    private val savedState: SavedStateHandle,
+    private val logStore: LogStore,
+    private val projectStore: ProjectStore,
 ) : ViewModel() {
 
-    private val projectId: Int = savedStateHandle["projectId"] ?: 0
-    private var project: ProjectData? = null
-    private var selectedLogfile: LogFileDTO? = null
-    private var globalOffset: Int = 0
-    private var allLogs: List<ProjectDetailLog> = emptyList()
-    private var sortBy: LogSort = LogSort.NEWEST
-    private val _ui = MutableStateFlow(ProjectDetailUiState(projectId = projectId))
-    val ui: StateFlow<ProjectDetailUiState> = _ui
+    private val projectId: Int = checkNotNull(savedState[Destinations.ProjectIdArg]) { "project id missing" }
 
-    init {
+    private val filters = MutableStateFlow(readFilters())
+    private val sheet = MutableStateFlow<ProjectDetailSheet?>(null)
+    private val refreshing = MutableStateFlow(false)
+    private var loadingMore = false
+
+    private val _events = Channel<ProjectDetailEvent>(Channel.BUFFERED)
+    val events: Flow<ProjectDetailEvent> = _events.receiveAsFlow()
+
+    private val page: Flow<Pair<LogQuery, Resource<LogPage>>> =
+        filters.map { it.toQuery() }.flatMapLatest { q -> logStore.events(q).map { q to it } }
+
+    private val local = combine(sheet, refreshing) { sh, r -> sh to r }
+
+    val state: StateFlow<ProjectDetailUiState> =
+        combine(page, projectStore.projects(), projectStore.summary(projectId), local) { (q, logs), projects, summary, l ->
+            val project = projects.data?.firstOrNull { it.id == projectId }
+            val notFound = projects.data != null && project == null
+            ProjectDetailUiState(
+                project = project,
+                summary = summary.data,
+                query = q,
+                items = logs.data?.items.orEmpty(),
+                hasMore = logs.data?.hasMore == true,
+                initialLoad = projects.isInitialLoad || (project != null && logs.isInitialLoad),
+                notFound = notFound,
+                loadFailed = (projects.data == null && projects.error != null) ||
+                    (project != null && logs.data == null && logs.error != null),
+                refreshing = l.second,
+                sheet = l.first,
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            ProjectDetailUiState(query = filters.value.toQuery()),
+        )
+
+    /** The Errors tile: Error and above, or back to all levels when that is already the filter. */
+    fun toggleErrors() = toggleLevel(LfLevel.Error)
+
+    /** The Warnings tile: Warning and above, or back to all levels. */
+    fun toggleWarnings() = toggleLevel(LfLevel.Warning)
+
+    private fun toggleLevel(level: LfLevel) = update { it.copy(minLevel = if (it.minLevel == level) null else level) }
+
+    fun setMinLevel(level: LfLevel?) = update { it.copy(minLevel = level) }
+
+    fun setLogFile(id: Int?) = update { it.copy(logFileId = id) }
+
+    fun setSort(order: LogSortOrder) = update { it.copy(sort = order) }
+
+    /** Drops the file and level filters; the sort order stays. */
+    fun clearFilters() = update { it.copy(minLevel = null, logFileId = null) }
+
+    fun openSheet(target: ProjectDetailSheet) {
+        sheet.value = target
+    }
+
+    fun closeSheet() {
+        sheet.value = null
+    }
+
+    /** Pull-to-refresh, awaited: the logs of the current query, this project's counts and the project list. */
+    fun refresh() {
+        if (refreshing.value) return
+        val q = state.value.query
+        refreshing.value = true
         viewModelScope.launch {
-            project = getProjectDetailUseCase(projectId)
-            if (project == null) {
-                _ui.value = _ui.value.copy(
-                    loading = false,
-                    error = "Project not found",
-                )
-                return@launch
-            }
-            hydratePlaceholder()
-            addInitialLogs()
-            fillLogFiles()
-            getLogs()
+            val results = listOf(
+                async { logStore.refresh(q) },
+                async { projectStore.refresh(projectId) },
+                async { projectStore.refresh() },
+            ).awaitAll()
+            refreshing.value = false
+            if (results.any { it.isFailure }) _events.send(ProjectDetailEvent.RefreshFailed)
         }
     }
 
-    private fun hydratePlaceholder() {
-        val defaultLog = ProjectDetailLog(
-            id = 0,
-            level = LogLevel.CRITICAL,
-            timestamp = "2025.11.16 23:58:09",
-            message = "This is a DEFAULT placeholder for log\n\n" +
-                    "If this message keeps displayed your project is no longer available or not found",
-            projectName = "Project $projectId",
-            fileName = "File 1"
-        )
-        _ui.value = ProjectDetailUiState(
-            loading = false,
-            projectId = 0,
-            projectName = "Loading...",
-            logs = listOf(defaultLog),
-        )
-    }
-
-    private fun addInitialLogs() {
-        val defaultLog = ProjectDetailLog(
-            id = 0,
-            level = LogLevel.CRITICAL,
-            timestamp = "2025.11.16 23:58:09",
-            message = "This is a DEFAULT placeholder for log\n\n" +
-                    "If this message keeps displayed please check your logfile configuration",
-            projectName = "Project $projectId",
-            fileName = "File 1"
-        )
-        val dto = project?.dto ?: return
-        _ui.value = _ui.value.copy(
-            loading = false,
-            projectId = dto.id,
-            projectName = dto.name,
-            logs = listOf(defaultLog),
-        )
-    }
-
-    private fun fillLogFiles() {
-        val logfiles = project?.dto?.logfiles ?: return
-        if (logfiles.isEmpty()) return
-        var isFirst = true
-        val options = logfiles.map { logfile ->
-            val selected = isFirst
-            if (isFirst) {
-                selectedLogfile = logfile
-                isFirst = false
-            }
-            ProjectLogFileOption(
-                id = logfile.id,
-                fileName = logfile.file_name,
-                selected = selected
-            )
-        }
-        _ui.value = _ui.value.copy(
-            filterState = _ui.value.filterState.copy(
-                logfileOptions = options
-            )
-        )
-    }
-
-    fun loadMoreLogs() {
-        _ui.value = _ui.value.copy(showMoreLoading = true)
-        globalOffset += 50
+    /** The list scrolled near its end: loads the next page unless one is loading or none is left. */
+    fun onEndReached() {
+        val s = state.value
+        if (loadingMore || !s.hasMore || s.initialLoad) return
+        loadingMore = true
         viewModelScope.launch {
-            getLogs(offset = globalOffset)
+            val result = logStore.loadMore(s.query)
+            loadingMore = false
+            if (result.isFailure) _events.send(ProjectDetailEvent.LoadMoreFailed)
         }
     }
 
-    private suspend fun getLogs(limit: Int = 50, offset: Int = 0) {
-        val dto = project?.dto
-        if (dto == null) {
-            _ui.value = _ui.value.copy(
-                showMoreLoading = false,
-                error = _ui.value.error ?: "Project not found",
-            )
-            return
-        }
-        val logfile = selectedLogfile
-        if (logfile == null) {
-            _ui.value = _ui.value.copy(
-                loading = false,
-                showMoreLoading = false,
-                logs = emptyList(),
-                logsError = "No log file selected",
-            )
-            return
-        }
-        val logs = getProjectLogsUseCase(
-            projectId = dto.id,
-            projectName = dto.name,
-            logfileId = logfile.id,
-            fileName = logfile.file_name,
-            limit = limit,
-            offset = offset,
-            sortBy = sortBy
-        )
-        if (logs == null) {
-            if (offset == 0) {
-                allLogs = emptyList()
-            }
-            _ui.value = _ui.value.copy(
-                loading = false,
-                showMoreLoading = false,
-                logs = if (offset == 0) emptyList() else _ui.value.logs,
-                logsError = "Failed to load logs",
-            )
-            return
-        }
-        val first = offset == 0
-        addLogs(
-            newLogs = logs,
-            first = first
-        )
-        _ui.value = _ui.value.copy(
-            showMoreLoading = false,
-            showMoreHasMore = logs.size >= limit,
-            logsError = null,
-        )
+    private fun update(change: (Filters) -> Filters) {
+        val next = change(filters.value)
+        filters.value = next
+        savedState[KEY_LEVEL] = next.minLevel?.name
+        savedState[KEY_FILE] = next.logFileId
+        savedState[KEY_SORT] = next.sort.name
     }
 
+    private fun readFilters() = Filters(
+        minLevel = savedState.get<String>(KEY_LEVEL)?.let(LfLevel::parse),
+        logFileId = savedState[KEY_FILE],
+        sort = savedState.get<String>(KEY_SORT)?.let { runCatching { LogSortOrder.valueOf(it) }.getOrNull() }
+            ?: LogSortOrder.Newest,
+    )
 
-    private fun addLogs(
-        newLogs: List<ProjectDetailLog>,
-        first: Boolean,
-    ) {
-        val project = project?.dto ?: return
-        allLogs = if (first) {
-            newLogs
-        } else {
-            allLogs + newLogs
-        }
-        _ui.value = _ui.value.copy(
-            loading = false,
-            projectId = project.id,
-            projectName = project.name,
-            logs = filterLogs()
-        )
-    }
+    private fun Filters.toQuery() = LogQuery(projectId, minLevel, logFileId, sort = sort)
 
-    fun filterLogs(): List<ProjectDetailLog> {
-        val currentLevels = _ui.value.filterState.selectedLevel
-        return if (currentLevels.isEmpty()) {
-            allLogs
-        } else {
-            allLogs.filter { currentLevels.contains(it.level) }
-        }
-    }
+    private data class Filters(
+        val minLevel: LfLevel? = null,
+        val logFileId: Int? = null,
+        val sort: LogSortOrder = LogSortOrder.Newest,
+    )
 
-    fun onSortSelected(sortBy: LogSort) {
-        if (this.sortBy == sortBy) return
-        this.sortBy = sortBy
-        _ui.value = _ui.value.copy(
-            filterState = _ui.value.filterState.copy(
-                sortBy = sortBy
-            )
-        )
-        globalOffset = 0
-        viewModelScope.launch {
-            getLogs()
-        }
-    }
-
-    fun onLevelSelected(level: LogLevel) {
-        val currentLevels = _ui.value.filterState.selectedLevel.toMutableList()
-        if (currentLevels.contains(level)) {
-            currentLevels.remove(level)
-        } else {
-            currentLevels.add(level)
-        }
-        _ui.value = _ui.value.copy(
-            filterState = _ui.value.filterState.copy(
-                selectedLevel = currentLevels
-            )
-        )
-        _ui.value = _ui.value.copy(
-            logs = filterLogs()
-        )
-    }
-
-    fun onLogfileSelected(logfileId: Int) {
-        addInitialLogs()
-        globalOffset = 0
-        val project = project?.dto ?: return
-        val logfile = project.logfiles?.find { it.id == logfileId } ?: return
-        selectedLogfile = logfile
-        _ui.value = _ui.value.copy(
-            filterState = _ui.value.filterState.copy(
-                logfileOptions = _ui.value.filterState.logfileOptions.map {
-                    it.copy(selected = it.id == logfileId)
-                }
-            ),
-            showMoreHasMore = true,
-        )
-        viewModelScope.launch {
-            getLogs()
-        }
+    private companion object {
+        const val KEY_LEVEL = "projectDetail.minLevel"
+        const val KEY_FILE = "projectDetail.logFileId"
+        const val KEY_SORT = "projectDetail.sort"
     }
 }

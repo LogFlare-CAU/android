@@ -25,9 +25,10 @@ import com.logflare.android.feature.mypage.MyPageUiState
 import com.logflare.android.feature.project.ProjectsContent
 import com.logflare.android.data.store.model.ProjectItem
 import com.logflare.android.feature.project.ProjectsUiState
-import com.logflare.android.feature.projectdetail.ProjectDetailLog
-import com.logflare.android.feature.projectdetail.ProjectDetailScreenContent
+import com.logflare.android.feature.projectdetail.ProjectDetailContent
 import com.logflare.android.feature.projectdetail.ProjectDetailUiState
+import com.logflare.android.data.store.model.LogEvent
+import com.example.logflare.core.designsystem.v2.LfLevel
 import com.logflare.android.ui.VisualQaAppRoot
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.theme.LogflareandroidTheme
@@ -154,40 +155,47 @@ class VisualQaSemanticsTest {
 
     @Test
     fun projectDetailExposesOpenSettingsAndLogCards() {
-        var openedSettings: Int? = null
+        var openedSettings = 0
         var openedLog: Int? = null
         compose.setContent {
             LogflareandroidTheme(false) {
-                ProjectDetailScreenContent(
-                    uiState = ProjectDetailUiState(
-                        loading = false,
-                        projectId = 101,
-                        projectName = "Payments",
-                        settingsLabel = "Project Settings",
-                        logs = listOf(
-                            ProjectDetailLog(
+                ProjectDetailContent(
+                    state = ProjectDetailUiState(
+                        project = ProjectItem(101, "Payments", emptyList(), 0, 0, null),
+                        initialLoad = false,
+                        items = listOf(
+                            LogEvent(
                                 id = 5001,
-                                level = LogLevel.ERROR,
-                                timestamp = "2026-01-01T00:00:00Z",
+                                projectId = 101,
+                                logFileName = "payments.log",
+                                type = null,
                                 message = "payment gateway timeout",
-                                projectName = "Payments",
-                                fileName = "payments.log",
+                                level = LfLevel.Error,
+                                lastSeen = Instant.parse("2026-01-01T00:00:00Z"),
+                                firstSeen = Instant.parse("2026-01-01T00:00:00Z"),
+                                occurrences = 1,
                             ),
                         ),
                     ),
                     onBack = {},
-                    onOpenProjectSettings = { openedSettings = it },
-                    onLevelSelected = {},
-                    onLogfileSelected = {},
-                    onSortSelected = {},
-                    onLogClick = { openedLog = it.id },
-                    onLoadMore = {},
+                    onOpenSettings = { openedSettings++ },
+                    onToggleErrors = {},
+                    onToggleWarnings = {},
+                    onOpenSheet = {},
+                    onCloseSheet = {},
+                    onSelectFile = {},
+                    onSelectLevel = {},
+                    onSelectSort = {},
+                    onClearFilters = {},
+                    onRefresh = {},
+                    onEndReached = {},
+                    onOpenLog = { openedLog = it },
                 )
             }
         }
         compose.onNodeWithTag(VisualQaTags.ProjectDetail).assertExists()
         compose.onNodeWithTag(VisualQaTags.OpenProjectSettings).performClick()
-        assertEquals(101, openedSettings)
+        assertEquals(1, openedSettings)
         compose.onNodeWithTag(VisualQaTags.logCard(5001)).performClick()
         assertEquals(5001, openedLog)
     }

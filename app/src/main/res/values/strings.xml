@@ -160,4 +160,18 @@
     <string name="log_back">Back</string>
     <string name="log_load_failed_title">Couldn\'t load this log</string>
     <string name="log_load_failed_body">Check your connection, then try again.</string>
+    <string name="project_detail_settings">Project settings</string>
+    <string name="project_detail_stat_errors">Errors · 24h</string>
+    <string name="project_detail_stat_warnings">Warnings</string>
+    <string name="project_detail_stat_files">Log files</string>
+    <string name="project_detail_stat_unknown">–</string>
+    <string name="project_detail_all_files">All files</string>
+    <string name="project_detail_file_fallback">Log file</string>
+    <string name="project_detail_sheet_file">Log file</string>
+    <string name="project_detail_empty_filtered_title">No logs match these filters</string>
+    <string name="project_detail_empty_filtered_body">Try another file or a lower level.</string>
+    <string name="project_detail_empty_title">No logs yet</string>
+    <string name="project_detail_empty_body">Logs this project sends show up here.</string>
+    <string name="project_detail_not_found">This project no longer exists</string>
+    <string name="project_detail_back_to_projects">Back to projects</string>
 </resources>

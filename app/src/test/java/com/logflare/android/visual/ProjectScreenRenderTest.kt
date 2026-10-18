@@ -8,8 +8,6 @@ import androidx.compose.ui.test.onNodeWithText
 import com.logflare.android.feature.project.ProjectCreateScreenContent
 import com.logflare.android.feature.project.ProjectCreateUiState
 import com.logflare.android.feature.project.ProjectSettingsScreenContent
-import com.logflare.android.feature.projectdetail.ProjectDetailScreenContent
-import com.logflare.android.feature.projectdetail.ProjectDetailUiState
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.theme.LogflareandroidTheme
 import org.junit.Assert.assertFalse
@@ -87,23 +85,5 @@ class ProjectScreenRenderTest {
             }
         }
         compose.onNodeWithTag(VisualQaTags.ProjectSettings).assertExists()
-    }
-
-    @Test fun projectDetailRendersFromStateOnly() {
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                ProjectDetailScreenContent(
-                    uiState = ProjectDetailUiState(loading = false, projectName = "Payments"),
-                    onBack = {},
-                    onOpenProjectSettings = { _ -> },
-                    onLevelSelected = { _ -> },
-                    onLogfileSelected = { _ -> },
-                    onSortSelected = { _ -> },
-                    onLogClick = { _ -> },
-                    onLoadMore = {},
-                )
-            }
-        }
-        compose.onNodeWithTag(VisualQaTags.ProjectDetail).assertExists()
     }
 }
