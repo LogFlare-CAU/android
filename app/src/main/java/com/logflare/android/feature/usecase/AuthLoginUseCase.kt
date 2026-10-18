@@ -41,8 +41,7 @@ class AuthLoginUseCase @Inject constructor(
         }
 
         val bearer = "Bearer $token"
-        authRepository.setToken(bearer)
-        authRepository.setUsername(username)
+        authRepository.setTokenAndUsername(bearer, username)
         runCatching {
             deviceRepository.syncConfigAndRegister()
         }.onFailure {

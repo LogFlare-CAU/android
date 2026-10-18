@@ -24,6 +24,10 @@ sealed interface SessionState {
     data object SignedOut : SessionState
 
     data class SignedIn(
+        /**
+         * Normalized server URL. Can be empty for legacy installs that stored a token but never
+         * a server URL; requests then fail fast in host selection.
+         */
         val serverUrl: String,
         /** Stored verbatim, already including the `Bearer ` prefix. */
         val token: String,

@@ -63,12 +63,26 @@ class AuthRepository internal constructor(
     }
 
     /**
-     * Removes the token and the user identity (idx/permission) so a later login as someone
-     * else can't inherit the previous user's session key. The username is kept.
+     * Removes the token and the whole user identity (username/idx/permission) so a later login
+     * as someone else can't inherit the previous user's session key.
      */
     suspend fun clearToken() {
         dataStore.edit { prefs ->
             prefs.remove(KEY_TOKEN)
+            prefs.remove(KEY_USERNAME)
+            prefs.remove(KEY_USER_IDX)
+            prefs.remove(KEY_PERMISSION)
+        }
+    }
+
+    /**
+     * Writes token and username in one transaction (old login path; profile not known yet).
+     * Clears idx/permission so they can't belong to a different user.
+     */
+    suspend fun setTokenAndUsername(jwt: String, username: String) {
+        dataStore.edit { prefs ->
+            prefs[KEY_TOKEN] = jwt
+            prefs[KEY_USERNAME] = username
             prefs.remove(KEY_USER_IDX)
             prefs.remove(KEY_PERMISSION)
         }

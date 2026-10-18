@@ -1,15 +1,21 @@
 package com.logflare.android.data.session
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import app.cash.turbine.test
 import com.example.logflare.core.model.UserDTO
 import com.logflare.android.data.AuthRepository
 import com.logflare.android.data.DataStoreBaseUrlProvider
 import com.logflare.android.data.ServerConfigRepository
 import java.io.File
+import java.io.IOException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
@@ -32,14 +38,24 @@ class SessionRepositoryTest {
         fun session() = SessionRepository(auth, serverConfig, baseUrl, scope.backgroundScope)
     }
 
-    private fun TestScope.env(): Env {
+    /** A store whose file can't be read (e.g. corrupt): every read and write throws. */
+    private object BrokenStore : DataStore<Preferences> {
+        override val data: Flow<Preferences> = flow { throw IOException("corrupt store") }
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
+            throw IOException("corrupt store")
+    }
+
+    private fun TestScope.env(
+        brokenAuth: Boolean = false,
+        brokenConfig: Boolean = false,
+    ): Env {
         fun store(name: String) = PreferenceDataStoreFactory.create(
             scope = backgroundScope,
             produceFile = { File(tmp.root, "$name.preferences_pb") },
         )
-        val serverConfig = ServerConfigRepository(store("config"))
+        val serverConfig = ServerConfigRepository(if (brokenConfig) BrokenStore else store("config"))
         return Env(
-            auth = AuthRepository(store("auth")),
+            auth = AuthRepository(if (brokenAuth) BrokenStore else store("auth")),
             serverConfig = serverConfig,
             baseUrl = DataStoreBaseUrlProvider(serverConfig, backgroundScope),
             scope = this,
@@ -146,6 +162,69 @@ class SessionRepositoryTest {
         assertNull(env.auth.token.first())
         assertNull(repo.currentToken())
         assertEquals("https://logs.example.com/", env.serverConfig.serverUrl.first())
+        assertEquals("https://logs.example.com/", env.baseUrl.getBaseUrl())
+    }
+
+    @Test
+    fun signOut_thenOtherUserLogsIn_neverCarriesPreviousIdentity() = runTest {
+        val env = env()
+        val url = "https://logs.example.com/"
+        env.serverConfig.setServerUrl(url)
+        env.auth.setSession("Bearer alice", UserDTO(idx = 1, username = "alice", permission = 1))
+        val repo = env.session()
+        val aliceKey = SessionKey.of(url, 1)
+
+        repo.state.test {
+            assertEquals(SessionState.Loading, awaitItem())
+            assertEquals(aliceKey, (awaitItem() as SessionState.SignedIn).key)
+
+            repo.signOut()
+            assertEquals(SessionState.SignedOut, awaitItem())
+            val stored = env.auth.stored.first()
+            assertNull(stored.username)
+            assertNull(stored.userIdx)
+
+            // Old login path (AuthLoginUseCase): token + username in one transaction.
+            env.auth.setTokenAndUsername("Bearer bob", "bob")
+            val bob = awaitItem() as SessionState.SignedIn
+            assertEquals("Bearer bob", bob.token)
+            assertEquals("bob", bob.username)
+            assertNull(bob.userIdx)
+            assertEquals(SessionKey.of(url, null, "bob"), bob.key)
+            assertNotEquals(aliceKey, bob.key)
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun gate_notStuck_whenConfigStoreUnreadable_andTokenReadable() = runTest {
+        val env = env(brokenConfig = true)
+        env.auth.setToken("Bearer abc")
+        val repo = env.session()
+
+        repo.state.test {
+            assertEquals(SessionState.Loading, awaitItem())
+            val signedIn = awaitItem() as SessionState.SignedIn
+            assertEquals("Bearer abc", signedIn.token)
+            assertEquals("", signedIn.serverUrl)
+            expectNoEvents()
+        }
+        withTimeout(1_000) { env.baseUrl.awaitLoaded() }
+        assertNull(env.baseUrl.getBaseUrl())
+    }
+
+    @Test
+    fun gate_notStuck_whenAuthStoreUnreadable() = runTest {
+        val env = env(brokenAuth = true)
+        env.serverConfig.setServerUrl("https://logs.example.com")
+        val repo = env.session()
+
+        repo.state.test {
+            assertEquals(SessionState.Loading, awaitItem())
+            assertEquals(SessionState.SignedOut, awaitItem())
+            expectNoEvents()
+        }
+        withTimeout(1_000) { env.baseUrl.awaitLoaded() }
         assertEquals("https://logs.example.com/", env.baseUrl.getBaseUrl())
     }
 
