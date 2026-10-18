@@ -20,6 +20,7 @@ import com.logflare.android.push.GlobalAlert
 import com.logflare.android.push.LegacyAlerts
 import com.logflare.android.push.ProjectAlert
 import com.logflare.android.ui.nav.Destinations
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -163,32 +164,55 @@ class ProjectSettingsViewModelTest {
         val env = newEnv()
         val vm = env.vm
         settle()
-        // No own level: shows the Push alerts default (Error and above).
+        // No own level: follows the Push alerts default (Error and above).
+        assertTrue(vm.state.value.followsPushAlerts)
         assertEquals(LfLevel.Error, vm.state.value.alertLevel)
         val callsBefore = api.calls.size
 
         vm.saveAlertLevel(LfLevel.Warning)
         settle()
         assertEquals(LfLevel.Warning, vm.state.value.alertLevel)
+        assertFalse(vm.state.value.followsPushAlerts)
         assertEquals(LfLevel.Warning, env.alerts.settings.value.projects[1]?.level)
-
-        // Picking the global level again makes the project follow Push alerts.
-        vm.saveAlertLevel(LfLevel.Error)
-        settle()
-        assertNull(env.alerts.settings.value.projects[1])
-        assertEquals(LfLevel.Error, vm.state.value.alertLevel)
 
         vm.saveKeywords(listOf("healthcheck", "favicon.ico"))
         settle()
-        assertEquals(ProjectAlert(mutedKeywords = setOf("healthcheck", "favicon.ico")), env.alerts.settings.value.projects[1])
+        assertEquals(
+            ProjectAlert(level = LfLevel.Warning, mutedKeywords = setOf("healthcheck", "favicon.ico")),
+            env.alerts.settings.value.projects[1],
+        )
         assertEquals(listOf("healthcheck", "favicon.ico"), vm.state.value.mutedKeywords)
 
         assertEquals(callsBefore, api.calls.size)
-        assertEquals(List(3) { ProjectSettingsEvent.Saved }, env.events)
+        assertEquals(List(2) { ProjectSettingsEvent.Saved }, env.events)
 
         env.alerts.setGlobal(GlobalAlert.Off)
         settle()
         assertTrue(vm.state.value.pushAlertsOff)
+    }
+
+    @Test
+    fun alertLevel_explicitChoiceKeptEvenWhenEqualToGlobal() = runTest {
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+
+        // Same as the global Error and above, but chosen: stored as the project's own level.
+        vm.saveAlertLevel(LfLevel.Error)
+        settle()
+        assertEquals(LfLevel.Error, env.alerts.settings.value.projects[1]?.level)
+        assertFalse(vm.state.value.followsPushAlerts)
+
+        env.alerts.setGlobal(GlobalAlert.CriticalOnly)
+        settle()
+        assertEquals(LfLevel.Error, vm.state.value.alertLevel)
+
+        vm.followPushAlerts()
+        settle()
+        assertNull(env.alerts.settings.value.projects[1])
+        assertTrue(vm.state.value.followsPushAlerts)
+        assertEquals(LfLevel.Critical, vm.state.value.alertLevel)
+        assertEquals(List(2) { ProjectSettingsEvent.Saved }, env.events)
     }
 
     @Test
@@ -211,6 +235,102 @@ class ProjectSettingsViewModelTest {
         assertEquals(1, api.count("resetProjectPerms"))
         assertEquals(3, vm.state.value.memberCount)
         assertEquals(listOf(true, false, true, true), vm.state.value.members.map { it.hasAccess })
+    }
+
+    @Test
+    fun members_bothLoaded_sendsUsernames() = runTest {
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        vm.openSheet(SettingsSheet.Members)
+        settle()
+        assertEquals(SettingsSheet.Members, vm.state.value.sheet)
+
+        vm.saveMembers(setOf(1, 8, 9))
+        settle()
+        assertEquals(setOf("admin", "minsu", "jihyun"), api.permsResets.single().usernames)
+        assertEquals(1, api.permsResets.single().projectid)
+    }
+
+    @Test
+    fun members_accessFails_noResetAndToast() = runTest {
+        api.projectPerms = { throw IOException("offline") }
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        assertNull(vm.state.value.memberCount)
+
+        vm.openSheet(SettingsSheet.Members)
+        settle()
+        assertNull(vm.state.value.sheet)
+        assertEquals(listOf<ProjectSettingsEvent>(ProjectSettingsEvent.MembersUnavailable), env.events)
+
+        vm.saveMembers(setOf(1, 8))
+        settle()
+        assertFalse("resetProjectPerms" in api.calls)
+    }
+
+    @Test
+    fun members_usersFail_noResetAndToast() = runTest {
+        api.users = { throw IOException("offline") }
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        assertNull(vm.state.value.memberCount)
+
+        vm.openSheet(SettingsSheet.Members)
+        settle()
+        assertNull(vm.state.value.sheet)
+        assertEquals(listOf<ProjectSettingsEvent>(ProjectSettingsEvent.MembersUnavailable), env.events)
+
+        vm.saveMembers(setOf(1, 8))
+        settle()
+        assertFalse("resetProjectPerms" in api.calls)
+    }
+
+    @Test
+    fun members_saveFails_keepsAccessAndReports() = runTest {
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        vm.openSheet(SettingsSheet.Members)
+        settle()
+        api.mutationRejected = true
+        vm.saveMembers(setOf(1, 8, 9))
+        settle()
+        assertEquals(2, vm.state.value.memberCount)
+        assertFalse(vm.state.value.busy)
+        assertEquals(listOf<ProjectSettingsEvent>(ProjectSettingsEvent.SaveFailed), env.events)
+    }
+
+    @Test
+    fun rename_failure_reportsAndKeepsSheet() = runTest {
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        vm.openSheet(SettingsSheet.Name)
+        vm.setNameDraft("alpha-2")
+        api.mutationError = IOException("offline")
+        vm.saveName()
+        settle()
+        assertEquals(SettingsSheet.Name, vm.state.value.sheet)
+        assertFalse(vm.state.value.busy)
+        assertEquals(listOf<ProjectSettingsEvent>(ProjectSettingsEvent.SaveFailed), env.events)
+    }
+
+    @Test
+    fun delete_failure_reportsAndResetsBusy() = runTest {
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        vm.openSheet(SettingsSheet.Delete)
+        vm.setDeleteConfirmText("alpha")
+        api.mutationError = IOException("offline")
+        vm.confirmDelete()
+        settle()
+        assertFalse(vm.state.value.busy)
+        assertTrue(vm.state.value.canDelete)
+        assertEquals(listOf<ProjectSettingsEvent>(ProjectSettingsEvent.DeleteFailed), env.events)
     }
 
     @Test
@@ -273,6 +393,20 @@ class ProjectSettingsViewModelTest {
         assertFalse(vm.state.value.tokenRevealed)
         assertEquals(1, api.count("getProjectToken"))
         assertEquals(listOf<ProjectSettingsEvent>(ProjectSettingsEvent.CopyToken("tok-1")), env.events)
+    }
+
+    @Test
+    fun tokenFetchedOncePerBurst() = runTest {
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        vm.toggleReveal()
+        vm.copyToken()
+        vm.copyToken()
+        settle()
+        assertEquals(1, api.count("getProjectToken"))
+        assertTrue(vm.state.value.tokenRevealed)
+        assertEquals(List(2) { ProjectSettingsEvent.CopyToken("tok-1") }, env.events)
     }
 
     @Test

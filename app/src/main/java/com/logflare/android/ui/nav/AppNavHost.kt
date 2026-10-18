@@ -117,11 +117,13 @@ private fun NavHostController.leaveLogin() {
 
 /**
  * After a project was deleted: back to the Projects tab root, dropping its detail and settings.
- * Opened from another tab, that tab is first popped to its root so it doesn't keep the project.
+ * Opened from another tab, that tab is first popped to its root so it doesn't keep the project,
+ * and the Projects tab's saved stack is dropped so it opens at its root.
  */
-private fun NavHostController.popToProjectList() {
+internal fun NavHostController.popToProjectList() {
     if (popBackStack(Destinations.Projects, inclusive = false)) return
     popBackStack(Destinations.Home, inclusive = false)
+    clearBackStack(Destinations.Projects)
     navigateToTab(Destinations.Projects)
 }
 

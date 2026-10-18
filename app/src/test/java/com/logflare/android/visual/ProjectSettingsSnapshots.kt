@@ -25,6 +25,8 @@ class ProjectSettingsSnapshots : DsSnapshotTest() {
     @Test fun project_settings_member_dark() = capture("project_settings_member", true) { Settings(ProjectSettingsFixtures.member) }
     @Test fun project_settings_alert_sheet_light() = capture("project_settings_alert_sheet", false) { Settings(ProjectSettingsFixtures.alertSheet) }
     @Test fun project_settings_alert_sheet_dark() = capture("project_settings_alert_sheet", true) { Settings(ProjectSettingsFixtures.alertSheet) }
+    @Test fun project_settings_members_sheet_light() = capture("project_settings_members_sheet", false) { Settings(ProjectSettingsFixtures.membersSheet) }
+    @Test fun project_settings_members_sheet_dark() = capture("project_settings_members_sheet", true) { Settings(ProjectSettingsFixtures.membersSheet) }
     @Test fun project_settings_delete_sheet_light() = capture("project_settings_delete_sheet", false) { Settings(ProjectSettingsFixtures.deleteSheet) }
     @Test fun project_settings_delete_sheet_dark() = capture("project_settings_delete_sheet", true) { Settings(ProjectSettingsFixtures.deleteSheet) }
 }
@@ -44,6 +46,7 @@ object ProjectSettingsFixtures {
         loading = false,
         isAdmin = true,
         alertLevel = LfLevel.Warning,
+        followsPushAlerts = false,
         mutedKeywords = listOf("healthcheck", "favicon.ico"),
         memberCount = 3,
         members = listOf(
@@ -63,6 +66,8 @@ object ProjectSettingsFixtures {
     )
 
     val alertSheet = admin.copy(sheet = SettingsSheet.AlertLevel)
+
+    val membersSheet = admin.copy(sheet = SettingsSheet.Members)
 
     val deleteSheet = admin.copy(sheet = SettingsSheet.Delete, deleteConfirmText = "api-ser")
 }

@@ -18,7 +18,9 @@ import com.logflare.android.ui.nav.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** A user in the Members sheet. Super Admins ([locked]) see every project and can't be unticked. */
 data class MemberAccess(val member: Member, val hasAccess: Boolean, val locked: Boolean)
@@ -46,10 +49,14 @@ data class ProjectSettingsUiState(
     val isAdmin: Boolean = false,
     /** The level that alerts on this device: the project's own, else the Push alerts default. */
     val alertLevel: LfLevel = DEFAULT_LEVEL,
+    /** No level of its own: the project uses the Push alerts default ([globalLevel]). */
+    val followsPushAlerts: Boolean = true,
+    /** The Push alerts default; null when push alerts are off. */
+    val globalLevel: LfLevel? = DEFAULT_LEVEL,
     /** Push alerts are off on this device, so no level alerts. */
     val pushAlertsOff: Boolean = false,
     val mutedKeywords: List<String> = emptyList(),
-    /** Users who can see the project; null until it's known. */
+    /** Users who can see the project; null until both the users and the access list are known. */
     val memberCount: Int? = null,
     val members: List<MemberAccess> = emptyList(),
     /** Fetched on the first reveal or copy. */
@@ -71,6 +78,7 @@ sealed interface ProjectSettingsEvent {
     data object SaveFailed : ProjectSettingsEvent
     data class CopyToken(val token: String) : ProjectSettingsEvent
     data object TokenUnavailable : ProjectSettingsEvent
+    data object MembersUnavailable : ProjectSettingsEvent
     data object TokenRotated : ProjectSettingsEvent
     data object RotateFailed : ProjectSettingsEvent
     data object Deleted : ProjectSettingsEvent
@@ -81,6 +89,7 @@ private val DEFAULT_LEVEL: LfLevel = checkNotNull(AlertSettings().global.thresho
 private const val TAG = "ProjectSettings"
 private const val ADMIN_PERMISSION = 80
 private const val SUPER_ADMIN_PERMISSION = 100
+private const val USERS_TIMEOUT_MS = 5_000L
 
 /**
  * Project settings. Alert level and muted keywords are this device's push settings (anyone can
@@ -91,7 +100,7 @@ private const val SUPER_ADMIN_PERMISSION = 100
 class ProjectSettingsViewModel internal constructor(
     savedState: SavedStateHandle,
     private val projectStore: ProjectStore,
-    memberStore: MemberStore,
+    private val memberStore: MemberStore,
     private val alerts: AlertSettingsRepository,
     sessions: StateFlow<SessionState>,
 ) : ViewModel() {
@@ -121,28 +130,29 @@ class ProjectSettingsViewModel internal constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** All users, for the Members sheet; members can't list users, so they don't ask. */
-    private val users: Flow<List<Member>?> = isAdmin.flatMapLatest { admin ->
-        if (admin) memberStore.members().map { it.data } else flowOf(null)
-    }
+    private val users: StateFlow<List<Member>?> = isAdmin
+        .flatMapLatest { admin -> if (admin) memberStore.members().map { it.data } else flowOf(null) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The shared token fetch, so a burst of reveal/copy taps makes one request. */
+    private var tokenFetch: Deferred<Result<String>>? = null
 
     val state: StateFlow<ProjectSettingsUiState> =
         combine(projects, isAdmin, users, alerts.settings, local) { resource, admin, allUsers, settings, l ->
             val list = resource?.data
             val project = list?.firstOrNull { it.id == projectId }
             val own = settings.projects[projectId]
-            val members = if (admin) memberAccess(allUsers.orEmpty(), l.access) else emptyList()
+            val members = if (admin && allUsers != null && l.access != null) memberAccess(allUsers, l.access) else emptyList()
             ProjectSettingsUiState(
                 project = project,
                 loading = resource == null || resource.isInitialLoad,
                 isAdmin = admin,
                 alertLevel = own?.level ?: settings.global.threshold() ?: DEFAULT_LEVEL,
+                followsPushAlerts = own?.level == null,
+                globalLevel = settings.global.threshold(),
                 pushAlertsOff = settings.global == GlobalAlert.Off,
                 mutedKeywords = own?.mutedKeywords.orEmpty().toList(),
-                memberCount = when {
-                    !admin -> null
-                    members.isNotEmpty() && l.access != null -> members.count { it.hasAccess }
-                    else -> l.access?.size
-                },
+                memberCount = members.takeIf { it.isNotEmpty() }?.count { it.hasAccess },
                 members = members,
                 token = l.token.takeIf { admin },
                 tokenRevealed = admin && l.tokenRevealed,
@@ -166,8 +176,11 @@ class ProjectSettingsViewModel internal constructor(
         val adminOnly = sheet != SettingsSheet.AlertLevel && sheet != SettingsSheet.Keywords
         if (adminOnly && !isAdmin.value) return
         val name = state.value.project?.name.orEmpty()
+        if (sheet == SettingsSheet.Members && !membersKnown()) {
+            openMembersWhenLoaded()
+            return
+        }
         local.value = local.value.copy(sheet = sheet, nameDraft = name, deleteText = "")
-        if (sheet == SettingsSheet.Members && local.value.access == null) viewModelScope.launch { loadAccess() }
     }
 
     fun dismissSheet() {
@@ -187,22 +200,22 @@ class ProjectSettingsViewModel internal constructor(
         mutate(closeSheet = true) { projectStore.rename(projectId, draft) }
     }
 
-    /** Choosing the Push alerts default again drops the project's own level, so it follows it. */
-    fun saveAlertLevel(level: LfLevel) = saveLocally {
-        if (level == alerts.settings.value.global.threshold()) {
-            alerts.clearProjectLevel(projectId)
-        } else {
-            alerts.setProjectLevel(projectId, level)
-        }
-    }
+    /** An explicit choice, kept even when it equals the Push alerts default. */
+    fun saveAlertLevel(level: LfLevel) = saveLocally { alerts.setProjectLevel(projectId, level) }
+
+    /** Drops the project's own level: it then follows the Push alerts default. */
+    fun followPushAlerts() = saveLocally { alerts.clearProjectLevel(projectId) }
 
     fun saveKeywords(keywords: List<String>) = saveLocally { alerts.setMutedKeywords(projectId, keywords.toSet()) }
 
-    /** [selected] are user indexes; the server takes usernames. */
+    /**
+     * [selected] are user indexes; the server takes usernames. Only with both the users and the
+     * current access known: the request replaces the whole list, so a partial view would wipe it.
+     */
     fun saveMembers(selected: Set<Int>) {
-        val s = state.value
-        if (!s.isAdmin || s.busy) return
-        val usernames = s.members.filter { it.member.idx in selected }.mapTo(mutableSetOf()) { it.member.username }
+        val all = users.value
+        if (!isAdmin.value || local.value.busy || all == null || local.value.access == null) return
+        val usernames = all.filter { it.idx in selected }.mapTo(mutableSetOf()) { it.username }
         mutate(closeSheet = true, onSuccess = { local.value = local.value.copy(access = selected) }) {
             projectStore.setMembers(projectId, usernames)
         }
@@ -269,17 +282,48 @@ class ProjectSettingsViewModel internal constructor(
         val busy: Boolean = false,
     )
 
-    private suspend fun loadAccess() {
-        projectStore.members(projectId).onSuccess { local.value = local.value.copy(access = it) }
+    private suspend fun loadAccess(): Boolean =
+        projectStore.members(projectId).onSuccess { local.value = local.value.copy(access = it) }.isSuccess
+
+    private fun membersKnown() = users.value != null && local.value.access != null
+
+    /** Loads what's missing, then opens the Members sheet; reports when it can't. */
+    private fun openMembersWhenLoaded() {
+        if (local.value.busy) return
+        local.value = local.value.copy(busy = true)
+        viewModelScope.launch {
+            val accessKnown = local.value.access != null || loadAccess()
+            val usersKnown = accessKnown && (users.value != null || awaitUsers())
+            local.value = local.value.copy(busy = false)
+            if (usersKnown) {
+                local.value = local.value.copy(sheet = SettingsSheet.Members)
+            } else {
+                _events.send(ProjectSettingsEvent.MembersUnavailable)
+            }
+        }
+    }
+
+    /** Refreshes the user list; true once [users] has it. */
+    private suspend fun awaitUsers(): Boolean {
+        if (memberStore.refresh().isFailure) return false
+        return withTimeoutOrNull(USERS_TIMEOUT_MS) { users.first { it != null } } != null
     }
 
     private fun withToken(block: suspend (String) -> Unit) {
+        val known = local.value.token
+        val fetch = if (known == null) {
+            tokenFetch ?: viewModelScope.async { projectStore.token(projectId) }.also { tokenFetch = it }
+        } else {
+            null
+        }
         viewModelScope.launch {
-            val token = local.value.token ?: projectStore.token(projectId).getOrElse {
+            val token = known ?: checkNotNull(fetch).await().getOrElse {
                 // E.g. a 403: admins (80) only get tokens of projects they can see.
+                if (tokenFetch === fetch) tokenFetch = null
                 _events.send(ProjectSettingsEvent.TokenUnavailable)
                 return@launch
-            }.also { local.value = local.value.copy(token = it) }
+            }
+            if (local.value.token == null) local.value = local.value.copy(token = token)
             block(token)
         }
     }

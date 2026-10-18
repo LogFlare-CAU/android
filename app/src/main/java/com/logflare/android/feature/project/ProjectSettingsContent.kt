@@ -50,6 +50,7 @@ fun ProjectSettingsRoute(
     val rotated = stringResource(R.string.project_create_token_rotated)
     val rotateFailed = stringResource(R.string.project_create_rotate_failed)
     val deleteFailed = stringResource(R.string.project_settings_delete_failed)
+    val membersUnavailable = stringResource(R.string.project_settings_members_unavailable)
     LaunchedEffect(viewModel) {
         viewModel.events.collect {
             when (it) {
@@ -60,6 +61,7 @@ fun ProjectSettingsRoute(
                     toast.show(copied)
                 }
                 ProjectSettingsEvent.TokenUnavailable -> toast.show(unavailable)
+                ProjectSettingsEvent.MembersUnavailable -> toast.show(membersUnavailable)
                 ProjectSettingsEvent.TokenRotated -> toast.show(rotated)
                 ProjectSettingsEvent.RotateFailed -> toast.show(rotateFailed)
                 ProjectSettingsEvent.Deleted -> onDeleted()
@@ -77,6 +79,7 @@ fun ProjectSettingsRoute(
             onNameDraft = viewModel::setNameDraft,
             onSaveName = viewModel::saveName,
             onSaveLevel = viewModel::saveAlertLevel,
+            onFollowPushAlerts = viewModel::followPushAlerts,
             onSaveKeywords = viewModel::saveKeywords,
             onKeywordDuplicate = { toast.show(duplicate) },
             onSaveMembers = viewModel::saveMembers,
@@ -98,6 +101,7 @@ class ProjectSettingsActions(
     val onNameDraft: (String) -> Unit = {},
     val onSaveName: () -> Unit = {},
     val onSaveLevel: (LfLevel) -> Unit = {},
+    val onFollowPushAlerts: () -> Unit = {},
     val onSaveKeywords: (List<String>) -> Unit = {},
     val onKeywordDuplicate: () -> Unit = {},
     val onSaveMembers: (Set<Int>) -> Unit = {},
@@ -150,7 +154,7 @@ private fun Settings(state: ProjectSettingsUiState, name: String, actions: Proje
             }
             SettingRow(
                 stringResource(R.string.project_settings_alert_level),
-                if (state.pushAlertsOff) stringResource(R.string.project_settings_push_off) else levelRange(state.alertLevel),
+                alertLevelValue(state),
                 { actions.onOpenSheet(SettingsSheet.AlertLevel) },
             )
             SettingRow(
@@ -185,6 +189,17 @@ private fun Settings(state: ProjectSettingsUiState, name: String, actions: Proje
                 )
             }
         }
+    }
+}
+
+/** Push alerts off wins; else the project's own level, or the Push alerts default it follows. */
+@Composable
+private fun alertLevelValue(state: ProjectSettingsUiState): String {
+    val global = state.globalLevel
+    return when {
+        state.pushAlertsOff || global == null -> stringResource(R.string.project_settings_push_off)
+        state.followsPushAlerts -> stringResource(R.string.project_settings_follows_push, global.name)
+        else -> levelRange(state.alertLevel)
     }
 }
 

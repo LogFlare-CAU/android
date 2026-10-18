@@ -235,4 +235,9 @@
     <string name="project_settings_role_super_admin">Super Admin · always has access</string>
     <string name="project_settings_role_admin">Admin</string>
     <string name="project_settings_role_member">Member</string>
+    <string name="project_settings_follows_push">Follows Push alerts (%1$s)</string>
+    <string name="project_settings_follow_push">Follow Push alerts</string>
+    <string name="project_settings_off">Off</string>
+    <string name="project_settings_members_body">Who can see this project\'s logs.</string>
+    <string name="project_settings_members_unavailable">Couldn\'t load members. Try again.</string>
 </resources>

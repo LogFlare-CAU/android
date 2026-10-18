@@ -27,6 +27,7 @@ import com.example.logflare.core.designsystem.v2.components.LfSheet
 import com.example.logflare.core.designsystem.v2.components.MultiSelectSheet
 import com.example.logflare.core.designsystem.v2.components.PrimaryButton
 import com.example.logflare.core.designsystem.v2.components.SheetOption
+import com.example.logflare.core.designsystem.v2.components.SwitchRow
 import com.example.logflare.core.designsystem.v2.components.ThresholdLevelSelector
 import com.logflare.android.R
 
@@ -45,6 +46,8 @@ internal fun ProjectSettingsSheet(state: ProjectSettingsUiState, actions: Projec
             locked = state.members.filter { it.locked }.mapTo(mutableSetOf()) { it.member.idx },
             onConfirm = actions.onSaveMembers,
             onDismiss = actions.onDismissSheet,
+            description = stringResource(R.string.project_settings_members_body),
+            confirmLabel = stringResource(R.string.project_settings_save),
         )
         SettingsSheet.Rotate -> ConfirmSheet(
             title = stringResource(R.string.project_create_rotate_title),
@@ -93,6 +96,7 @@ private fun NameSheet(state: ProjectSettingsUiState, actions: ProjectSettingsAct
 @Composable
 private fun AlertLevelSheet(state: ProjectSettingsUiState, actions: ProjectSettingsActions) {
     var draft by rememberSaveable { mutableStateOf(state.alertLevel) }
+    var follow by rememberSaveable { mutableStateOf(state.followsPushAlerts) }
     LfSheet(title = stringResource(R.string.project_settings_alert_level), onDismiss = actions.onDismissSheet) {
         Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.project_settings_device_only), style = Lf.type.secondary, color = Lf.colors.textMuted)
@@ -100,17 +104,30 @@ private fun AlertLevelSheet(state: ProjectSettingsUiState, actions: ProjectSetti
                 Text(stringResource(R.string.project_settings_push_off_body), style = Lf.type.secondary, color = Lf.colors.error)
             }
         }
-        ThresholdLevelSelector(
-            selected = draft,
-            onSelect = { draft = it },
-            summary = if (draft == LfLevel.Critical) {
-                stringResource(R.string.alerts_for_critical_only)
-            } else {
-                stringResource(R.string.alerts_for_level_and_above, draft.name)
-            },
-            modifier = Modifier.padding(top = 12.dp),
+        SwitchRow(
+            label = stringResource(R.string.project_settings_follow_push),
+            description = state.globalLevel?.let { levelRange(it) } ?: stringResource(R.string.project_settings_off),
+            checked = follow,
+            onCheckedChange = { follow = it },
+            modifier = Modifier.padding(top = 8.dp),
         )
-        SaveButton(enabled = true, loading = false, onClick = { actions.onSaveLevel(draft) })
+        if (!follow) {
+            ThresholdLevelSelector(
+                selected = draft,
+                onSelect = { draft = it },
+                summary = if (draft == LfLevel.Critical) {
+                    stringResource(R.string.alerts_for_critical_only)
+                } else {
+                    stringResource(R.string.alerts_for_level_and_above, draft.name)
+                },
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        SaveButton(
+            enabled = true,
+            loading = false,
+            onClick = { if (follow) actions.onFollowPushAlerts() else actions.onSaveLevel(draft) },
+        )
     }
 }
 

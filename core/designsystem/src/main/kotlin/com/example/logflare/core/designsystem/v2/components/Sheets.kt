@@ -107,6 +107,7 @@ fun <T> SelectionSheet(
 /**
  * Multiple choice with a local draft; "Save" calls [onConfirm] with the draft, then dismisses.
  * Options in [locked] keep their initial state and cannot be toggled (e.g. a Super Admin member).
+ * [description] is a line under the title; [confirmLabel] labels the save button.
  */
 @Composable
 fun <T> MultiSelectSheet(
@@ -116,8 +117,18 @@ fun <T> MultiSelectSheet(
     locked: Set<T> = emptySet(),
     onConfirm: (Set<T>) -> Unit,
     onDismiss: () -> Unit,
+    description: String? = null,
+    confirmLabel: String = "Save",
 ) = LfSheetFrame(title, onDismiss) { dismiss ->
     var draft by remember(selected) { mutableStateOf(selected) }
+    if (description != null) {
+        Text(
+            description,
+            style = Lf.type.secondary,
+            color = Lf.colors.textMuted,
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
+        )
+    }
     options.forEach { option ->
         val checked = option.value in draft
         val isLocked = option.value in locked
@@ -136,7 +147,7 @@ fun <T> MultiSelectSheet(
     }
     Spacer(Modifier.height(12.dp))
     PrimaryButton(
-        text = "Save",
+        text = confirmLabel,
         onClick = {
             onConfirm(draft)
             dismiss()

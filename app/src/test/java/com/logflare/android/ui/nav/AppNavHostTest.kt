@@ -239,6 +239,41 @@ class AppNavHostTest {
         assertEquals(9, nav.currentBackStackEntry?.arguments?.getInt(Destinations.ProjectIdArg))
     }
 
+    @Test
+    fun projectDeleted_fromProjectsTab_landsOnItsRoot() {
+        show(SIGNED_IN)
+        compose.onNodeWithText("Projects").performClick()
+        compose.runOnIdle {
+            nav.navigate(Destinations.projectDetail(9))
+            nav.navigate(Destinations.projectSettings(9))
+        }
+        compose.runOnIdle { nav.popToProjectList() }
+        compose.waitForIdle()
+
+        assertEquals(listOf(Destinations.Home, Destinations.Projects), routes())
+    }
+
+    @Test
+    fun projectDeleted_fromHome_landsOnProjectsRoot_withoutStaleStacks() {
+        show(SIGNED_IN)
+        // The Projects tab was left with another project's detail on its saved stack.
+        compose.onNodeWithText("Projects").performClick()
+        compose.runOnIdle { nav.navigate(Destinations.projectDetail(5)) }
+        compose.runOnIdle { nav.navigateToTab(Destinations.Home) }
+        compose.runOnIdle {
+            nav.navigate(Destinations.projectDetail(9))
+            nav.navigate(Destinations.projectSettings(9))
+        }
+        compose.runOnIdle { nav.popToProjectList() }
+        compose.waitForIdle()
+        assertEquals(listOf(Destinations.Home, Destinations.Projects), routes())
+
+        // Home's stack doesn't keep the deleted project either.
+        compose.onNodeWithText("Home").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(Destinations.Home), routes())
+    }
+
     private fun show(
         initial: SessionState,
         deepLinkErrorId: Int? = null,

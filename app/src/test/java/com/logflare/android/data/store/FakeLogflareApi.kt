@@ -170,8 +170,11 @@ class FakeLogflareApi : LogflareApi {
             { ProjectResponseWithToken(true, "ok", data = ProjectDTOWithToken(projectId, "p$projectId", token = "rotated-$projectId")) },
         ) { ProjectResponseWithToken(false, REJECTED, 403) }
 
+    /** Bodies of every [resetProjectPerms] call. */
+    val permsResets = mutableListOf<ProjectPermsBatchParams>()
+
     override suspend fun resetProjectPerms(bearer: String, body: ProjectPermsBatchParams): ProjectPermsSequenceResponse =
-        mutation("resetProjectPerms", bearer, { ProjectPermsSequenceResponse(true, "ok", data = emptyList()) }) {
+        also { permsResets += body }.mutation("resetProjectPerms", bearer, { ProjectPermsSequenceResponse(true, "ok", data = emptyList()) }) {
             ProjectPermsSequenceResponse(false, REJECTED, 400)
         }
 
