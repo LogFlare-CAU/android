@@ -42,4 +42,7 @@ object Destinations {
     const val AddMember = "my/members/new"
     const val EditMemberPattern = "my/members/{$MemberIdxArg}"
     fun editMember(idx: Int) = "my/members/$idx"
+
+    /** Set to true in My's back-stack entry by Edit member when it left after saving: My shows "Saved". */
+    const val MemberSavedResult = "memberSaved"
 }

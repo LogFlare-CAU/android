@@ -10,12 +10,16 @@ import com.logflare.android.data.store.MemberStore
 import com.logflare.android.feature.project.NameCheck
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -36,8 +40,11 @@ data class AddMemberUiState(
     /** The signed-in server's host, shown on the success state. */
     val serverHost: String = "",
     val discardOpen: Boolean = false,
+    /** The viewer isn't an admin (permission < 80): the form is read-only and nothing is sent. */
+    val locked: Boolean = false,
 ) {
-    val canAdd: Boolean get() = nameCheck == NameCheck.Valid && passwordRules.ok && !submitting && added == null
+    val canAdd: Boolean
+        get() = !locked && nameCheck == NameCheck.Valid && passwordRules.ok && !submitting && added == null
 
     /** Something was typed; closing then asks first. */
     val dirty: Boolean get() = added == null && (name.isNotEmpty() || password.isNotEmpty())
@@ -55,17 +62,19 @@ private const val KEY_ROLE = "role"
 private const val KEY_ADDED_NAME = "addedName"
 private const val KEY_ADDED_ROLE = "addedRole"
 private const val HTTP_CONFLICT = 409
+private const val ADMIN_PERMISSION = 80
 
 /**
  * Add member: name (checked against the cached member list as typed), password with its rules,
  * and role. On success the member list is refreshed by [MemberStore] so My shows them at once.
  * Name, role and the added member survive process death; the password is never saved.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class AddMemberViewModel internal constructor(
     private val savedState: SavedStateHandle,
     private val memberStore: MemberStore,
-    sessions: StateFlow<SessionState>,
+    private val sessions: StateFlow<SessionState>,
 ) : ViewModel() {
 
     @Inject
@@ -86,36 +95,43 @@ class AddMemberViewModel internal constructor(
     private val _events = Channel<AddMemberEvent>(Channel.BUFFERED)
     val events: Flow<AddMemberEvent> = _events.receiveAsFlow()
 
-    /** Lower-cased names of every user, for the "Already taken" check. */
-    private val takenNames: StateFlow<Set<String>> = memberStore.members()
-        .map { r -> r.data.orEmpty().mapTo(HashSet()) { it.username.lowercase() } }
+    private val isAdmin: Flow<Boolean> = sessions.map { isAdmin(it) }.distinctUntilChanged()
+
+    /** Lower-cased names of every user, for the "Already taken" check; members can't list users. */
+    private val takenNames: StateFlow<Set<String>> = isAdmin
+        .flatMapLatest { admin -> if (admin) memberStore.members() else flowOf(null) }
+        .map { r -> r?.data.orEmpty().mapTo(HashSet()) { it.username.lowercase() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     private val host = sessions.map { (it as? SessionState.SignedIn)?.serverUrl?.let(::serverHost).orEmpty() }
 
-    val state: StateFlow<AddMemberUiState> = combine(local, takenNames, host) { l, taken, h ->
-        l.resolved(taken).copy(serverHost = h)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), local.value.resolved(emptySet()))
+    val state: StateFlow<AddMemberUiState> = combine(local, takenNames, host, isAdmin) { l, taken, h, admin ->
+        l.resolved(taken).copy(serverHost = h, locked = !admin)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        local.value.resolved(emptySet()).copy(locked = !isAdmin(sessions.value)),
+    )
 
     fun setName(value: String) {
-        if (local.value.added != null) return
+        if (local.value.added != null || !isAdmin(sessions.value)) return
         local.update { it.copy(name = value) }
         savedState[KEY_NAME] = value
     }
 
     fun setPassword(value: String) {
-        if (local.value.added != null) return
+        if (local.value.added != null || !isAdmin(sessions.value)) return
         local.update { it.copy(password = value) }
     }
 
     fun setRole(role: MemberRole) {
-        if (local.value.added != null) return
+        if (local.value.added != null || !isAdmin(sessions.value)) return
         local.update { it.copy(role = role) }
         savedState[KEY_ROLE] = role.name
     }
 
     fun add() {
-        val current = local.value.resolved(takenNames.value)
+        val current = local.value.resolved(takenNames.value).copy(locked = !isAdmin(sessions.value))
         if (!current.canAdd) return
         local.update { it.copy(submitting = true) }
         viewModelScope.launch {
@@ -142,6 +158,7 @@ class AddMemberViewModel internal constructor(
 
     /** The close button / system Back: asks first when something was typed. */
     fun close() {
+        if (local.value.submitting) return
         if (local.value.dirty) {
             local.update { it.copy(discardOpen = true) }
         } else {
@@ -150,6 +167,7 @@ class AddMemberViewModel internal constructor(
     }
 
     fun confirmDiscard() {
+        if (local.value.submitting) return
         local.update { it.copy(discardOpen = false) }
         _events.trySend(AddMemberEvent.NavigateBack)
     }
@@ -161,5 +179,7 @@ class AddMemberViewModel internal constructor(
         passwordRules = passwordRules(password),
     )
 }
+
+private fun isAdmin(session: SessionState) = ((session as? SessionState.SignedIn)?.permission ?: 0) >= ADMIN_PERMISSION
 
 private fun String?.toRole(): MemberRole = MemberRole.entries.firstOrNull { it.name == this } ?: MemberRole.Member

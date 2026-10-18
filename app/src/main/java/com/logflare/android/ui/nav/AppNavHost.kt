@@ -154,6 +154,7 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             onCreateProject = { nav.navigate(Destinations.ProjectCreate) },
         )
         Destinations.My -> MyRoute(
+            entryState = entry.savedStateHandle,
             onAddMember = { nav.navigate(Destinations.AddMember) },
             onEditMember = { nav.navigate(Destinations.editMember(it)) },
             // The session redirect above usually got there first; this covers it either way.
@@ -183,6 +184,12 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             onOpenLog = { nav.navigate(Destinations.logDetail(it)) },
         )
         Destinations.AddMember -> AddMemberRoute(onBack = back)
-        Destinations.EditMemberPattern -> EditMemberRoute(onBack = back)
+        Destinations.EditMemberPattern -> EditMemberRoute(
+            onBack = back,
+            onSavedAndLeft = {
+                nav.previousBackStackEntry?.savedStateHandle?.set(Destinations.MemberSavedResult, true)
+                nav.popBackStack()
+            },
+        )
     }
 }

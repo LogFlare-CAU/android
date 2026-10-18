@@ -44,6 +44,8 @@ import com.logflare.android.ui.VisualQaTags
 @Composable
 fun EditMemberRoute(
     onBack: () -> Unit,
+    /** Saved, and the viewer can no longer edit the member: back to My, which shows "Saved". */
+    onSavedAndLeft: () -> Unit,
     viewModel: EditMemberViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -60,6 +62,7 @@ fun EditMemberRoute(
                 EditMemberEvent.NameTaken -> toast.show(taken)
                 EditMemberEvent.DeleteFailed -> toast.show(deleteFailed)
                 EditMemberEvent.Deleted -> onBack()
+                EditMemberEvent.SavedAndLeft -> onSavedAndLeft()
             }
         }
     }

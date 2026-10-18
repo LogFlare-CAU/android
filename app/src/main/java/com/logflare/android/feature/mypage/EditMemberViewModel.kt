@@ -67,6 +67,8 @@ data class EditMemberUiState(
 
 sealed interface EditMemberEvent {
     data object Saved : EditMemberEvent
+    /** Saved, but the viewer can no longer edit the member (promoted to their role): back to My. */
+    data object SavedAndLeft : EditMemberEvent
     data object SaveFailed : EditMemberEvent
     /** The server already has the new name. */
     data object NameTaken : EditMemberEvent
@@ -142,18 +144,27 @@ class EditMemberViewModel internal constructor(
         val member = s.member
         if (!s.canSave || member == null) return
         local.update { it.copy(saving = true) }
+        val username = s.name.takeIf { it != member.username }
+        val permission = s.role.permission.takeIf { s.role != MemberRole.of(member.permission) }
         viewModelScope.launch {
             memberStore.update(
                 idx = member.idx,
-                username = s.name.takeIf { it != member.username },
+                username = username,
                 password = s.password.ifEmpty { null },
-                permission = s.role.permission.takeIf { s.role != MemberRole.of(member.permission) },
+                permission = permission,
             ).onSuccess {
-                // The store already reloaded the list: it is the new baseline.
+                // What the server now has. The store reloaded its list, but if that refetch failed
+                // the list still shows [member]: the saved values stay the baseline until it catches up.
+                val saved = member.copy(username = username ?: member.username, permission = permission ?: member.permission)
                 savedState.remove<String>(KEY_NAME)
                 savedState.remove<String>(KEY_ROLE)
-                local.update { it.copy(name = null, role = null, password = "", saving = false) }
-                _events.send(EditMemberEvent.Saved)
+                local.update {
+                    it.copy(name = null, role = null, password = "", saving = false, stale = member, saved = saved)
+                }
+                val session = sessions.value as? SessionState.SignedIn
+                val stillEditable = canEditMember(session?.userIdx, session?.permission ?: 0, saved)
+                // Promoted to the viewer's own role: they can't edit them any more, so leave.
+                _events.send(if (stillEditable) EditMemberEvent.Saved else EditMemberEvent.SavedAndLeft)
             }.onFailure { e ->
                 local.update { it.copy(saving = false) }
                 _events.send(if (e.isConflict()) EditMemberEvent.NameTaken else EditMemberEvent.SaveFailed)
@@ -200,6 +211,7 @@ class EditMemberViewModel internal constructor(
 
     private fun resolve(res: Resource<List<Member>>?, session: SessionState.SignedIn?, l: Local): EditMemberUiState {
         val found = res?.data?.firstOrNull { it.idx == idx }
+            ?.let { if (l.saved != null && it == l.stale) l.saved else it }
         if (found != null) lastSeen = found
         // Once deleted (or while deleting), the refreshed list no longer has them: keep the last view.
         val member = found ?: lastSeen?.takeIf { l.deleting || l.deleted }
@@ -243,6 +255,9 @@ class EditMemberViewModel internal constructor(
         val deleting: Boolean = false,
         val deleted: Boolean = false,
         val deleteOpen: Boolean = false,
+        /** After a save: the member as it was before, and as saved (used while the list still shows [stale]). */
+        val stale: Member? = null,
+        val saved: Member? = null,
     )
 }
 

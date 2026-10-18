@@ -332,6 +332,7 @@
     <string name="member_locked_super_admin">Super Admin accounts can\'t be changed in the app.</string>
     <string name="member_locked_role">Only a Super Admin can change other admins.</string>
     <string name="member_locked_self">You can\'t change your own account here.</string>
+    <string name="member_add_locked">Only admins can add members.</string>
     <string name="member_load_failed">Couldn\'t load this member</string>
     <string name="member_load_retry">Try again</string>
     <string name="member_missing">This member no longer exists</string>

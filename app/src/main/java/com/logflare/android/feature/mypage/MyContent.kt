@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.logflare.core.designsystem.v2.Lf
 import com.example.logflare.core.designsystem.v2.LfIcons
@@ -62,6 +63,7 @@ import com.logflare.android.data.ThemePreference
 import com.logflare.android.data.store.model.Member
 import com.logflare.android.push.GlobalAlert
 import com.logflare.android.ui.VisualQaTags
+import com.logflare.android.ui.nav.Destinations
 
 /** The My tab. [onSignedOut] leaves for Login once the sign-out finished. */
 @Composable
@@ -69,6 +71,8 @@ fun MyRoute(
     onAddMember: () -> Unit,
     onEditMember: (idx: Int) -> Unit,
     onSignedOut: () -> Unit,
+    /** My's back-stack entry state: Edit member leaves [Destinations.MemberSavedResult] there. */
+    entryState: SavedStateHandle? = null,
     viewModel: MyViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -82,6 +86,15 @@ fun MyRoute(
     val saveFailed = stringResource(R.string.my_save_failed)
     val alertLabels = GlobalAlert.entries.associateWith { globalAlertLabel(it) }
     val pushChanged = stringResource(R.string.my_push_changed)
+    val memberSaved = stringResource(R.string.member_saved)
+    LaunchedEffect(entryState) {
+        entryState?.getStateFlow(Destinations.MemberSavedResult, false)?.collect { saved ->
+            if (saved) {
+                entryState[Destinations.MemberSavedResult] = false
+                toast.show(memberSaved)
+            }
+        }
+    }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {

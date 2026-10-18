@@ -182,6 +182,37 @@ class AddMemberViewModelTest {
     }
 
     @Test
+    fun add_lockedForMembers() = runTest {
+        sessions.value = ADMIN.copy(username = "minsu", userIdx = 8, permission = 0)
+        val env = newEnv()
+        settle()
+        assertTrue(env.vm.state.value.locked)
+        env.vm.setName("newbie")
+        env.vm.setPassword("newbiepass1")
+        env.vm.add()
+        settle()
+        assertFalse(env.vm.state.value.canAdd)
+        assertFalse("createUser" in api.calls)
+        // Members can't list users either, so nothing is fetched.
+        assertFalse("getAllUsers" in api.calls)
+    }
+
+    @Test
+    fun close_blockedWhileSubmitting() = runTest {
+        val env = newEnv()
+        settle()
+        env.vm.setName("minsu")
+        env.vm.setPassword("minsupass1")
+        runCurrent()
+        env.vm.add()
+        env.vm.close()
+        env.vm.confirmDiscard()
+        settle()
+        assertTrue(env.events.isEmpty())
+        assertEquals(AddedMember("minsu", MemberRole.Member), env.vm.state.value.added)
+    }
+
+    @Test
     fun close_asksFirstWhenDirty() = runTest {
         val env = newEnv()
         settle()

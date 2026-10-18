@@ -119,7 +119,16 @@ fun AddMemberContent(
                 navIcon = NavIcon.Close,
             )
             val added = state.added
-            if (added == null) AddForm(state, actions, Modifier.weight(1f)) else Added(state, added, actions, Modifier.weight(1f))
+            when {
+                added != null -> Added(state, added, actions, Modifier.weight(1f))
+                state.locked -> Text(
+                    stringResource(R.string.member_add_locked),
+                    style = Lf.type.secondary,
+                    color = Lf.colors.textMuted,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                )
+                else -> AddForm(state, actions, Modifier.weight(1f))
+            }
         }
         if (toast != null) LfToastHost(toast, Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp))
     }

@@ -132,6 +132,7 @@ class EditMemberViewModelTest {
 
     @Test
     fun edit_emptyPassword_notSent() = runTest {
+        sessions.value = SUPER_ADMIN
         val env = newEnv()
         val vm = env.vm
         settle()
@@ -176,6 +177,37 @@ class EditMemberViewModelTest {
         assertEquals(MemberRole.Admin, env.vm.state.value.role)
         assertFalse(env.vm.state.value.saving)
         assertTrue(env.vm.state.value.canSave)
+    }
+
+    @Test
+    fun edit_saveSuccess_staleList_keepsSavedValues() = runTest {
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        vm.setName("minsu.kim")
+        settle()
+        // The server's list still has the old name (a stale or failed refetch).
+        vm.save()
+        settle()
+        assertEquals(listOf<EditMemberEvent>(EditMemberEvent.Saved), env.events)
+        val s = vm.state.value
+        assertEquals(Member(8, "minsu.kim", 0), s.member)
+        assertEquals("minsu.kim", s.name)
+        assertFalse(s.dirty)
+    }
+
+    @Test
+    fun edit_adminPromotesMember_leavesWithSaved() = runTest {
+        val env = newEnv()
+        val vm = env.vm
+        settle()
+        vm.setRole(MemberRole.Admin)
+        settle()
+        serverUsers = serverUsers.map { if (it.idx == 8) UserDTO(8, "minsu", 80) else it }
+        vm.save()
+        settle()
+        // An Admin can't edit another Admin: rather than locking the form, the screen leaves.
+        assertEquals(listOf<EditMemberEvent>(EditMemberEvent.SavedAndLeft), env.events)
     }
 
     @Test
@@ -244,7 +276,7 @@ class EditMemberViewModelTest {
     fun noArtificialDelay() = runTest {
         val env = newEnv()
         settle()
-        env.vm.setRole(MemberRole.Admin)
+        env.vm.setName("minsu.kim")
         runCurrent()
         val start = testScheduler.currentTime
         env.vm.save()
@@ -267,5 +299,6 @@ class EditMemberViewModelTest {
             permission = 80,
             key = SessionKey("dddddddddddddddd"),
         )
+        val SUPER_ADMIN = ADMIN.copy(username = "admin", userIdx = 1, permission = 100)
     }
 }
