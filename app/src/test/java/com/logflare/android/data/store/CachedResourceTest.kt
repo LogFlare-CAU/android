@@ -291,4 +291,32 @@ class CachedResourceTest {
         assertNull(store.read(a, "projects", String.serializer()))
         assertNull(newStore().read(a, "projects", String.serializer()))
     }
+
+    @Test
+    fun put_updatesStoreAndOpenStreams_withoutFetching() = runTest {
+        val store = newStore()
+        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now)
+        val res = resource(store)
+
+        res.stream(a).test {
+            assertEquals("cached", awaitItem().data)
+            res.put(a, "appended", fetchedAt = now - 5)
+            assertEquals(Resource("appended", refreshing = false, error = null, fetchedAt = now - 5), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals(0, fetchCount)
+        assertEquals(Cached("appended", now - 5), store.read(a, "projects", String.serializer()))
+    }
+
+    @Test
+    fun put_withGenerationFromBeforeClear_isDropped() = runTest {
+        val store = newStore()
+        val res = resource(store)
+        val generation = store.generation(a)
+        store.clear(a)
+
+        res.put(a, "stale", generation = generation)
+
+        assertNull(store.read(a, "projects", String.serializer()))
+    }
 }

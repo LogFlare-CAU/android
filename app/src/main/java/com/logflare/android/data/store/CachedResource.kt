@@ -77,6 +77,24 @@ class CachedResource<T>(
         fetchShared(session).await()
     }
 
+    /**
+     * Replaces the cached value of [session] without fetching (e.g. a list with a "load more"
+     * page appended) and pushes it to every active [stream] of [session]. Like a fetch result,
+     * it is dropped when [session] was cleared since [generation] was taken, so take the
+     * generation before any request whose result goes into [value].
+     */
+    suspend fun put(
+        session: SessionKey,
+        value: T,
+        fetchedAt: Long = clock(),
+        generation: Long = store.generation(session),
+    ) {
+        store.write(session, key, value, serializer, fetchedAt, generation)
+        if (store.generation(session) != generation) return
+        val fetchId = mutex.withLock { nextFetchId++ }
+        events.emit(FetchEvent.Succeeded(session, fetchId, Cached(value, fetchedAt)))
+    }
+
     private fun isStale(cached: Cached<T>): Boolean {
         val age = clock() - cached.fetchedAt
         return age < 0 || age >= maxAgeMs
