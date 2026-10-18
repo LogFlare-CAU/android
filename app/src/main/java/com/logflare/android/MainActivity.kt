@@ -17,17 +17,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.logflare.core.designsystem.v2.LogFlareTheme
 import com.logflare.android.data.ThemePreference
 import com.logflare.android.data.session.SessionState
 import com.logflare.android.ui.VisualQaAppRoot
 import com.logflare.android.ui.nav.AppNavHost
+import com.logflare.android.ui.theme.ThemeController
 import com.logflare.android.ui.theme.LogflareandroidTheme
 import com.logflare.android.viewmodel.AppViewModel
-import com.logflare.android.viewmodel.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint(ComponentActivity::class)
 class MainActivity : Hilt_MainActivity() {
@@ -37,6 +37,9 @@ class MainActivity : Hilt_MainActivity() {
         }
 
     private val appViewModel: AppViewModel by viewModels()
+
+    /** The theme choice; My › Appearance changes it and it applies at once. */
+    @Inject lateinit var themeController: ThemeController
 
     /** Error id of a tapped push notification, until the nav host has handled it. */
     private var deepLinkErrorId by mutableStateOf<Int?>(null)
@@ -62,8 +65,7 @@ class MainActivity : Hilt_MainActivity() {
         }
 
         setContent {
-            val themeViewModel: ThemeViewModel = hiltViewModel()
-            val preference by themeViewModel.preference.collectAsStateWithLifecycle()
+            val preference by themeController.preference.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
             val darkTheme = when (preference) {
                 ThemePreference.SYSTEM -> systemDark

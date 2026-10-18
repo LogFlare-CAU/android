@@ -1,36 +1,13 @@
 package com.logflare.android.visual
 
-import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
 import com.logflare.android.feature.mypage.AddMemberUiState
 import com.logflare.android.feature.mypage.EditMemberUiState
 import com.logflare.android.feature.mypage.InputValidationUiState
-import com.logflare.android.feature.mypage.LogoutUiState
-import com.logflare.android.feature.mypage.MyPageMemberUiModel
-import com.logflare.android.feature.mypage.MyPageUiState
 import com.logflare.android.ui.component.common.MemberFieldStatus
 
 object SnapshotFixtures {
     private const val BASE_TIMESTAMP = "2026-01-15T10:30:00Z"
-
-    fun myPage(
-        empty: Boolean = false,
-        loading: Boolean = false,
-        error: String? = null,
-        admin: Boolean = true,
-    ): MyPageUiState =
-        MyPageUiState(
-            loading = loading,
-            username = "qa-admin",
-            permission = if (admin) UserPermission.MODERATOR else UserPermission.USER,
-            members = when {
-                loading || error != null -> emptyList()
-                empty -> emptyList()
-                else -> listOf(MyPageMemberUiModel("qa-member", UserPermission.USER, idx = 2))
-            },
-            selectedLogLevel = LogLevel.ERROR,
-            errorMessage = error,
-        )
 
     fun addMember(
         valid: Boolean = false,
@@ -97,13 +74,4 @@ object SnapshotFixtures {
             base
         }
     }
-
-    fun logout(
-        loading: Boolean = false,
-        error: String? = null,
-    ): LogoutUiState =
-        LogoutUiState(
-            isLoading = loading,
-            errorMessage = error,
-        )
 }

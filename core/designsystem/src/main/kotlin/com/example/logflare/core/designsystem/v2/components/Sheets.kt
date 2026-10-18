@@ -69,6 +69,7 @@ fun LfSheet(
 /**
  * Single choice. Tapping a row calls [onSelect], then animates the sheet away and calls
  * [onDismiss]. The selected row shows a check with content description "Selected".
+ * [description] is a line under the title.
  */
 @Composable
 fun <T> SelectionSheet(
@@ -77,7 +78,9 @@ fun <T> SelectionSheet(
     selected: T,
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
+    description: String? = null,
 ) = LfSheetFrame(title, onDismiss) { dismiss ->
+    if (description != null) SheetDescription(description)
     options.forEach { option ->
         val isSelected = option.value == selected
         SheetRow(
@@ -121,14 +124,7 @@ fun <T> MultiSelectSheet(
     confirmLabel: String = "Save",
 ) = LfSheetFrame(title, onDismiss) { dismiss ->
     var draft by remember(selected) { mutableStateOf(selected) }
-    if (description != null) {
-        Text(
-            description,
-            style = Lf.type.secondary,
-            color = Lf.colors.textMuted,
-            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
-        )
-    }
+    if (description != null) SheetDescription(description)
     options.forEach { option ->
         val checked = option.value in draft
         val isLocked = option.value in locked
@@ -264,6 +260,16 @@ private fun LfSheetFrame(
             content(dismiss)
         }
     }
+}
+
+@Composable
+private fun SheetDescription(text: String) {
+    Text(
+        text,
+        style = Lf.type.secondary,
+        color = Lf.colors.textMuted,
+        modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
+    )
 }
 
 private val DragHandleHeight = 20.dp // 12 top + 4 bar + 4 bottom

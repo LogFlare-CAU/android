@@ -6,22 +6,25 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.filterToOne
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeUp
 import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
 import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
-import com.logflare.android.enums.LogLevel
-import com.logflare.android.enums.UserPermission
-import com.logflare.android.feature.mypage.LogoutScreenContent
-import com.logflare.android.feature.mypage.LogoutUiState
-import com.logflare.android.feature.mypage.MyPageContent
-import com.logflare.android.feature.mypage.MyPageMemberUiModel
-import com.logflare.android.feature.mypage.MyPageUiState
+import com.example.logflare.core.designsystem.v2.LogFlareTheme
+import com.logflare.android.data.store.model.Member
+import com.logflare.android.feature.mypage.MyActions
+import com.logflare.android.feature.mypage.MyContent
+import com.logflare.android.feature.mypage.MySheet
+import com.logflare.android.feature.mypage.MyUiState
 import com.logflare.android.feature.project.ProjectsContent
 import com.logflare.android.data.store.model.ProjectItem
 import com.logflare.android.feature.project.ProjectsUiState
@@ -121,36 +124,52 @@ class VisualQaSemanticsTest {
 
     @Test
     fun myPageExposesMemberRowAndActionTagsWithReachableCallbacks() {
-        var edited: String? = null
+        var edited: Int? = null
         var addClicked = false
-        var logoutClicked = false
+        var sheet: MySheet? = null
         compose.setContent {
-            LogflareandroidTheme(false) {
-                MyPageContent(
-                    uiState = MyPageUiState(
-                        loading = false,
-                        username = "qa-admin",
-                        permission = UserPermission.MODERATOR,
-                        members = listOf(
-                            MyPageMemberUiModel("qa-member", UserPermission.USER, idx = 2),
-                        ),
-                        selectedLogLevel = LogLevel.ERROR,
+            LogFlareTheme(darkTheme = false) {
+                MyContent(
+                    state = MyUiState(
+                        me = Member(1, "qa-admin", 80),
+                        serverHost = "logs.example.com",
+                        members = listOf(Member(2, "qa-member", 0)),
+                        canManageMembers = true,
+                        version = "2.0.0",
                     ),
-                    onLogout = { logoutClicked = true },
-                    onAddMember = { addClicked = true },
-                    onEditMember = { edited = it },
-                    onSelectLogLevel = {},
+                    actions = MyActions(
+                        onAddMember = { addClicked = true },
+                        onEditMember = { edited = it },
+                        onOpenSheet = { sheet = it },
+                    ),
                 )
             }
         }
         compose.onNodeWithTag(VisualQaTags.MyPage).assertExists()
         compose.onNodeWithTag(VisualQaTags.memberRow("qa-member")).performClick()
-        assertEquals("qa-member", edited)
+        assertEquals(2, edited)
         compose.onNodeWithTag(VisualQaTags.AddMember).performClick()
         assertTrue(addClicked)
-        compose.onNodeWithTag(VisualQaTags.MyPage).performTouchInput { swipeUp() }
-        compose.onNodeWithTag(VisualQaTags.LogoutAction).performClick()
-        assertTrue(logoutClicked)
+        compose.onNodeWithTag(VisualQaTags.LogoutAction).performScrollTo().performClick()
+        assertEquals(MySheet.Logout, sheet)
+    }
+
+    @Test
+    fun myPageMemberRowsAreNotClickableWithoutManageRights() {
+        compose.setContent {
+            LogFlareTheme(darkTheme = false) {
+                MyContent(
+                    state = MyUiState(
+                        me = Member(1, "qa-member", 0),
+                        members = listOf(Member(2, "qa-other", 0)),
+                        canManageMembers = false,
+                    ),
+                    actions = MyActions(),
+                )
+            }
+        }
+        compose.onNodeWithTag(VisualQaTags.memberRow("qa-other")).assertHasNoClickAction()
+        compose.onNodeWithTag(VisualQaTags.AddMember).assertDoesNotExist()
     }
 
     @Test
@@ -201,20 +220,18 @@ class VisualQaSemanticsTest {
     }
 
     @Test
-    fun logoutConfirmTagReachesCallback() {
+    fun logoutSheetConfirmReachesCallback() {
         var confirmed = false
         compose.setContent {
-            LogflareandroidTheme(false) {
-                LogoutScreenContent(
-                    uiState = LogoutUiState(),
-                    onBack = {},
-                    onLogout = { confirmed = true },
-                    onDismissError = {},
+            LogFlareTheme(darkTheme = false) {
+                MyContent(
+                    state = MyUiState(me = Member(1, "qa-admin", 80), sheet = MySheet.Logout),
+                    actions = MyActions(onConfirmLogout = { confirmed = true }),
                 )
             }
         }
-        compose.onNodeWithTag(VisualQaTags.Logout).assertExists()
-        compose.onNodeWithTag(VisualQaTags.ConfirmLogout).performClick()
+        compose.onNodeWithText("Log out?").assertExists()
+        compose.onAllNodesWithText("Log out").filterToOne(hasClickAction() and !hasTestTag(VisualQaTags.LogoutAction)).performClick()
         assertTrue(confirmed)
     }
 

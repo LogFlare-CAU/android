@@ -21,8 +21,7 @@ import com.logflare.android.feature.log.LogDetailRoute
 import com.logflare.android.feature.log.LogsRoute
 import com.logflare.android.feature.mypage.AddMemberScreen
 import com.logflare.android.feature.mypage.EditMemberScreen
-import com.logflare.android.feature.mypage.LogoutScreen
-import com.logflare.android.feature.mypage.MyPageScreen
+import com.logflare.android.feature.mypage.MyRoute
 import com.logflare.android.feature.project.ProjectCreateRoute
 import com.logflare.android.feature.project.ProjectSettingsRoute
 import com.logflare.android.feature.project.ProjectsRoute
@@ -31,9 +30,6 @@ import com.logflare.android.feature.projectdetail.ProjectDetailRoute
 /** Draws the screen registered under route pattern `route`; tests pass a stub. */
 typealias DestinationContent =
     @Composable (route: String, entry: NavBackStackEntry, navController: NavHostController) -> Unit
-
-/** Old confirm screen behind My › Log out until Task 11 replaces it with a sheet. */
-internal const val LegacyLogoutRoute = "my/logout"
 
 /**
  * The app's single nav graph. Build it only once [session] is known (not Loading): the start
@@ -59,12 +55,7 @@ fun AppNavHost(
     LaunchedEffect(signedIn) {
         val current = navController.currentDestination?.route ?: return@LaunchedEffect
         if (!signedIn && current != Destinations.Login) {
-            navController.navigate(Destinations.Login) {
-                popUpTo(navController.graph.id) { inclusive = true }
-                launchSingleTop = true
-            }
-            // Saved tab stacks belong to the old session.
-            Destinations.Tabs.forEach { navController.clearBackStack(it) }
+            navController.showLogin()
         } else if (signedIn && current == Destinations.Login) {
             navController.leaveLogin()
         }
@@ -89,7 +80,6 @@ fun AppNavHost(
             destination(Destinations.LogDetailPattern, navController, screen, Destinations.ErrorIdArg)
             destination(Destinations.AddMember, navController, screen)
             destination(Destinations.EditMemberPattern, navController, screen, Destinations.MemberIdxArg)
-            destination(LegacyLogoutRoute, navController, screen)
         }
     }
 }
@@ -104,6 +94,19 @@ private fun NavGraphBuilder.destination(
         route = route,
         arguments = listOfNotNull(intArg?.let { navArgument(it) { type = NavType.IntType } }),
     ) { entry -> screen(route, entry, navController) }
+}
+
+/**
+ * Signed out: Login alone on the back stack; a no-op when already there. Saved tab stacks belong
+ * to the old session and are dropped.
+ */
+internal fun NavHostController.showLogin() {
+    if (currentDestination?.route == Destinations.Login) return
+    navigate(Destinations.Login) {
+        popUpTo(graph.id) { inclusive = true }
+        launchSingleTop = true
+    }
+    Destinations.Tabs.forEach { clearBackStack(it) }
 }
 
 /** Login → Home, dropping Login; a no-op when the session redirect already did it. */
@@ -150,10 +153,11 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             onOpenProject = { nav.navigate(Destinations.projectDetail(it)) },
             onCreateProject = { nav.navigate(Destinations.ProjectCreate) },
         )
-        Destinations.My -> MyPageScreen(
-            onLogout = { nav.navigate(LegacyLogoutRoute) },
+        Destinations.My -> MyRoute(
             onAddMember = { nav.navigate(Destinations.AddMember) },
             onEditMember = { nav.navigate(Destinations.editMember(it)) },
+            // The session redirect above usually got there first; this covers it either way.
+            onSignedOut = { nav.showLogin() },
         )
         Destinations.ProjectCreate -> ProjectCreateRoute(
             onBack = back,
@@ -180,7 +184,5 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
         )
         Destinations.AddMember -> AddMemberScreen(onBack = back)
         Destinations.EditMemberPattern -> EditMemberScreen(onBack = back)
-        // Signing out flips the session; the redirect above then shows Login.
-        LegacyLogoutRoute -> LogoutScreen(onBack = back, onLogout = {})
     }
 }
