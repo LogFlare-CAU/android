@@ -289,7 +289,9 @@ private fun MembersCard(state: MyUiState, actions: MyActions) {
                 modifier = Modifier.padding(start = 20.dp, end = 16.dp, top = 4.dp, bottom = 14.dp),
             )
             else -> state.visibleMembers.forEach { member ->
-                MemberRow(member, if (state.canManageMembers) ({ actions.onEditMember(member.idx) }) else null)
+                // Super Admins, equal roles and yourself can't be edited: a plain row.
+                val editable = state.canManageMembers && canEditMember(state.me?.idx, state.me?.permission ?: 0, member)
+                MemberRow(member, if (editable) ({ actions.onEditMember(member.idx) }) else null)
             }
         }
         if (state.hasMoreMembers && !state.membersLoading) {

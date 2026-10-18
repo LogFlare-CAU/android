@@ -6,6 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.filterToOne
 import androidx.compose.ui.test.hasClickAction
@@ -152,6 +153,25 @@ class VisualQaSemanticsTest {
         assertTrue(addClicked)
         compose.onNodeWithTag(VisualQaTags.LogoutAction).performScrollTo().performClick()
         assertEquals(MySheet.Logout, sheet)
+    }
+
+    @Test
+    fun myPageSuperAdminAndEqualAdminRowsAreNotEditable() {
+        compose.setContent {
+            LogFlareTheme(darkTheme = false) {
+                MyContent(
+                    state = MyUiState(
+                        me = Member(7, "qa-admin", 80),
+                        members = listOf(Member(1, "qa-root", 100), Member(9, "qa-peer", 80), Member(2, "qa-member", 0)),
+                        canManageMembers = true,
+                    ),
+                    actions = MyActions(),
+                )
+            }
+        }
+        compose.onNodeWithTag(VisualQaTags.memberRow("qa-root")).assertHasNoClickAction()
+        compose.onNodeWithTag(VisualQaTags.memberRow("qa-peer")).assertHasNoClickAction()
+        compose.onNodeWithTag(VisualQaTags.memberRow("qa-member")).assertHasClickAction()
     }
 
     @Test

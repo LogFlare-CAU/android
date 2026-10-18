@@ -3,378 +3,247 @@ package com.logflare.android.feature.mypage
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.logflare.core.model.UserDTO
-import com.logflare.android.enums.UserPermission
-import com.logflare.android.feature.usecase.AuthMeUseCase
-import com.logflare.android.feature.usecase.DeleteUserUseCase
-import com.logflare.android.feature.usecase.GetUsersUseCase
-import com.logflare.android.feature.usecase.UpdateUserUseCase
-import com.logflare.android.ui.component.common.MemberFieldStatus
+import com.logflare.android.data.session.SessionRepository
+import com.logflare.android.data.session.SessionState
+import com.logflare.android.data.store.ApiException
+import com.logflare.android.data.store.MemberStore
+import com.logflare.android.data.store.Resource
+import com.logflare.android.data.store.model.Member
+import com.logflare.android.feature.project.NameCheck
 import com.logflare.android.ui.nav.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class EditMemberUiState(
-    val originalUsername: String = "",
-    val username: String = "",
-    val newPassword: String = "",
-    val usernameValidation: InputValidationUiState = InputValidationUiState(),
-    val passwordValidation: InputValidationUiState = InputValidationUiState(
-        helperText = "Use English, numbers, and symbols only",
-        status = MemberFieldStatus.Idle
-    ),
-    val selectedPermission: UserPermission = UserPermission.USER,
-    val originalPermission: UserPermission = UserPermission.USER,
-    val isLoading: Boolean = false,
-    val snackbarMessage: String? = null,
-    val snackbarIsError: Boolean = false,
-    val showDeleteDialog: Boolean = false,
-    val disabled: Boolean = false
-)
+enum class EditLoad {
+    /** The member list loads for the first time. */
+    Loading,
 
+    /** The first load failed and nothing is cached. */
+    Failed,
+
+    /** The list has no user with this idx (deleted elsewhere). */
+    Missing,
+    Ready,
+}
+
+/** Why the viewer can't change a member. */
+enum class MemberLock { SuperAdmin, Self, Role }
+
+data class EditMemberUiState(
+    val load: EditLoad = EditLoad.Loading,
+    /** The member as the server knows them: the baseline for [dirty]. */
+    val member: Member? = null,
+    /** Set when the viewer may not change this member; the screen then only shows who it is. */
+    val lock: MemberLock? = null,
+    val name: String = "",
+    val nameCheck: NameCheck = NameCheck.Empty,
+    /** A new password, or empty to keep the current one. */
+    val password: String = "",
+    val passwordRules: PasswordRules = passwordRules(""),
+    val role: MemberRole = MemberRole.Member,
+    val saving: Boolean = false,
+    val deleting: Boolean = false,
+    val deleteOpen: Boolean = false,
+) {
+    val locked: Boolean get() = lock != null
+
+    val dirty: Boolean
+        get() = member != null && !locked &&
+            (name != member.username || role != MemberRole.of(member.permission) || password.isNotEmpty())
+
+    val canSave: Boolean
+        get() = dirty && nameCheck == NameCheck.Valid && (password.isEmpty() || passwordRules.ok) && !saving && !deleting
+}
+
+sealed interface EditMemberEvent {
+    data object Saved : EditMemberEvent
+    data object SaveFailed : EditMemberEvent
+    /** The server already has the new name. */
+    data object NameTaken : EditMemberEvent
+    /** The member is gone: the screen leaves for My. */
+    data object Deleted : EditMemberEvent
+    data object DeleteFailed : EditMemberEvent
+}
+
+private const val KEY_NAME = "name"
+private const val KEY_ROLE = "role"
+private const val HTTP_CONFLICT = 409
+private const val SUPER_ADMIN_PERMISSION = 100
+
+/**
+ * Edit member `my/members/{idx}`: rename, set a new password (optional) and change the role, or
+ * delete. The member comes from [MemberStore]'s list, whose refresh after every mutation also
+ * updates My. Unsaved name and role survive process death; the password is never saved.
+ */
 @HiltViewModel
-class EditMemberViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val authMeUseCase: AuthMeUseCase,
-    private val getUsersUseCase: GetUsersUseCase,
-    private val updateUserUseCase: UpdateUserUseCase,
-    private val deleteUserUseCase: DeleteUserUseCase
+class EditMemberViewModel internal constructor(
+    private val savedState: SavedStateHandle,
+    private val memberStore: MemberStore,
+    private val sessions: StateFlow<SessionState>,
 ) : ViewModel() {
 
-    /** The `my/members/{idx}` route names the member by idx; the old screen loads it from the list. */
-    private val requestedIdx: Int = checkNotNull(savedStateHandle[Destinations.MemberIdxArg])
-    private var requestedUser: UserDTO? = null
-    private var me: UserDTO? = null
-    private val _ui = MutableStateFlow(EditMemberUiState())
-    val ui: StateFlow<EditMemberUiState> = _ui
+    @Inject
+    constructor(
+        savedState: SavedStateHandle,
+        memberStore: MemberStore,
+        sessionRepository: SessionRepository,
+    ) : this(savedState, memberStore, sessionRepository.state)
 
-    private var usernameValidationJob: Job? = null
-    private var passwordValidationJob: Job? = null
+    private val idx: Int = checkNotNull(savedState[Destinations.MemberIdxArg]) { "member idx missing" }
 
-    init {
+    private val local = MutableStateFlow(
+        Local(
+            name = savedState.get<String>(KEY_NAME),
+            role = savedState.get<String>(KEY_ROLE)?.let { r -> MemberRole.entries.firstOrNull { it.name == r } },
+        ),
+    )
+
+    private val _events = Channel<EditMemberEvent>(Channel.BUFFERED)
+    val events: Flow<EditMemberEvent> = _events.receiveAsFlow()
+
+    private val members: StateFlow<Resource<List<Member>>?> = memberStore.members()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The member as last seen, so the screen keeps showing them while they are being deleted. */
+    private var lastSeen: Member? = null
+
+    val state: StateFlow<EditMemberUiState> = combine(members, sessions, local) { res, session, l ->
+        resolve(res, session as? SessionState.SignedIn, l)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditMemberUiState())
+
+    /** The state for the latest input, without waiting for [state] to be recomputed. */
+    private fun current(): EditMemberUiState =
+        resolve(members.value, sessions.value as? SessionState.SignedIn, local.value)
+
+    fun setName(value: String) = edit {
+        savedState[KEY_NAME] = value
+        it.copy(name = value)
+    }
+
+    fun setPassword(value: String) = edit { it.copy(password = value) }
+
+    fun setRole(role: MemberRole) = edit {
+        savedState[KEY_ROLE] = role.name
+        it.copy(role = role)
+    }
+
+    fun save() {
+        val s = current()
+        val member = s.member
+        if (!s.canSave || member == null) return
+        local.update { it.copy(saving = true) }
         viewModelScope.launch {
-            initUsers()
-            loadMemberData()
-            checkPermissionToEdit()
-        }
-    }
-
-    private suspend fun initUsers() {
-        _ui.update { it.copy(isLoading = true) }
-        requestedUser = getUsersUseCase()?.firstOrNull { it.idx == requestedIdx }
-        me = authMeUseCase().getOrNull()
-        _ui.update { it.copy(isLoading = false) }
-    }
-
-    private fun checkPermissionToEdit() {
-        val myPermission = UserPermission.fromCode(me?.permission ?: 0)
-        val targetPermission = UserPermission.fromCode(requestedUser?.permission ?: 0)
-        if ((myPermission <= targetPermission && me?.username != requestedUser?.username) || requestedUser?.permission == UserPermission.SUPER_USER.code) {
-            val message = if (requestedUser?.permission == UserPermission.SUPER_USER.code) {
-                "You cannot edit a Super User member"
-            } else {
-                "You do not have permission to edit this member"
-            }
-            _ui.update {
-                it.copy(
-                    isLoading = false,
-                    snackbarMessage = message,
-                    snackbarIsError = true,
-                    disabled = true,
-                    usernameValidation = InputValidationUiState(
-                        status = MemberFieldStatus.Error,
-                        helperText = message
-                    ),
-                )
+            memberStore.update(
+                idx = member.idx,
+                username = s.name.takeIf { it != member.username },
+                password = s.password.ifEmpty { null },
+                permission = s.role.permission.takeIf { s.role != MemberRole.of(member.permission) },
+            ).onSuccess {
+                // The store already reloaded the list: it is the new baseline.
+                savedState.remove<String>(KEY_NAME)
+                savedState.remove<String>(KEY_ROLE)
+                local.update { it.copy(name = null, role = null, password = "", saving = false) }
+                _events.send(EditMemberEvent.Saved)
+            }.onFailure { e ->
+                local.update { it.copy(saving = false) }
+                _events.send(if (e.isConflict()) EditMemberEvent.NameTaken else EditMemberEvent.SaveFailed)
             }
         }
     }
 
-    private fun loadMemberData() {
-        _ui.update { it.copy(isLoading = true) }
-        val user = requestedUser ?: return
-        val seedUsername = user.username
-        val initialPermission = UserPermission.fromCode(user.permission)
-        _ui.update {
-            it.copy(
-                isLoading = false,
-                originalUsername = seedUsername,
-                username = seedUsername,
-                selectedPermission = initialPermission,
-                originalPermission = initialPermission,
-                usernameValidation = InputValidationUiState(
-                    helperText = "Looks good",
-                    status = MemberFieldStatus.Valid
-                )
-            )
-        }
+    fun openDelete() {
+        val s = current()
+        if (s.member == null || s.locked || s.deleting) return
+        local.update { it.copy(deleteOpen = true) }
     }
 
-    fun updateUsername(username: String) {
-        _ui.update {
-            it.copy(
-                username = username,
-                usernameValidation = InputValidationUiState(),
-                snackbarMessage = null,
-                snackbarIsError = false,
-            )
-        }
-        scheduleUsernameValidation()
-    }
+    fun dismissSheet() = local.update { it.copy(deleteOpen = false) }
 
-    fun retryUsernameValidation() {
-        scheduleUsernameValidation(forceImmediate = true)
-    }
-
-    fun updatePassword(password: String) {
-        _ui.update {
-            it.copy(
-                newPassword = password,
-                passwordValidation = InputValidationUiState(
-                    helperText = "Use English, numbers, and symbols only",
-                    status = if (password.isBlank()) MemberFieldStatus.Idle else MemberFieldStatus.Idle
-                ),
-                snackbarMessage = null,
-                snackbarIsError = false,
-            )
-        }
-        schedulePasswordValidation()
-    }
-
-    fun retryPasswordValidation() {
-        schedulePasswordValidation(forceImmediate = true)
-    }
-
-    fun selectPermission(permission: UserPermission) {
-        _ui.update {
-            it.copy(
-                selectedPermission = permission,
-                snackbarMessage = null,
-                snackbarIsError = false,
-            )
-        }
-    }
-
-    fun saveChanges() {
-        val current = _ui.value
-        val usernameChanged = current.username != current.originalUsername &&
-                current.usernameValidation.status == MemberFieldStatus.Valid
-        val passwordReady = current.passwordValidation.status == MemberFieldStatus.Valid
-        val roleChanged = current.selectedPermission != current.originalPermission
-
-        if (!usernameChanged && !passwordReady && !roleChanged) {
-            _ui.update {
-                it.copy(
-                    snackbarMessage = "No changes to save",
-                    snackbarIsError = false,
-                )
-            }
-            return
-        }
-
+    fun confirmDelete() {
+        val s = current()
+        val member = s.member
+        if (!s.deleteOpen || member == null || s.locked || s.deleting) return
+        local.update { it.copy(deleteOpen = false, deleting = true) }
         viewModelScope.launch {
-            _ui.update { it.copy(isLoading = true) }
-            updateUserUseCase(
-                userId = requestedUser?.idx ?: return@launch,
-                username = if (usernameChanged) current.username.trim() else null,
-                password = if (passwordReady) current.newPassword else null,
-                permission = if (roleChanged) current.selectedPermission else null
-            )
+            memberStore.delete(member.idx)
                 .onSuccess {
-                    val snackbarText = when {
-                        passwordReady -> "Member’s password updated successfully"
-                        roleChanged -> "Member’s role updated successfully"
-                        else -> "Member profile updated successfully"
-                    }
-                    _ui.update {
-                        it.copy(
-                            isLoading = false,
-                            snackbarMessage = snackbarText,
-                            snackbarIsError = false,
-                            originalUsername = if (usernameChanged) it.username else it.originalUsername,
-                            originalPermission = if (roleChanged) it.selectedPermission else it.originalPermission,
-                            newPassword = if (passwordReady) "" else it.newPassword,
-                            passwordValidation = if (passwordReady) {
-                                InputValidationUiState(status = MemberFieldStatus.Completed)
-                            } else {
-                                it.passwordValidation
-                            },
-                            usernameValidation = if (usernameChanged) {
-                                InputValidationUiState(status = MemberFieldStatus.Completed)
-                            } else {
-                                it.usernameValidation
-                            }
-                        )
-                    }
+                    local.update { it.copy(deleted = true) }
+                    _events.send(EditMemberEvent.Deleted)
                 }
-                .onFailure { error ->
-                    _ui.update {
-                        it.copy(
-                            isLoading = false,
-                            snackbarMessage = "Failed to update member: ${error.message}",
-                            snackbarIsError = true,
-                        )
-                    }
+                .onFailure {
+                    local.update { it.copy(deleting = false) }
+                    _events.send(EditMemberEvent.DeleteFailed)
                 }
         }
     }
 
-    fun showDeleteDialog() {
-        _ui.update { it.copy(showDeleteDialog = true) }
+    /** The first load failed: try again. */
+    fun retry() {
+        viewModelScope.launch { memberStore.refresh() }
     }
 
-    fun hideDeleteDialog() {
-        _ui.update { it.copy(showDeleteDialog = false) }
+    private fun edit(change: (Local) -> Local) {
+        val s = current()
+        if (s.member == null || s.locked || s.saving || s.deleting) return
+        local.update(change)
     }
 
-    fun deleteMember(onDeleted: () -> Unit) {
-        viewModelScope.launch {
-            _ui.update { it.copy(isLoading = true, showDeleteDialog = false) }
-            deleteUserUseCase(requestedUser?.idx ?: return@launch)
-                .onSuccess {
-                    val username = _ui.value.originalUsername
-                    _ui.update {
-                        it.copy(
-                            isLoading = false,
-                            snackbarMessage = "${username.ifBlank { "Member" }} deleted successfully",
-                            snackbarIsError = false,
-                        )
-                    }
-                    delay(600)
-                    onDeleted()
-                }
-                .onFailure { error ->
-                    _ui.update {
-                        it.copy(
-                            isLoading = false,
-                            snackbarMessage = "Failed to delete member: ${error.message}",
-                            snackbarIsError = true,
-                        )
-                    }
-                }
+    private fun resolve(res: Resource<List<Member>>?, session: SessionState.SignedIn?, l: Local): EditMemberUiState {
+        val found = res?.data?.firstOrNull { it.idx == idx }
+        if (found != null) lastSeen = found
+        // Once deleted (or while deleting), the refreshed list no longer has them: keep the last view.
+        val member = found ?: lastSeen?.takeIf { l.deleting || l.deleted }
+        val load = when {
+            member != null -> EditLoad.Ready
+            res == null || res.data == null && res.refreshing -> EditLoad.Loading
+            res.data == null -> if (res.error != null) EditLoad.Failed else EditLoad.Loading
+            else -> EditLoad.Missing
         }
-    }
+        if (member == null) return EditMemberUiState(load = load)
 
-    fun dismissSnackbar() {
-        _ui.update { it.copy(snackbarMessage = null, snackbarIsError = false) }
-    }
-
-    private fun scheduleUsernameValidation(forceImmediate: Boolean = false) {
-        usernameValidationJob?.cancel()
-        if (_ui.value.username.isBlank()) {
-            setUsernameValidation(InputValidationUiState())
-            return
+        val lock = when {
+            canEditMember(session?.userIdx, session?.permission ?: 0, member) -> null
+            member.permission >= SUPER_ADMIN_PERMISSION -> MemberLock.SuperAdmin
+            member.idx == session?.userIdx -> MemberLock.Self
+            else -> MemberLock.Role
         }
-
-        usernameValidationJob = viewModelScope.launch {
-            setUsernameValidation(
-                InputValidationUiState(
-                    helperText = "Validating username...",
-                    status = MemberFieldStatus.Validating
-                )
-            )
-            delay(if (forceImmediate) MANUAL_VALIDATION_DELAY else AUTO_VALIDATION_DELAY)
-            val trimmed = _ui.value.username.trim()
-            when {
-                trimmed.length < 3 -> setUsernameValidation(
-                    InputValidationUiState(
-                        helperText = "Use at least 3 characters",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                !trimmed.matches(USERNAME_ALLOWED_REGEX) -> setUsernameValidation(
-                    InputValidationUiState(
-                        helperText = "Use English, numbers, and '_' only",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                else -> setUsernameValidation(
-                    InputValidationUiState(
-                        helperText = "Looks good",
-                        status = MemberFieldStatus.Valid
-                    )
-                )
-            }
-        }
-    }
-
-    private fun schedulePasswordValidation(forceImmediate: Boolean = false) {
-        passwordValidationJob?.cancel()
-        if (_ui.value.newPassword.isBlank()) {
-            setPasswordValidation(
-                InputValidationUiState(
-                    helperText = "Use English, numbers, and symbols only",
-                    status = MemberFieldStatus.Idle
-                )
-            )
-            return
-        }
-
-        passwordValidationJob = viewModelScope.launch {
-            setPasswordValidation(
-                InputValidationUiState(
-                    helperText = "Checking password...",
-                    status = MemberFieldStatus.Validating
-                )
-            )
-            delay(if (forceImmediate) MANUAL_VALIDATION_DELAY else AUTO_VALIDATION_DELAY)
-            val password = _ui.value.newPassword
-            when {
-                password.length < 8 -> setPasswordValidation(
-                    InputValidationUiState(
-                        helperText = "Use at least 8 characters",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                password.none { it.isDigit() } -> setPasswordValidation(
-                    InputValidationUiState(
-                        helperText = "Include at least one number",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                !password.matches(PASSWORD_ALLOWED_REGEX) -> setPasswordValidation(
-                    InputValidationUiState(
-                        helperText = "Use English letters, digits, or symbols",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                else -> setPasswordValidation(
-                    InputValidationUiState(
-                        helperText = "Looks strong",
-                        status = MemberFieldStatus.Valid
-                    )
-                )
-            }
-        }
-    }
-
-    private fun setUsernameValidation(state: InputValidationUiState) {
-        _ui.update { it.copy(usernameValidation = state) }
-    }
-
-    private fun setPasswordValidation(state: InputValidationUiState) {
-        _ui.update { it.copy(passwordValidation = state) }
-    }
-
-    companion object {
-        private const val AUTO_VALIDATION_DELAY = 600L
-        private const val MANUAL_VALIDATION_DELAY = 250L
-        private const val MOCK_EDIT_MEMBER_USERNAME = "edit_member_demo"
-        private val MOCK_EDIT_MEMBER_PERMISSION = UserPermission.MODERATOR
-        private val USERNAME_ALLOWED_REGEX = Regex("^[A-Za-z0-9_]+$")
-        private val PASSWORD_ALLOWED_REGEX = Regex(
-            """^[A-Za-z0-9!@#${'$'}%^&*()_+\-=\[\]{};':"\\|,.<>/?`~]+$"""
+        val name = l.name ?: member.username
+        val others = res?.data.orEmpty().filter { it.idx != member.idx }.mapTo(HashSet()) { it.username.lowercase() }
+        return EditMemberUiState(
+            load = load,
+            member = member,
+            lock = lock,
+            name = name,
+            nameCheck = checkMemberName(name, { it.lowercase() in others }, current = member.username),
+            password = l.password,
+            passwordRules = passwordRules(l.password),
+            role = l.role ?: MemberRole.of(member.permission),
+            saving = l.saving,
+            deleting = l.deleting || l.deleted,
+            deleteOpen = l.deleteOpen && lock == null,
         )
     }
+
+    /** Unsaved input; null [name] / [role] means unchanged from the member. */
+    private data class Local(
+        val name: String? = null,
+        val role: MemberRole? = null,
+        val password: String = "",
+        val saving: Boolean = false,
+        val deleting: Boolean = false,
+        val deleted: Boolean = false,
+        val deleteOpen: Boolean = false,
+    )
 }
+
+private fun Throwable.isConflict() = this is ApiException && errorCode == HTTP_CONFLICT

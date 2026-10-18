@@ -8,7 +8,8 @@ sealed interface NameCheck {
     data class Invalid(val reason: NameProblem) : NameCheck
 }
 
-enum class NameProblem { Spaces, Characters, Duplicate, TooLong }
+/** [Format] is for member names only: outside the allowed characters or 3–32 length. */
+enum class NameProblem { Spaces, Characters, Duplicate, TooLong, Format }
 
 private const val MAX_NAME_LENGTH = 64
 private val FORBIDDEN_NAME_CHARS = setOf('<', '>', '/', '\\')

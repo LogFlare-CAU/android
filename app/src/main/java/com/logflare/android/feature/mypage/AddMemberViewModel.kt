@@ -1,258 +1,165 @@
 package com.logflare.android.feature.mypage
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.logflare.android.enums.UserPermission
-import com.logflare.android.feature.usecase.AddUserUseCase
-import com.logflare.android.ui.component.common.MemberFieldStatus
+import com.logflare.android.data.session.SessionRepository
+import com.logflare.android.data.session.SessionState
+import com.logflare.android.data.store.ApiException
+import com.logflare.android.data.store.MemberStore
+import com.logflare.android.feature.project.NameCheck
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class InputValidationUiState(
-    val helperText: String? = null,
-    val status: MemberFieldStatus = MemberFieldStatus.Idle
-)
+data class AddedMember(val name: String, val role: MemberRole)
 
 data class AddMemberUiState(
-    val username: String = "",
-    val temporaryPassword: String = "",
-    val usernameValidation: InputValidationUiState = InputValidationUiState(),
-    val passwordValidation: InputValidationUiState = InputValidationUiState(
-        helperText = "Use English, numbers, and symbols only",
-        status = MemberFieldStatus.Idle
-    ),
-    val selectedPermission: UserPermission = UserPermission.USER,
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val successMessage: String? = null
-)
+    val name: String = "",
+    val nameCheck: NameCheck = NameCheck.Empty,
+    val password: String = "",
+    val passwordRules: PasswordRules = passwordRules(""),
+    val role: MemberRole = MemberRole.Member,
+    val submitting: Boolean = false,
+    /** Set once the server created the member: the screen then shows the success state. */
+    val added: AddedMember? = null,
+    /** The signed-in server's host, shown on the success state. */
+    val serverHost: String = "",
+    val discardOpen: Boolean = false,
+) {
+    val canAdd: Boolean get() = nameCheck == NameCheck.Valid && passwordRules.ok && !submitting && added == null
 
+    /** Something was typed; closing then asks first. */
+    val dirty: Boolean get() = added == null && (name.isNotEmpty() || password.isNotEmpty())
+}
+
+sealed interface AddMemberEvent {
+    data object NavigateBack : AddMemberEvent
+    data object AddFailed : AddMemberEvent
+    /** The server already has that name (someone added it since the list was loaded). */
+    data object NameTaken : AddMemberEvent
+}
+
+private const val KEY_NAME = "name"
+private const val KEY_ROLE = "role"
+private const val KEY_ADDED_NAME = "addedName"
+private const val KEY_ADDED_ROLE = "addedRole"
+private const val HTTP_CONFLICT = 409
+
+/**
+ * Add member: name (checked against the cached member list as typed), password with its rules,
+ * and role. On success the member list is refreshed by [MemberStore] so My shows them at once.
+ * Name, role and the added member survive process death; the password is never saved.
+ */
 @HiltViewModel
-class AddMemberViewModel @Inject constructor(
-    private val adduserUseCase: AddUserUseCase,
+class AddMemberViewModel internal constructor(
+    private val savedState: SavedStateHandle,
+    private val memberStore: MemberStore,
+    sessions: StateFlow<SessionState>,
 ) : ViewModel() {
 
-    private val _ui = MutableStateFlow(AddMemberUiState())
-    val ui: StateFlow<AddMemberUiState> = _ui
+    @Inject
+    constructor(
+        savedState: SavedStateHandle,
+        memberStore: MemberStore,
+        sessionRepository: SessionRepository,
+    ) : this(savedState, memberStore, sessionRepository.state)
 
-    private var usernameValidationJob: Job? = null
-    private var passwordValidationJob: Job? = null
+    private val local = MutableStateFlow(
+        AddMemberUiState(
+            name = savedState.get<String>(KEY_NAME).orEmpty(),
+            role = savedState.get<String>(KEY_ROLE).toRole(),
+            added = savedState.get<String>(KEY_ADDED_NAME)?.let { AddedMember(it, savedState.get<String>(KEY_ADDED_ROLE).toRole()) },
+        ),
+    )
 
-    fun updateUsername(username: String) {
-        _ui.update {
-            it.copy(
-                username = username,
-                usernameValidation = InputValidationUiState(),
-                errorMessage = null,
-                successMessage = null
-            )
-        }
-        scheduleUsernameValidation()
+    private val _events = Channel<AddMemberEvent>(Channel.BUFFERED)
+    val events: Flow<AddMemberEvent> = _events.receiveAsFlow()
+
+    /** Lower-cased names of every user, for the "Already taken" check. */
+    private val takenNames: StateFlow<Set<String>> = memberStore.members()
+        .map { r -> r.data.orEmpty().mapTo(HashSet()) { it.username.lowercase() } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    private val host = sessions.map { (it as? SessionState.SignedIn)?.serverUrl?.let(::serverHost).orEmpty() }
+
+    val state: StateFlow<AddMemberUiState> = combine(local, takenNames, host) { l, taken, h ->
+        l.resolved(taken).copy(serverHost = h)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), local.value.resolved(emptySet()))
+
+    fun setName(value: String) {
+        if (local.value.added != null) return
+        local.update { it.copy(name = value) }
+        savedState[KEY_NAME] = value
     }
 
-    fun updateTemporaryPassword(password: String) {
-        _ui.update {
-            it.copy(
-                temporaryPassword = password,
-                passwordValidation = InputValidationUiState(),
-                errorMessage = null,
-                successMessage = null
-            )
-        }
-        schedulePasswordValidation()
+    fun setPassword(value: String) {
+        if (local.value.added != null) return
+        local.update { it.copy(password = value) }
     }
 
-    fun retryUsernameValidation() {
-        scheduleUsernameValidation(forceImmediate = true)
+    fun setRole(role: MemberRole) {
+        if (local.value.added != null) return
+        local.update { it.copy(role = role) }
+        savedState[KEY_ROLE] = role.name
     }
 
-    fun retryPasswordValidation() {
-        schedulePasswordValidation(forceImmediate = true)
-    }
-
-    fun selectPermission(permission: UserPermission) {
-        _ui.update {
-            it.copy(
-                selectedPermission = permission,
-                errorMessage = null,
-                successMessage = null
-            )
-        }
-    }
-
-    fun addMember(onSuccess: () -> Unit) {
-        val currentState = _ui.value
-        if (currentState.usernameValidation.status != MemberFieldStatus.Valid) {
-            _ui.update { it.copy(errorMessage = "Username must be valid before continuing") }
-            return
-        }
-
-        if (currentState.passwordValidation.status != MemberFieldStatus.Valid) {
-            _ui.update { it.copy(errorMessage = "Password must be valid before continuing") }
-            return
-        }
-
+    fun add() {
+        val current = local.value.resolved(takenNames.value)
+        if (!current.canAdd) return
+        local.update { it.copy(submitting = true) }
         viewModelScope.launch {
-            _ui.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
-
-            adduserUseCase(
-                username = currentState.username.trim(),
-                password = currentState.temporaryPassword,
-                permission = currentState.selectedPermission
-            )
-                .onSuccess {
-                    _ui.update {
-                        it.copy(
-                            isLoading = false,
-                            successMessage = "Member added successfully",
-                            usernameValidation = InputValidationUiState(status = MemberFieldStatus.Completed),
-                            passwordValidation = InputValidationUiState(status = MemberFieldStatus.Completed)
-                        )
-                    }
-
-                    delay(500)
-                    onSuccess()
+            memberStore.add(current.name, current.password, current.role.permission)
+                .onSuccess { member ->
+                    val added = AddedMember(member.username, current.role)
+                    savedState[KEY_ADDED_NAME] = added.name
+                    savedState[KEY_ADDED_ROLE] = added.role.name
+                    local.update { it.copy(submitting = false, password = "", added = added) }
                 }
                 .onFailure { e ->
-                    _ui.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "Failed to add member: ${e.message}"
-                        )
-                    }
+                    local.update { it.copy(submitting = false) }
+                    val taken = e is ApiException && e.errorCode == HTTP_CONFLICT
+                    _events.send(if (taken) AddMemberEvent.NameTaken else AddMemberEvent.AddFailed)
                 }
-
-
         }
     }
 
-    fun clearError() {
-        _ui.update { it.copy(errorMessage = null, successMessage = null) }
+    /** From the success state: an empty form again. */
+    fun addAnother() {
+        local.value = AddMemberUiState()
+        listOf(KEY_NAME, KEY_ROLE, KEY_ADDED_NAME, KEY_ADDED_ROLE).forEach { savedState.remove<Any>(it) }
     }
 
-    private fun scheduleUsernameValidation(forceImmediate: Boolean = false) {
-        usernameValidationJob?.cancel()
-        if (_ui.value.username.isBlank()) {
-            setUsernameValidation(InputValidationUiState())
-            return
-        }
-
-        usernameValidationJob = viewModelScope.launch {
-            setUsernameValidation(
-                InputValidationUiState(
-                    helperText = "Validating username...",
-                    status = MemberFieldStatus.Validating
-                )
-            )
-            delay(if (forceImmediate) MANUAL_VALIDATION_DELAY else AUTO_VALIDATION_DELAY)
-            val trimmed = _ui.value.username.trim()
-            when {
-                trimmed.isBlank() -> setUsernameValidation(InputValidationUiState())
-                trimmed.length < 3 -> setUsernameValidation(
-                    InputValidationUiState(
-                        helperText = "Use at least 3 characters",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                !trimmed.matches(USERNAME_ALLOWED_REGEX) -> setUsernameValidation(
-                    InputValidationUiState(
-                        helperText = "Use English, numbers, and '_' only",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                RESERVED_MEMBER_NAMES.any { it.equals(trimmed, ignoreCase = true) } -> setUsernameValidation(
-                    InputValidationUiState(
-                        helperText = "This member name already exists",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                else -> setUsernameValidation(
-                    InputValidationUiState(
-                        helperText = "Looks good",
-                        status = MemberFieldStatus.Valid
-                    )
-                )
-            }
+    /** The close button / system Back: asks first when something was typed. */
+    fun close() {
+        if (local.value.dirty) {
+            local.update { it.copy(discardOpen = true) }
+        } else {
+            _events.trySend(AddMemberEvent.NavigateBack)
         }
     }
 
-    private fun schedulePasswordValidation(forceImmediate: Boolean = false) {
-        passwordValidationJob?.cancel()
-        if (_ui.value.temporaryPassword.isBlank()) {
-            setPasswordValidation(
-                InputValidationUiState(
-                    helperText = "Use English, numbers, and symbols only",
-                    status = MemberFieldStatus.Idle
-                )
-            )
-            return
-        }
-
-        passwordValidationJob = viewModelScope.launch {
-            setPasswordValidation(
-                InputValidationUiState(
-                    helperText = "Checking password...",
-                    status = MemberFieldStatus.Validating
-                )
-            )
-            delay(if (forceImmediate) MANUAL_VALIDATION_DELAY else AUTO_VALIDATION_DELAY)
-            val current = _ui.value.temporaryPassword
-            when {
-                current.length < 8 -> setPasswordValidation(
-                    InputValidationUiState(
-                        helperText = "Use at least 8 characters",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                current.none { it.isDigit() } -> setPasswordValidation(
-                    InputValidationUiState(
-                        helperText = "Include at least one number",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                !current.matches(PASSWORD_ALLOWED_REGEX) -> setPasswordValidation(
-                    InputValidationUiState(
-                        helperText = "Use English letters, digits, or symbols",
-                        status = MemberFieldStatus.Error
-                    )
-                )
-
-                else -> setPasswordValidation(
-                    InputValidationUiState(
-                        helperText = "Looks strong",
-                        status = MemberFieldStatus.Valid
-                    )
-                )
-            }
-        }
+    fun confirmDiscard() {
+        local.update { it.copy(discardOpen = false) }
+        _events.trySend(AddMemberEvent.NavigateBack)
     }
 
-    private fun setUsernameValidation(state: InputValidationUiState) {
-        _ui.update { it.copy(usernameValidation = state) }
-    }
+    fun dismissSheet() = local.update { it.copy(discardOpen = false) }
 
-    private fun setPasswordValidation(state: InputValidationUiState) {
-        _ui.update { it.copy(passwordValidation = state) }
-    }
-
-    companion object {
-        private const val AUTO_VALIDATION_DELAY = 600L
-        private const val MANUAL_VALIDATION_DELAY = 250L
-        private val USERNAME_ALLOWED_REGEX = Regex("^[A-Za-z0-9_]+$")
-        private val RESERVED_MEMBER_NAMES = setOf("logflare_admin", "project_owner", "viewer01")
-        private val PASSWORD_ALLOWED_REGEX = Regex(
-            """^[A-Za-z0-9!@#${'$'}%^&*()_+\-=\[\]{};':"\\|,.<>/?`~]+$"""
-        )
-    }
+    private fun AddMemberUiState.resolved(taken: Set<String>) = copy(
+        nameCheck = checkMemberName(name, { it.lowercase() in taken }),
+        passwordRules = passwordRules(password),
+    )
 }
+
+private fun String?.toRole(): MemberRole = MemberRole.entries.firstOrNull { it.name == this } ?: MemberRole.Member

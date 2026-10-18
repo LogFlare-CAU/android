@@ -19,8 +19,8 @@ import com.logflare.android.feature.auth.LoginRoute
 import com.logflare.android.feature.home.HomeRoute
 import com.logflare.android.feature.log.LogDetailRoute
 import com.logflare.android.feature.log.LogsRoute
-import com.logflare.android.feature.mypage.AddMemberScreen
-import com.logflare.android.feature.mypage.EditMemberScreen
+import com.logflare.android.feature.mypage.AddMemberRoute
+import com.logflare.android.feature.mypage.EditMemberRoute
 import com.logflare.android.feature.mypage.MyRoute
 import com.logflare.android.feature.project.ProjectCreateRoute
 import com.logflare.android.feature.project.ProjectSettingsRoute
@@ -182,7 +182,7 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             onOpenProject = { nav.navigate(Destinations.projectDetail(it)) },
             onOpenLog = { nav.navigate(Destinations.logDetail(it)) },
         )
-        Destinations.AddMember -> AddMemberScreen(onBack = back)
-        Destinations.EditMemberPattern -> EditMemberScreen(onBack = back)
+        Destinations.AddMember -> AddMemberRoute(onBack = back)
+        Destinations.EditMemberPattern -> EditMemberRoute(onBack = back)
     }
 }

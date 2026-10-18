@@ -244,6 +244,7 @@ internal fun nameProblemText(problem: NameProblem): String = stringResource(
         NameProblem.Characters -> R.string.project_name_characters
         NameProblem.Duplicate -> R.string.project_name_duplicate
         NameProblem.TooLong -> R.string.project_name_too_long
+        NameProblem.Format -> R.string.member_name_format
     },
 )
 

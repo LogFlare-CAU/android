@@ -178,13 +178,17 @@ class FakeLogflareApi : LogflareApi {
             ProjectPermsSequenceResponse(false, REJECTED, 400)
         }
 
+    /** Bodies of every [createUser] call, and `userId to body` of every [updateUser] call. */
+    val userCreates = mutableListOf<UserCreateParams>()
+    val userUpdates = mutableListOf<Pair<Int, UserUpdateParams>>()
+
     override suspend fun createUser(token: String, body: UserCreateParams): UserResponse =
-        mutation("createUser", token, { UserResponse(true, "ok", data = UserDTO(50, body.username, body.permission)) }) {
+        also { userCreates += body }.mutation("createUser", token, { UserResponse(true, "ok", data = UserDTO(50, body.username, body.permission)) }) {
             UserResponse(false, REJECTED, 409)
         }
 
     override suspend fun updateUser(token: String, userId: Int, body: UserUpdateParams): UserResponse =
-        mutation(
+        also { userUpdates += userId to body }.mutation(
             "updateUser",
             token,
             { UserResponse(true, "ok", data = UserDTO(userId, body.username ?: "unchanged", body.permission ?: 0)) },
