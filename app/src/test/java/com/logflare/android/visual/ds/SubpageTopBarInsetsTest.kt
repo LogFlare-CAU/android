@@ -6,10 +6,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertTopPositionInRootIsEqualTo
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.v2.LogFlareTheme
+import com.example.logflare.core.designsystem.v2.components.LfScaffold
 import com.example.logflare.core.designsystem.v2.components.SubpageTopBar
 import org.junit.Rule
 import org.junit.Test
@@ -50,5 +52,25 @@ class SubpageTopBarInsetsTest {
         }
         compose.onNodeWithTag("SubpageTopBar.row").assertHeightIsEqualTo(56.dp)
         compose.onNodeWithTag("root").assertHeightIsAtLeast(56.dp)
+    }
+
+    @Test
+    fun insideScaffold_isNotDoublePadded() {
+        compose.setContent {
+            LogFlareTheme(darkTheme = false) {
+                LfScaffold(contentInsets = WindowInsets(top = 24.dp)) {
+                    SubpageTopBar(
+                        title = "api-server",
+                        onNav = {},
+                        modifier = Modifier.testTag("bar"),
+                        windowInsets = WindowInsets(top = 24.dp),
+                    )
+                }
+            }
+        }
+        // Scaffold pads 24dp once and consumes it; the bar adds nothing: it sits at y=24 and is 56dp tall.
+        compose.onNodeWithTag("bar").assertTopPositionInRootIsEqualTo(24.dp)
+        compose.onNodeWithTag("bar").assertHeightIsEqualTo(56.dp)
+        compose.onNodeWithTag("SubpageTopBar.row").assertHeightIsEqualTo(56.dp)
     }
 }
