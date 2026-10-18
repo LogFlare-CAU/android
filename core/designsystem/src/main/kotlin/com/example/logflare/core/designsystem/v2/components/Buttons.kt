@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.v2.Lf
 
 @Composable
-private fun LfButton(
+internal fun LfButton(
     text: String,
     onClick: () -> Unit,
     enabled: Boolean,
