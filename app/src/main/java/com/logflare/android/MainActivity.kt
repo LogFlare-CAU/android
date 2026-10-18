@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,14 +14,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.logflare.android.data.ThemePreference
+import com.logflare.android.data.session.SessionState
 import com.logflare.android.feature.auth.LoginScreen
 import com.logflare.android.feature.main.MainScaffold
 import com.logflare.android.ui.VisualQaAppRoot
@@ -37,7 +40,13 @@ class MainActivity : Hilt_MainActivity() {
             // no-op; optional: show rationale or toast
         }
 
+    private val appViewModel: AppViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Keep the splash up until the stored session is read, so the start destination is decided once.
+        installSplashScreen().setKeepOnScreenCondition {
+            appViewModel.session.value is SessionState.Loading
+        }
         super.onCreate(savedInstanceState)
         val projectId = intent.getIntExtra("projectid", -1).takeIf { it != -1 }
         val errorId = intent.getIntExtra("errorid", -1).takeIf { it != -1 }
@@ -66,6 +75,7 @@ class MainActivity : Hilt_MainActivity() {
             LogflareandroidTheme(darkTheme = darkTheme) {
                 VisualQaAppRoot {
                     App(
+                        vm = appViewModel,
                         intentProjectId = projectId,
                         intentErrorId = errorId,
                         themeViewModel = themeViewModel,
@@ -83,19 +93,23 @@ fun App(
     intentProjectId: Int? = null,
     intentErrorId: Int? = null
 ) {
-    val token by vm.token.collectAsState()
+    val session by vm.session.collectAsState()
+    // The splash screen covers Loading; build nothing until the stored session is known.
+    if (session is SessionState.Loading) return
+    val signedIn = session is SessionState.SignedIn
     val navController = rememberNavController()
-    val backEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backEntry?.destination?.route
-    val start = if (token.isNullOrBlank()) Route.Auth.path else Route.Main.path
+    // Decided once from the state read off disk — no redirect on first composition.
+    val start = remember { if (signedIn) Route.Main.path else Route.Auth.path }
 
-    LaunchedEffect(token) {
-        if (token.isNullOrBlank() && currentRoute != Route.Auth.path) {
+    // Later transitions only (logout, 401 clearing the token, login from another path).
+    LaunchedEffect(signedIn) {
+        val currentRoute = navController.currentDestination?.route ?: return@LaunchedEffect
+        if (!signedIn && currentRoute != Route.Auth.path) {
             navController.navigate(Route.Auth.path) {
                 popUpTo(Route.Main.path) { inclusive = true }
                 launchSingleTop = true
             }
-        } else if (!token.isNullOrBlank() && currentRoute == Route.Auth.path) {
+        } else if (signedIn && currentRoute == Route.Auth.path) {
             navController.navigate(Route.Main.path) {
                 popUpTo(Route.Auth.path) { inclusive = true }
                 launchSingleTop = true

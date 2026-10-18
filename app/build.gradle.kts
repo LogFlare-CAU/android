@@ -67,6 +67,7 @@ dependencies {
     implementation(project(":core:designsystem"))
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -94,6 +95,8 @@ dependencies {
     testImplementation(libs.roborazzi)
     testImplementation(libs.roborazzi.compose)
     testImplementation(libs.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.compose.ui.test.manifest)
