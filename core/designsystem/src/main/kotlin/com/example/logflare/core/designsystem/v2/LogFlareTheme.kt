@@ -7,7 +7,9 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 
 private val LocalLfColors = staticCompositionLocalOf { lfLightColors() }
 private val LocalLfTypography = staticCompositionLocalOf { lfTypography() }
@@ -27,34 +29,42 @@ fun LogFlareTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    val colors = if (darkTheme) lfDarkColors() else lfLightColors()
-    val scheme = if (darkTheme) {
-        darkColorScheme(
-            background = colors.background,
-            surface = colors.surface,
-            onSurface = colors.textPrimary,
-            onSurfaceVariant = colors.textMuted,
-            outline = colors.divider,
-            error = colors.error,
-            primary = colors.primaryAction,
-            onPrimary = colors.onPrimaryAction,
-        )
-    } else {
-        lightColorScheme(
-            background = colors.background,
-            surface = colors.surface,
-            onSurface = colors.textPrimary,
-            onSurfaceVariant = colors.textMuted,
-            outline = colors.divider,
-            error = colors.error,
-            primary = colors.primaryAction,
-            onPrimary = colors.onPrimaryAction,
-        )
+    val colors = remember(darkTheme) { if (darkTheme) lfDarkColors() else lfLightColors() }
+    val typography = remember { lfTypography() }
+    val shapes = remember { LfShapes() }
+    val scheme = remember(darkTheme) {
+        if (darkTheme) {
+            darkColorScheme(
+                background = colors.background,
+                surface = colors.surface,
+                onBackground = colors.textPrimary,
+                onSurface = colors.textPrimary,
+                onSurfaceVariant = colors.textMuted,
+                outline = colors.divider,
+                error = colors.error,
+                onError = Color.White,
+                primary = colors.primaryAction,
+                onPrimary = colors.onPrimaryAction,
+            )
+        } else {
+            lightColorScheme(
+                background = colors.background,
+                surface = colors.surface,
+                onBackground = colors.textPrimary,
+                onSurface = colors.textPrimary,
+                onSurfaceVariant = colors.textMuted,
+                outline = colors.divider,
+                error = colors.error,
+                onError = Color.White,
+                primary = colors.primaryAction,
+                onPrimary = colors.onPrimaryAction,
+            )
+        }
     }
     CompositionLocalProvider(
         LocalLfColors provides colors,
-        LocalLfTypography provides lfTypography(),
-        LocalLfShapes provides LfShapes(),
+        LocalLfTypography provides typography,
+        LocalLfShapes provides shapes,
     ) {
         MaterialTheme(colorScheme = scheme, content = content)
     }
