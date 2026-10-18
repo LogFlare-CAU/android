@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,7 +53,7 @@ fun rememberLfToastState(): LfToastState {
 fun LfToastHost(state: LfToastState, modifier: Modifier = Modifier) {
     val text by state.message.collectAsState()
     val current = text ?: return
-    Box(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Box(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("LfToast")) {
         Text(
             current,
             modifier = Modifier

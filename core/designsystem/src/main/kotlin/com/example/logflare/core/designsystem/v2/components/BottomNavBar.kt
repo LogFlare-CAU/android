@@ -35,6 +35,7 @@ fun BottomNavBar(
     selected: String,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
+    windowInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
     val divider = Lf.colors.divider
     Row(
@@ -42,7 +43,7 @@ fun BottomNavBar(
             .fillMaxWidth()
             .background(Lf.colors.surface)
             .drawBehind { drawLine(divider, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx()) }
-            .windowInsetsPadding(WindowInsets.navigationBars)
+            .windowInsetsPadding(windowInsets)
             .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
         items.forEach { item ->
