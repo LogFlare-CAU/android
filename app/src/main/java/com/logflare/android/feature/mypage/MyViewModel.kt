@@ -18,6 +18,7 @@ import com.logflare.android.ui.theme.ThemeController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.net.URI
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -66,6 +67,8 @@ sealed interface MyEvent {
     data class CopyServer(val url: String) : MyEvent
     data class PushAlertsChanged(val value: GlobalAlert) : MyEvent
     data class QuietHoursChanged(val on: Boolean) : MyEvent
+    /** A Push alerts or Quiet hours change could not be saved. */
+    data object SaveFailed : MyEvent
     data object RefreshFailed : MyEvent
     data object LogoutFailed : MyEvent
     data object SignedOut : MyEvent
@@ -172,17 +175,22 @@ class MyViewModel internal constructor(
     /** Applies at once; saving happens in the background. */
     fun setTheme(preference: ThemePreference) = theme.set(preference)
 
-    fun setGlobalAlert(value: GlobalAlert) {
-        viewModelScope.launch {
-            alerts.setGlobal(value)
-            _events.send(MyEvent.PushAlertsChanged(value))
-        }
-    }
+    fun setGlobalAlert(value: GlobalAlert) = saveAlerts(MyEvent.PushAlertsChanged(value)) { alerts.setGlobal(value) }
 
-    fun setQuietHours(on: Boolean) {
+    fun setQuietHours(on: Boolean) = saveAlerts(MyEvent.QuietHoursChanged(on)) { alerts.setQuietHours(on) }
+
+    /** Runs [save]; reports [done] on success, [MyEvent.SaveFailed] otherwise. */
+    private fun saveAlerts(done: MyEvent, save: suspend () -> Unit) {
         viewModelScope.launch {
-            alerts.setQuietHours(on)
-            _events.send(MyEvent.QuietHoursChanged(on))
+            val ok = try {
+                save()
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                false
+            }
+            _events.send(if (ok) done else MyEvent.SaveFailed)
         }
     }
 
@@ -217,12 +225,15 @@ class MyViewModel internal constructor(
         if (local.value.signingOut) return
         local.update { it.copy(signingOut = true) }
         viewModelScope.launch {
-            runCatching { signOut() }
-                .onSuccess { _events.send(MyEvent.SignedOut) }
-                .onFailure {
-                    local.update { it.copy(signingOut = false) }
-                    _events.send(MyEvent.LogoutFailed)
-                }
+            try {
+                signOut()
+                _events.send(MyEvent.SignedOut)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                local.update { it.copy(signingOut = false) }
+                _events.send(MyEvent.LogoutFailed)
+            }
         }
     }
 

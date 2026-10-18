@@ -24,6 +24,8 @@ class MySnapshots : DsSnapshotTest() {
 
     @Test fun my_admin_light() = capture("my_admin", false) { My(MyFixtures.admin) }
     @Test fun my_admin_dark() = capture("my_admin", true) { My(MyFixtures.admin) }
+    @Test fun my_admin_no_members_light() = capture("my_admin_no_members", false) { My(MyFixtures.adminAlone) }
+    @Test fun my_admin_no_members_dark() = capture("my_admin_no_members", true) { My(MyFixtures.adminAlone) }
     @Test fun my_member_light() = capture("my_member", false) { My(MyFixtures.member) }
     @Test fun my_member_dark() = capture("my_member", true) { My(MyFixtures.member) }
     @Test fun my_appearance_sheet_light() = capture("my_appearance_sheet", false) { My(MyFixtures.appearanceSheet) }
@@ -59,6 +61,9 @@ object MyFixtures {
         globalAlert = GlobalAlert.WarningAndAbove,
         version = "2.0.0",
     )
+
+    /** An admin who is the server's only user. */
+    val adminAlone = admin.copy(members = emptyList())
 
     val appearanceSheet = admin.copy(theme = ThemePreference.DARK, sheet = MySheet.Appearance)
 

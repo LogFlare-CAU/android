@@ -7,6 +7,7 @@ import com.logflare.android.data.ThemePreference
 import com.logflare.android.data.session.SessionKey
 import com.logflare.android.data.session.SessionState
 import com.logflare.android.data.store.AccountStore
+import com.logflare.android.data.store.CacheStore
 import com.logflare.android.data.store.FakeLogflareApi
 import com.logflare.android.data.store.FileCacheStore
 import com.logflare.android.data.store.MemberStore
@@ -14,6 +15,7 @@ import com.logflare.android.push.AlertSettingsRepository
 import com.logflare.android.push.GlobalAlert
 import com.logflare.android.push.LegacyAlerts
 import com.logflare.android.ui.theme.ThemeController
+import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,6 +29,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -74,11 +77,30 @@ class MyViewModelTest {
         val events: MutableList<MyEvent>,
     )
 
+    /** Lets a test make cache writes fail (a full disk, say). */
+    private class FailingCache(private val inner: CacheStore) : CacheStore by inner {
+        var failWrites = false
+
+        override suspend fun <T> write(
+            session: SessionKey,
+            key: String,
+            value: T,
+            serializer: KSerializer<T>,
+            fetchedAt: Long,
+            generation: Long?,
+        ) {
+            if (failWrites) throw IOException("disk full")
+            inner.write(session, key, value, serializer, fetchedAt, generation)
+        }
+    }
+
+    private lateinit var cache: FailingCache
+
     private fun TestScope.newEnv(
         saveTheme: suspend (ThemePreference) -> Unit = {},
         signOut: suspend () -> Unit = {},
     ): Env {
-        val cache = FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler))
+        cache = FailingCache(FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)))
         val alerts = AlertSettingsRepository(sessions, cache, { LegacyAlerts(null, emptyList()) }, backgroundScope)
         val account = AccountStore(api, sessions, cache, backgroundScope, onProfile = { _, _ -> }) { NOW }
         val saved = mutableListOf<ThemePreference>()
@@ -163,6 +185,38 @@ class MyViewModelTest {
         settle()
         assertFalse(env.vm.state.value.quietHours)
         assertEquals(listOf<MyEvent>(MyEvent.QuietHoursChanged(true), MyEvent.QuietHoursChanged(false)), env.events)
+    }
+
+    @Test
+    fun alertSaveFailure_reportsAndKeepsValue() = runTest {
+        val env = newEnv()
+        settle()
+        cache.failWrites = true
+
+        env.vm.setGlobalAlert(GlobalAlert.Off)
+        env.vm.setQuietHours(true)
+        settle()
+
+        assertEquals(listOf<MyEvent>(MyEvent.SaveFailed, MyEvent.SaveFailed), env.events)
+        assertEquals(GlobalAlert.ErrorAndAbove, env.vm.state.value.globalAlert)
+        assertFalse(env.vm.state.value.quietHours)
+    }
+
+    @Test
+    fun logoutFailure_resetsAndReports() = runTest {
+        var calls = 0
+        val env = newEnv(signOut = { calls++; throw IllegalStateException("boom") })
+        settle()
+        env.vm.openSheet(MySheet.Logout)
+        env.vm.confirmLogout()
+        settle()
+
+        assertFalse(env.vm.state.value.signingOut)
+        assertEquals(listOf<MyEvent>(MyEvent.LogoutFailed), env.events)
+        // It can be tried again.
+        env.vm.confirmLogout()
+        settle()
+        assertEquals(2, calls)
     }
 
     @Test

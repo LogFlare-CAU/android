@@ -79,6 +79,7 @@ fun MyRoute(
     val quietOff = stringResource(R.string.my_quiet_off)
     val refreshFailed = stringResource(R.string.my_refresh_failed)
     val logoutFailed = stringResource(R.string.my_logout_failed)
+    val saveFailed = stringResource(R.string.my_save_failed)
     val alertLabels = GlobalAlert.entries.associateWith { globalAlertLabel(it) }
     val pushChanged = stringResource(R.string.my_push_changed)
     LaunchedEffect(viewModel) {
@@ -92,6 +93,7 @@ fun MyRoute(
                 is MyEvent.QuietHoursChanged -> toast.show(if (event.on) quietOn else quietOff)
                 MyEvent.RefreshFailed -> toast.show(refreshFailed)
                 MyEvent.LogoutFailed -> toast.show(logoutFailed)
+                MyEvent.SaveFailed -> toast.show(saveFailed)
                 MyEvent.SignedOut -> onSignedOut()
             }
         }
@@ -279,6 +281,12 @@ private fun MembersCard(state: MyUiState, actions: MyActions) {
                     )
                 },
                 onClick = actions.onRetryMembers,
+            )
+            state.members.isEmpty() -> Text(
+                stringResource(R.string.my_members_empty),
+                style = Lf.type.secondary,
+                color = Lf.colors.textMuted,
+                modifier = Modifier.padding(start = 20.dp, end = 16.dp, top = 4.dp, bottom = 14.dp),
             )
             else -> state.visibleMembers.forEach { member ->
                 MemberRow(member, if (state.canManageMembers) ({ actions.onEditMember(member.idx) }) else null)

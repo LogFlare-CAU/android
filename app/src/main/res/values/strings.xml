@@ -278,6 +278,8 @@
     <string name="my_members_show_less">Show less</string>
     <string name="my_members_failed">Couldn\'t load members</string>
     <string name="my_members_retry">Try again</string>
+    <string name="my_members_empty">No other members yet</string>
+    <string name="my_save_failed">Couldn\'t save. Try again.</string>
     <string name="my_logout">Log out</string>
     <string name="my_logout_title">Log out?</string>
     <string name="my_logout_body">You will stop getting push alerts on this device until you sign in again.</string>
