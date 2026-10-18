@@ -1,7 +1,5 @@
 package com.logflare.android.feature.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,24 +9,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +33,7 @@ import com.example.logflare.core.designsystem.v2.components.Avatar
 import com.example.logflare.core.designsystem.v2.components.CountBadge
 import com.example.logflare.core.designsystem.v2.components.EmptyState
 import com.example.logflare.core.designsystem.v2.components.GroupedCard
+import com.example.logflare.core.designsystem.v2.components.HeaderIconButton
 import com.example.logflare.core.designsystem.v2.components.HomeHeader
 import com.example.logflare.core.designsystem.v2.components.LevelIcon
 import com.example.logflare.core.designsystem.v2.components.LfPullToRefresh
@@ -82,14 +76,17 @@ fun HomeContent(
     Box(modifier.fillMaxSize().testTag(VisualQaTags.Home)) {
         Column(Modifier.fillMaxSize()) {
             HomeHeader(logo = painterResource(R.drawable.logo)) {
-                HeaderIconButton(Icons.Outlined.Search, stringResource(R.string.home_search)) {
-                    onOpenSheet(HomeSheet.Search)
-                }
+                HeaderIconButton(
+                    Icons.Outlined.Search,
+                    stringResource(R.string.home_search),
+                    onClick = { onOpenSheet(HomeSheet.Search) },
+                )
                 HeaderIconButton(
                     Icons.Outlined.Notifications,
                     stringResource(if (state.unreadAlerts > 0) R.string.home_notifications_unread else R.string.home_notifications),
+                    onClick = { onOpenSheet(HomeSheet.Notifications) },
                     dot = state.unreadAlerts > 0,
-                ) { onOpenSheet(HomeSheet.Notifications) }
+                )
             }
             LfPullToRefresh(refreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
                 LazyColumn(
@@ -141,8 +138,8 @@ fun HomeContent(
             projectNames = state.projectNames,
             now = now,
             onQuery = onSearch,
-            onOpenLog = { onCloseSheet(); onOpenLog(it) },
-            onOpenProject = { onCloseSheet(); onOpenProject(it) },
+            onOpenLog = onOpenLog,
+            onOpenProject = onOpenProject,
             onDismiss = onCloseSheet,
         )
         HomeSheet.Notifications -> NotificationsSheet(
@@ -151,7 +148,7 @@ fun HomeContent(
             now = now,
             onMarkRead = onMarkRead,
             onMarkAllRead = onMarkAllRead,
-            onOpenLog = { onCloseSheet(); onOpenLog(it) },
+            onOpenLog = onOpenLog,
             onDismiss = onCloseSheet,
         )
         null -> Unit
@@ -208,7 +205,8 @@ private fun RecentRow(log: LogEvent, projectName: String?, now: Instant, onClick
     val ago = relativeTime(log.lastSeen, now)
     ListRow(
         title = log.message,
-        subtitle = if (projectName != null) stringResource(R.string.home_project_subtitle, projectName, ago) else ago,
+        // Time first: a long project name ellipsizes instead of hiding it.
+        subtitle = if (projectName != null) stringResource(R.string.home_dot_join, ago, projectName) else ago,
         leading = { LevelIcon(log.level) },
         onClick = onClick,
     )
@@ -259,31 +257,5 @@ private fun CardHeader(title: String, onSeeAll: () -> Unit) {
                 .clickable(role = Role.Button, onClick = onSeeAll)
                 .padding(horizontal = 8.dp, vertical = 12.dp),
         )
-    }
-}
-
-/** 48dp icon button; [dot] adds the unread marker. */
-@Composable
-private fun HeaderIconButton(icon: ImageVector, description: String, dot: Boolean = false, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = Lf.colors.textSecondary, modifier = Modifier.size(24.dp))
-        if (dot) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 10.dp, end = 11.dp)
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(Lf.colors.error)
-                    .border(2.dp, Lf.colors.background, CircleShape),
-            )
-        }
     }
 }

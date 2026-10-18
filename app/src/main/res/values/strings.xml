@@ -31,6 +31,11 @@
     <string name="time_short_minutes">%1$dm</string>
     <string name="time_short_hours">%1$dh</string>
     <string name="time_short_days">%1$dd</string>
+    <string name="level_debug">Debug</string>
+    <string name="level_info">Info</string>
+    <string name="level_warning">Warning</string>
+    <string name="level_error">Error</string>
+    <string name="level_critical">Critical</string>
     <string name="home_search">Search</string>
     <string name="home_notifications">Notifications</string>
     <string name="home_notifications_unread">Notifications, unread</string>
@@ -40,7 +45,7 @@
     <string name="home_recent_errors">Recent errors</string>
     <string name="home_projects">Projects</string>
     <string name="home_see_all">See all</string>
-    <string name="home_project_subtitle">%1$s · %2$s</string>
+    <string name="home_dot_join">%1$s · %2$s</string>
     <string name="home_last_error">Last error %1$s</string>
     <string name="home_no_errors">No errors yet</string>
     <string name="home_recent_empty">No errors yet. All clear.</string>

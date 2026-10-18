@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,7 +47,15 @@ internal fun HomeSearchSheet(
     onDismiss: () -> Unit,
 ) {
     val focus = remember { FocusRequester() }
-    LfSheet(title = stringResource(R.string.home_search), onDismiss = onDismiss) {
+    // A tapped row closes the sheet first (animated), then navigates once it is gone.
+    var afterDismiss by remember { mutableStateOf<(() -> Unit)?>(null) }
+    LfSheet(
+        title = stringResource(R.string.home_search),
+        onDismiss = {
+            onDismiss()
+            afterDismiss?.invoke()
+        },
+    ) { dismiss ->
         SearchField(
             value = query,
             onValueChange = onQuery,
@@ -58,8 +69,11 @@ internal fun HomeSearchSheet(
             ResultRow(
                 tag = { LevelBadge(log.level) },
                 title = log.message,
-                subtitle = projectNames[log.projectId]?.let { stringResource(R.string.home_project_subtitle, it, ago) } ?: ago,
-                onClick = { onOpenLog(log.id) },
+                subtitle = projectNames[log.projectId]?.let { stringResource(R.string.home_dot_join, ago, it) } ?: ago,
+                onClick = {
+                    afterDismiss = { onOpenLog(log.id) }
+                    dismiss()
+                },
             )
         }
         results.projects.forEach { p ->
@@ -68,7 +82,10 @@ internal fun HomeSearchSheet(
                 title = p.name,
                 subtitle = p.lastErrorAt?.let { stringResource(R.string.home_last_error, relativeTime(it, now)) }
                     ?: stringResource(R.string.home_no_errors),
-                onClick = { onOpenProject(p.id) },
+                onClick = {
+                    afterDismiss = { onOpenProject(p.id) }
+                    dismiss()
+                },
             )
         }
         if (results.logs.isEmpty() && results.projects.isEmpty()) {

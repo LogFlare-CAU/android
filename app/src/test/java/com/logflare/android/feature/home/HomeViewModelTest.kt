@@ -69,6 +69,22 @@ class HomeViewModelTest {
         return vm
     }
 
+    @Test
+    fun warmCache_showsContentWithoutWaitingForSearchDebounce() = runTest {
+        events(10 to "cached")
+        newVm()
+        settle()
+
+        // Same cache files, fresh stores and VM: like reopening Home within the cache's max age.
+        val vm = newVm()
+        runCurrent()
+
+        val s = vm.state.value
+        assertFalse(s.initialLoad)
+        assertEquals(listOf(10), s.recent.map { it.id })
+        assertEquals(1, api.count("getLogEvents"))
+    }
+
     /** Events with the given ids and messages; event `id` belongs to project `projectOf(id)`. */
     private fun events(vararg items: Pair<Int, String>, projectOf: (Int) -> Int = { 1 }) {
         val page = LogEventPageDTO(items.map { (id, message) -> event(id, message = message).copy(projectId = projectOf(id)) })
@@ -205,6 +221,7 @@ class HomeViewModelTest {
 
     @Test
     fun openSearch_clearsPreviousQuery_closeSheet() = runTest {
+        events(10 to "boom")
         val vm = newVm()
         settle()
         vm.openSheet(HomeSheet.Search)
@@ -215,9 +232,11 @@ class HomeViewModelTest {
         assertEquals(null, vm.state.value.sheet)
 
         vm.openSheet(HomeSheet.Search)
-        settle()
+        runCurrent()
         assertEquals(HomeSheet.Search, vm.state.value.sheet)
         assertEquals("", vm.state.value.search)
+        // The cleared query applies at once: no stale "x" results while the debounce runs.
+        assertEquals(listOf(10), vm.state.value.searchResults.logs.map { it.id })
     }
 
     @Test

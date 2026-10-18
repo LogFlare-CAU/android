@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,6 +31,7 @@ import com.example.logflare.core.designsystem.v2.Lf
 import com.example.logflare.core.designsystem.v2.components.LfSheet
 import com.logflare.android.R
 import com.logflare.android.push.HistoryEntry
+import com.logflare.android.ui.format.levelLabel
 import com.logflare.android.ui.format.shortAge
 import java.time.Instant
 
@@ -45,9 +50,14 @@ internal fun NotificationsSheet(
     onDismiss: () -> Unit,
 ) {
     val anyUnread = alerts.any { !it.read }
+    // An opened alert closes the sheet first (animated), then navigates once it is gone.
+    var afterDismiss by remember { mutableStateOf<(() -> Unit)?>(null) }
     LfSheet(
         title = stringResource(R.string.home_notifications),
-        onDismiss = onDismiss,
+        onDismiss = {
+            onDismiss()
+            afterDismiss?.invoke()
+        },
         action = {
             Text(
                 stringResource(R.string.home_mark_all_read),
@@ -59,7 +69,7 @@ internal fun NotificationsSheet(
                     .padding(horizontal = 8.dp, vertical = 12.dp),
             )
         },
-    ) {
+    ) { dismiss ->
         if (alerts.isEmpty()) {
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 40.dp),
@@ -82,7 +92,10 @@ internal fun NotificationsSheet(
         alerts.forEach { entry ->
             AlertRow(entry, entry.projectId?.let(projectNames::get), now) {
                 onMarkRead(entry.errorId)
-                if (entry.opensLog) onOpenLog(entry.errorId)
+                if (entry.opensLog) {
+                    afterDismiss = { onOpenLog(entry.errorId) }
+                    dismiss()
+                }
             }
         }
     }
@@ -94,7 +107,7 @@ internal val HistoryEntry.opensLog: Boolean get() = errorId > 0
 @Composable
 private fun AlertRow(entry: HistoryEntry, projectName: String?, now: Instant, onClick: () -> Unit) {
     val unread = !entry.read
-    val level = entry.level.name
+    val level = levelLabel(entry.level)
     Row(
         Modifier
             .fillMaxWidth()
@@ -120,7 +133,7 @@ private fun AlertRow(entry: HistoryEntry, projectName: String?, now: Instant, on
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                stringResource(R.string.home_project_subtitle, entry.message, shortAge(Instant.ofEpochMilli(entry.receivedAt), now)),
+                stringResource(R.string.home_dot_join, entry.message, shortAge(Instant.ofEpochMilli(entry.receivedAt), now)),
                 style = Lf.type.secondary,
                 color = Lf.colors.textMuted,
                 maxLines = 2,

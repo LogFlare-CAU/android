@@ -51,6 +51,7 @@ class HomeContentTest {
         show(HomeFixtures.notificationsSheet)
 
         compose.onNodeWithText("Critical · worker").performClick()
+        compose.waitForIdle()
 
         assertEquals(listOf("read:12", "close", "log:12"), calls)
     }
@@ -60,8 +61,19 @@ class HomeContentTest {
         show(HomeFixtures.notificationsSheet)
 
         compose.onNodeWithText("Test notification", substring = true).performClick()
+        compose.waitForIdle()
 
         assertEquals(listOf("read:0"), calls)
+    }
+
+    @Test
+    fun searchResultTap_closesSheetThenOpens() {
+        show(HomeFixtures.searchSheet)
+
+        compose.onNode(hasText("PROJECT") and hasClickAction()).performClick()
+        compose.waitForIdle()
+
+        assertEquals(listOf("close", "project:1"), calls.filterNot { it.startsWith("search:") })
     }
 
     @Test

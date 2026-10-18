@@ -2,6 +2,8 @@ package com.example.logflare.core.designsystem.v2.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -10,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,6 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -86,5 +94,40 @@ fun HomeHeader(
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically, content = actions)
+    }
+}
+
+/**
+ * 48dp header icon button (search, bell, add). [dot] adds the red unread marker; say so in
+ * [contentDescription] too, since the dot itself is not announced.
+ */
+@Composable
+fun HeaderIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    dot: Boolean = false,
+) {
+    Box(
+        modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = Lf.colors.textSecondary, modifier = Modifier.size(24.dp))
+        if (dot) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 11.dp)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(Lf.colors.error)
+                    .border(2.dp, Lf.colors.background, CircleShape),
+            )
+        }
     }
 }

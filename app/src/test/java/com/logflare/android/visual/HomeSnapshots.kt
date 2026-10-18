@@ -87,9 +87,10 @@ object HomeFixtures {
         log(15, 4, "Nightly export failed", LfLevel.Error, 60 * 26),
     )
 
+    /** Newest first, as NotificationHistory stores them. */
     private val alerts = listOf(
-        HistoryEntry(12, 2, "DiskFull", LfLevel.Critical, "Disk usage above 95%", NOW.minusSeconds(12 * 60).toEpochMilli(), read = false),
         HistoryEntry(11, 1, "NullPointerException", LfLevel.Error, "NullPointerException ×3", NOW.minusSeconds(3 * 60).toEpochMilli(), read = false),
+        HistoryEntry(12, 2, "DiskFull", LfLevel.Critical, "Disk usage above 95%", NOW.minusSeconds(12 * 60).toEpochMilli(), read = false),
         HistoryEntry(0, null, "Test", LfLevel.Error, "Test notification from LogFlare", NOW.minusSeconds(30 * 60).toEpochMilli(), read = false),
         HistoryEntry(14, 1, "TimeoutError", LfLevel.Error, "TimeoutError: auth-service", NOW.minusSeconds(60 * 60).toEpochMilli(), read = true),
     )

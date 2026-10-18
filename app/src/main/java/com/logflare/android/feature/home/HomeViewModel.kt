@@ -89,7 +89,9 @@ class HomeViewModel @Inject constructor(
         data,
         history.entries,
         ui,
-        search.debounce(SEARCH_DEBOUNCE_MS),
+        // Typing is debounced; a blank query (the start, or a reopened sheet) applies at once, so
+        // the first state isn't held back and a cleared query never shows the old results.
+        search.debounce { if (it.isBlank()) 0L else SEARCH_DEBOUNCE_MS },
     ) { loaded, alerts, local, query ->
         val projects = loaded.projects.data.orEmpty()
         val recent = loaded.recent.data.orEmpty()

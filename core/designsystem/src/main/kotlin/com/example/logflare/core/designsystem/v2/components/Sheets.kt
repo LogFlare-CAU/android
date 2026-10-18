@@ -54,15 +54,17 @@ data class SheetOption<T>(
 
 /**
  * Generic bottom sheet: surface container, 28dp top radius, drag handle, title, scrollable content.
- * [action] sits at the end of the title row (e.g. a "Mark all read" text button).
+ * [action] sits at the end of the title row (e.g. a "Mark all read" text button). [content]
+ * receives `dismiss`, which animates the sheet away and then calls [onDismiss] (e.g. before
+ * navigating from a row).
  */
 @Composable
 fun LfSheet(
     title: String,
     onDismiss: () -> Unit,
     action: (@Composable () -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) = LfSheetFrame(title, onDismiss, action) { content() }
+    content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
+) = LfSheetFrame(title, onDismiss, action, content)
 
 /**
  * Single choice. Tapping a row calls [onSelect], then animates the sheet away and calls
