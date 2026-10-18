@@ -24,8 +24,8 @@ import com.logflare.android.feature.mypage.EditMemberScreen
 import com.logflare.android.feature.mypage.LogoutScreen
 import com.logflare.android.feature.mypage.MyPageScreen
 import com.logflare.android.feature.project.ProjectCreateScreen
-import com.logflare.android.feature.project.ProjectListScreen
 import com.logflare.android.feature.project.ProjectSettingsScreen
+import com.logflare.android.feature.project.ProjectsRoute
 import com.logflare.android.feature.projectdetail.ProjectDetailScreen
 
 /** Draws the screen registered under route pattern `route`; tests pass a stub. */
@@ -141,8 +141,8 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             entryState = entry.savedStateHandle,
             onOpenLog = { nav.navigate(Destinations.logDetail(it)) },
         )
-        Destinations.Projects -> ProjectListScreen(
-            onProjectClick = { nav.navigate(Destinations.projectDetail(it)) },
+        Destinations.Projects -> ProjectsRoute(
+            onOpenProject = { nav.navigate(Destinations.projectDetail(it)) },
             onCreateProject = { nav.navigate(Destinations.ProjectCreate) },
         )
         Destinations.My -> MyPageScreen(

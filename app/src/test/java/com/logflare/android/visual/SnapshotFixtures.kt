@@ -1,6 +1,5 @@
 package com.logflare.android.visual
 
-import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
 import com.logflare.android.feature.mypage.AddMemberUiState
@@ -11,7 +10,6 @@ import com.logflare.android.feature.mypage.MyPageMemberUiModel
 import com.logflare.android.feature.mypage.MyPageUiState
 import com.logflare.android.feature.project.ProjectCreateUiState
 import com.logflare.android.feature.project.ProjectPermissionUiFactory
-import com.logflare.android.feature.project.ProjectsUiState
 import com.logflare.android.feature.projectdetail.ProjectDetailFilterState
 import com.logflare.android.feature.projectdetail.ProjectDetailLog
 import com.logflare.android.feature.projectdetail.ProjectDetailUiState
@@ -20,11 +18,6 @@ import com.logflare.android.ui.component.common.MemberFieldStatus
 
 object SnapshotFixtures {
     private const val BASE_TIMESTAMP = "2026-01-15T10:30:00Z"
-
-    private val sampleProjects: List<ProjectDTO> = listOf(
-        ProjectDTO(id = 101, name = "QA Payments"),
-        ProjectDTO(id = 202, name = "QA Platform"),
-    )
 
     private val sampleDetailLogs: List<ProjectDetailLog> = listOf(
         ProjectDetailLog(
@@ -44,17 +37,6 @@ object SnapshotFixtures {
             fileName = "Warning",
         ),
     )
-
-    fun projects(
-        empty: Boolean = false,
-        loading: Boolean = false,
-        error: String? = null,
-    ): ProjectsUiState =
-        ProjectsUiState(
-            loading = loading,
-            items = if (empty || loading || error != null) emptyList() else sampleProjects,
-            error = error,
-        )
 
     fun projectEditor(
         saved: Boolean = false,

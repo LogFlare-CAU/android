@@ -15,7 +15,6 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
 import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
-import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
 import com.logflare.android.feature.mypage.LogoutScreenContent
@@ -23,7 +22,8 @@ import com.logflare.android.feature.mypage.LogoutUiState
 import com.logflare.android.feature.mypage.MyPageContent
 import com.logflare.android.feature.mypage.MyPageMemberUiModel
 import com.logflare.android.feature.mypage.MyPageUiState
-import com.logflare.android.feature.project.ProjectListScreenContent
+import com.logflare.android.feature.project.ProjectsContent
+import com.logflare.android.data.store.model.ProjectItem
 import com.logflare.android.feature.project.ProjectsUiState
 import com.logflare.android.feature.projectdetail.ProjectDetailLog
 import com.logflare.android.feature.projectdetail.ProjectDetailScreenContent
@@ -39,6 +39,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.Instant
 
 @Config(qualifiers = "w1080dp-h2400dp")
 @RunWith(RobolectricTestRunner::class)
@@ -65,15 +66,21 @@ class VisualQaSemanticsTest {
         var clicked: Int? = null
         compose.setContent {
             LogflareandroidTheme(false) {
-                ProjectListScreenContent(
-                    uiState = ProjectsUiState(
-                        items = listOf(
-                            ProjectDTO(id = 101, name = "Payments", logfiles = emptyList()),
-                            ProjectDTO(id = 202, name = "Checkout", logfiles = emptyList()),
-                        ),
+                ProjectsContent(
+                    state = ProjectsUiState(
+                        items = listOf(qaProject(101, "Payments"), qaProject(202, "Checkout")),
+                        total = 2,
+                        initialLoad = false,
                     ),
-                    onProjectClick = { clicked = it },
+                    now = Instant.parse("2026-10-18T12:00:00Z"),
+                    onToggleSearch = {},
+                    onSearch = {},
+                    onOpenSort = {},
+                    onCloseSort = {},
+                    onSelectSort = {},
                     onRefresh = {},
+                    onOpenProject = { clicked = it },
+                    onCreateProject = {},
                 )
             }
         }
@@ -83,15 +90,24 @@ class VisualQaSemanticsTest {
         assertEquals(202, clicked)
     }
 
+    private fun qaProject(id: Int, name: String) =
+        ProjectItem(id, name, emptyList(), errorCount24h = 0, warningCount24h = 0, lastErrorAt = null)
+
     @Test
     fun projectListEmptyCreateTagReachesCallback() {
         var created = false
         compose.setContent {
             LogflareandroidTheme(false) {
-                ProjectListScreenContent(
-                    uiState = ProjectsUiState(items = emptyList()),
-                    onProjectClick = {},
+                ProjectsContent(
+                    state = ProjectsUiState(initialLoad = false, canCreate = true),
+                    now = Instant.parse("2026-10-18T12:00:00Z"),
+                    onToggleSearch = {},
+                    onSearch = {},
+                    onOpenSort = {},
+                    onCloseSort = {},
+                    onSelectSort = {},
                     onRefresh = {},
+                    onOpenProject = {},
                     onCreateProject = { created = true },
                 )
             }
