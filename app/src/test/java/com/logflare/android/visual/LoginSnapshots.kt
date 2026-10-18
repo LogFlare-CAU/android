@@ -30,6 +30,13 @@ class LoginSnapshots : DsSnapshotTest() {
         passwordError = LoginError.EnterPassword,
         recentServers = recent,
     )
+    private val formError = LoginUiState(
+        url = "https://logs.example.com/",
+        username = "admin",
+        password = "wrong",
+        formError = LoginError.InvalidCredentials,
+        recentServers = recent,
+    )
     private val submitting = LoginUiState(
         url = "https://logs.example.com/",
         username = "admin",
@@ -43,6 +50,8 @@ class LoginSnapshots : DsSnapshotTest() {
     @Test fun login_empty_dark() = capture("login_empty", true) { Login(empty) }
     @Test fun login_errors_light() = capture("login_errors", false) { Login(errors) }
     @Test fun login_errors_dark() = capture("login_errors", true) { Login(errors) }
+    @Test fun login_form_error_light() = capture("login_form_error", false) { Login(formError) }
+    @Test fun login_form_error_dark() = capture("login_form_error", true) { Login(formError) }
     @Test fun login_submitting_light() = capture("login_submitting", false) { Login(submitting) }
     @Test fun login_submitting_dark() = capture("login_submitting", true) { Login(submitting) }
     @Test fun login_recent_sheet_light() = capture("login_recent_sheet", false) { Login(sheet) }

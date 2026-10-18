@@ -86,7 +86,7 @@ class LoginViewModel internal constructor(
         val url = current.url.trim()
         val username = current.username.trim()
         val urlError = when {
-            url.isEmpty() -> LoginError.EnterUrl
+            url.isEmpty() || url.trimEnd('/').let { it.equals("http:", true) || it.equals("https:", true) } -> LoginError.EnterUrl
             !url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true) -> LoginError.UrlScheme
             else -> null
         }

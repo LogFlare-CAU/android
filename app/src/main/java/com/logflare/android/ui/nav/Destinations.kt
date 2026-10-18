@@ -15,6 +15,9 @@ object Destinations {
     /** The bottom-bar tabs, in bar order. */
     val Tabs = listOf(Home, Logs, Projects, My)
 
+    /** Routes that draw edge to edge and handle window insets themselves (no scaffold padding). */
+    val FullBleed = setOf(Login)
+
     const val ProjectIdArg = "projectId"
     const val ErrorIdArg = "errorId"
     const val MemberIdxArg = "idx"

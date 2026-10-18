@@ -134,4 +134,24 @@ class LoginViewModelTest {
         assertEquals(LoginError.EnterUsername, s.usernameError)
         assertEquals(LoginError.EnterPassword, s.passwordError)
     }
+
+    @Test fun submit_bareScheme_noHost_urlError() = runTest {
+        val vm = vm()
+        vm.fill(url = "https://")
+        vm.submit()
+        advanceUntilIdle()
+
+        assertEquals(LoginError.EnterUrl, vm.state.value.urlError)
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test fun submit_whileSubmitting_isIgnored() = runTest {
+        val vm = vm()
+        vm.fill()
+        vm.submit()
+        vm.submit()
+        advanceUntilIdle()
+
+        assertEquals(1, calls.size)
+    }
 }

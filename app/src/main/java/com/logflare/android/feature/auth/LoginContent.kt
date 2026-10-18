@@ -3,6 +3,7 @@ package com.logflare.android.feature.auth
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -25,11 +27,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.v2.Lf
@@ -65,11 +71,19 @@ fun LoginContent(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val submit = {
+        focusManager.clearFocus()
+        keyboard?.hide()
+        onSubmit()
+    }
     Column(
         modifier
             .fillMaxSize()
             .background(Lf.colors.surface)
             .testTag(VisualQaTags.Login)
+            .focusable()
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding()
@@ -87,7 +101,11 @@ fun LoginContent(
                     label = stringResource(R.string.login_server_url),
                     placeholder = stringResource(R.string.login_server_url_placeholder),
                     error = state.urlError.text(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        autoCorrectEnabled = false,
+                        imeAction = ImeAction.Next,
+                    ),
                     trailing = if (state.recentServers.isEmpty()) null else {
                         { RecentButton(onOpenRecent) }
                     },
@@ -98,6 +116,11 @@ fun LoginContent(
                     label = stringResource(R.string.login_username),
                     placeholder = stringResource(R.string.login_username),
                     error = state.usernameError.text(),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        autoCorrectEnabled = false,
+                        imeAction = ImeAction.Next,
+                    ),
                 )
                 PasswordField(
                     value = state.password,
@@ -105,16 +128,23 @@ fun LoginContent(
                     label = stringResource(R.string.login_password),
                     placeholder = stringResource(R.string.login_password),
                     error = state.passwordError.text(),
+                    imeAction = ImeAction.Done,
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
                 )
-                state.formError.text()?.let {
-                    Text(it, style = Lf.type.secondary.copy(fontWeight = FontWeight.SemiBold), color = Lf.colors.error)
-                }
             }
+        }
+        state.formError.text()?.let {
+            Text(
+                it,
+                style = Lf.type.secondary.copy(fontWeight = FontWeight.SemiBold),
+                color = Lf.colors.error,
+                modifier = Modifier.padding(top = 12.dp),
+            )
         }
         Spacer(Modifier.height(16.dp))
         PrimaryButton(
             text = stringResource(R.string.login_sign_in),
-            onClick = onSubmit,
+            onClick = submit,
             loading = state.submitting,
             modifier = Modifier.fillMaxWidth(),
         )

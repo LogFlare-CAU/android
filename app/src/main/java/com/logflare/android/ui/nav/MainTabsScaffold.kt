@@ -1,5 +1,7 @@
 package com.logflare.android.ui.nav
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.outlined.List
@@ -22,7 +24,8 @@ import com.logflare.android.R
 
 /**
  * App frame: the [BottomNavBar] while a tab is on top, nothing on sub-screens (they have their
- * own top bar with Back). Insets are applied once here, by [LfScaffold].
+ * own top bar with Back). Insets are applied once here, by [LfScaffold], except on
+ * [Destinations.FullBleed] routes, which paint edge to edge and apply insets themselves.
  */
 @Composable
 fun MainTabsScaffold(
@@ -33,8 +36,11 @@ fun MainTabsScaffold(
     val entry by navController.currentBackStackEntryAsState()
     val tab = entry?.destination?.route?.takeIf { it in Destinations.Tabs }
     val items = tabItems()
+    // Full-bleed routes (Login) get no scaffold insets and apply their own, once, over their own surface.
+    val insets = if (entry?.destination?.route in Destinations.FullBleed) WindowInsets(0) else WindowInsets.safeDrawing
     LfScaffold(
         modifier = modifier,
+        contentInsets = insets,
         bottomBar = tab?.let { selected ->
             { BottomNavBar(items = items, selected = selected, onSelect = { navController.navigateToTab(it) }) }
         },
