@@ -40,6 +40,7 @@ abstract class DsSnapshotTest {
             }
         }
         compose.mainClock.advanceTimeBy(250L)
+        compose.mainClock.advanceTimeBy(250L)
         compose.onRoot().captureRoboImage(
             "${name}_${if (darkTheme) "dark" else "light"}.png",
         )
