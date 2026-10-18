@@ -30,7 +30,7 @@ data class MyPageUiState(
 data class MyPageMemberUiModel(
     val username: String,
     val role: UserPermission,
-    val idx: Int = 0,
+    val idx: Int,
 )
 
 @HiltViewModel

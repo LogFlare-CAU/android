@@ -41,7 +41,7 @@ class MyPageScreenRenderTest {
                         username = "qa-admin",
                         permission = UserPermission.MODERATOR,
                         members = listOf(
-                            MyPageMemberUiModel("qa-member", UserPermission.USER),
+                            MyPageMemberUiModel("qa-member", UserPermission.USER, idx = 2),
                         ),
                         selectedLogLevel = LogLevel.ERROR,
                     ),

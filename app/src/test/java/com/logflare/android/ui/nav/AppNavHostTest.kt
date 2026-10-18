@@ -18,6 +18,7 @@ import com.logflare.android.data.session.SessionKey
 import com.logflare.android.data.session.SessionState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,6 +63,53 @@ class AppNavHostTest {
 
         assertEquals(listOf(Destinations.Home, Destinations.Logs, Destinations.LogDetailPattern), routes())
         assertEquals(7, nav.currentBackStackEntry?.arguments?.getInt(Destinations.ErrorIdArg))
+    }
+
+    @Test
+    fun reselectCurrentTab_keepsSameEntry() {
+        show(SIGNED_IN)
+        listOf("Logs" to Destinations.Logs, "Projects" to Destinations.Projects, "My" to Destinations.My)
+            .forEach { (label, route) ->
+                compose.onNodeWithText(label).performClick()
+                compose.waitForIdle()
+                val entry = compose.runOnIdle { nav.currentBackStackEntry }
+                val before = routes()
+                assertEquals(listOf(Destinations.Home, route), before)
+
+                compose.onNodeWithText(label).performClick()
+                compose.waitForIdle()
+
+                assertSame(entry, compose.runOnIdle { nav.currentBackStackEntry })
+                assertEquals(before, routes())
+            }
+    }
+
+    @Test
+    fun reselectTab_fromInsideIt_popsToItsRoot() {
+        show(SIGNED_IN)
+        compose.onNodeWithText("Logs").performClick()
+        compose.waitForIdle()
+        val logsEntry = compose.runOnIdle { nav.currentBackStackEntry }
+        compose.runOnIdle { nav.navigate(Destinations.logDetail(42)) }
+
+        compose.runOnIdle { nav.navigateToTab(Destinations.Logs) }
+        compose.waitForIdle()
+
+        assertEquals(listOf(Destinations.Home, Destinations.Logs), routes())
+        assertSame(logsEntry, compose.runOnIdle { nav.currentBackStackEntry })
+    }
+
+    @Test
+    fun reselectHome_fromASubScreenOpenedOnHome_popsToHome() {
+        show(SIGNED_IN)
+        val homeEntry = compose.runOnIdle { nav.currentBackStackEntry }
+        compose.runOnIdle { nav.navigate(Destinations.projectDetail(3)) }
+
+        compose.runOnIdle { nav.navigateToTab(Destinations.Home) }
+        compose.waitForIdle()
+
+        assertEquals(listOf(Destinations.Home), routes())
+        assertSame(homeEntry, compose.runOnIdle { nav.currentBackStackEntry })
     }
 
     @Test

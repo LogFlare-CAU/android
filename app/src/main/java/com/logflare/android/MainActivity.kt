@@ -47,8 +47,7 @@ class MainActivity : Hilt_MainActivity() {
             appViewModel.session.value is SessionState.Loading
         }
         super.onCreate(savedInstanceState)
-        // A recreated activity restores its back stack, which already holds the link if it was opened.
-        if (savedInstanceState == null) deepLinkErrorId = intent.deepLinkErrorId()
+        deepLinkErrorId = initialDeepLinkErrorId(savedInstanceState, intent)
         enableEdgeToEdge()
 
         // Request notification permission on Android 13+
@@ -86,6 +85,11 @@ class MainActivity : Hilt_MainActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        saveDeepLinkErrorId(outState, deepLinkErrorId)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -94,12 +98,29 @@ class MainActivity : Hilt_MainActivity() {
 }
 
 /** The `errorid` extra of a push tap; none when relaunched from Recents (stale extras). */
-private fun Intent.deepLinkErrorId(): Int? {
+internal fun Intent.deepLinkErrorId(): Int? {
     if (flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
     return getIntExtra(EXTRA_ERROR_ID, 0).takeIf { it > 0 }
 }
 
-private const val EXTRA_ERROR_ID = "errorid"
+/**
+ * A fresh launch reads the push extra. A recreated activity restores its back stack, which already
+ * holds the link if it was opened; one not opened yet (e.g. rotated during the splash) comes back
+ * from [saveDeepLinkErrorId].
+ */
+internal fun initialDeepLinkErrorId(savedInstanceState: Bundle?, intent: Intent): Int? =
+    if (savedInstanceState == null) {
+        intent.deepLinkErrorId()
+    } else {
+        savedInstanceState.getInt(STATE_DEEP_LINK_ERROR_ID, 0).takeIf { it > 0 }
+    }
+
+internal fun saveDeepLinkErrorId(outState: Bundle, errorId: Int?) {
+    errorId?.let { outState.putInt(STATE_DEEP_LINK_ERROR_ID, it) }
+}
+
+internal const val EXTRA_ERROR_ID = "errorid"
+private const val STATE_DEEP_LINK_ERROR_ID = "deepLinkErrorId"
 
 @Composable
 fun App(

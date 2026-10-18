@@ -245,7 +245,7 @@ object SnapshotFixtures {
             members = when {
                 loading || error != null -> emptyList()
                 empty -> emptyList()
-                else -> listOf(MyPageMemberUiModel("qa-member", UserPermission.USER))
+                else -> listOf(MyPageMemberUiModel("qa-member", UserPermission.USER, idx = 2))
             },
             selectedLogLevel = LogLevel.ERROR,
             errorMessage = error,
