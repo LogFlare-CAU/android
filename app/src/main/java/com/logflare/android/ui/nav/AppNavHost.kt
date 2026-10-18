@@ -17,7 +17,7 @@ import androidx.navigation.navArgument
 import com.logflare.android.data.session.SessionState
 import com.logflare.android.feature.auth.LoginRoute
 import com.logflare.android.feature.home.HomeRoute
-import com.logflare.android.feature.log.LogDetailScreen
+import com.logflare.android.feature.log.LogDetailRoute
 import com.logflare.android.feature.log.LogsRoute
 import com.logflare.android.feature.mypage.AddMemberScreen
 import com.logflare.android.feature.mypage.EditMemberScreen
@@ -166,7 +166,11 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             onBack = back,
             onDelete = { nav.popToProjectList() },
         )
-        Destinations.LogDetailPattern -> LogDetailScreen(onBack = back)
+        Destinations.LogDetailPattern -> LogDetailRoute(
+            onBack = back,
+            onOpenProject = { nav.navigate(Destinations.projectDetail(it)) },
+            onOpenLog = { nav.navigate(Destinations.logDetail(it)) },
+        )
         Destinations.AddMember -> AddMemberScreen(onBack = back)
         Destinations.EditMemberPattern -> EditMemberScreen(onBack = back)
         // Signing out flips the session; the redirect above then shows Login.

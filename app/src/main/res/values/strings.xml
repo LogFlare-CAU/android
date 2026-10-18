@@ -104,4 +104,27 @@
     <string name="logs_retry">Try again</string>
     <string name="logs_refresh_failed">Couldn\'t refresh</string>
     <string name="logs_load_more_failed">Couldn\'t load more logs</string>
+    <string name="log_title">Log</string>
+    <string name="log_share">Share</string>
+    <string name="log_share_title">Share log</string>
+    <string name="log_copy_message">Copy message</string>
+    <string name="log_copied">Copied</string>
+    <string name="log_info">Log info</string>
+    <string name="log_info_project">Project</string>
+    <string name="log_info_error_type">Error type</string>
+    <string name="log_info_log_file">Log file</string>
+    <string name="log_info_first_seen">First seen</string>
+    <string name="log_info_last_seen">Last seen</string>
+    <string name="log_info_occurrences">Occurrences</string>
+    <string name="log_raw_data">Raw data</string>
+    <string name="log_raw_copy">Copy</string>
+    <string name="log_raw_show_all">Show all</string>
+    <string name="log_raw_show_less">Show less</string>
+    <string name="log_earlier">Earlier occurrences</string>
+    <string name="log_occurrence">Occurrence #%1$d</string>
+    <string name="log_times">×%1$d</string>
+    <string name="log_not_found">This log is no longer available.</string>
+    <string name="log_back">Back</string>
+    <string name="log_load_failed_title">Couldn\'t load this log</string>
+    <string name="log_load_failed_body">Check your connection, then try again.</string>
 </resources>

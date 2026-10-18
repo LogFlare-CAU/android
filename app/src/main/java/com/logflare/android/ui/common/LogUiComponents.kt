@@ -18,13 +18,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -376,37 +374,6 @@ fun EmptyState(projectFiltered: Boolean = false, filter: List<LogLevel> = emptyL
     }
 }
 
-
-@Composable
-fun TopTitle(
-    title: String,
-    onBack: (() -> Unit)? = null
-) {
-    Box(
-        modifier = Modifier.fillMaxWidth().height(60.dp)
-    ) {
-        if (onBack != null) {
-            Row(
-                modifier = Modifier.align(Alignment.CenterStart),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = AppTheme.colors.onSurface
-                    )
-                }
-            }
-        }
-        Text(
-            text = title,
-            style = AppTheme.typography.bodyLgBold,
-            color = AppTheme.colors.onSurface,
-            modifier = Modifier.align(Alignment.Center)
-        )
-    }
-}
 
 private fun cropLongText(text: String, maxLength: Int = 100): String {
     return if (text.length <= maxLength) {

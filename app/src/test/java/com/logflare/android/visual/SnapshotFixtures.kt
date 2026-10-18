@@ -16,7 +16,6 @@ import com.logflare.android.feature.projectdetail.ProjectDetailFilterState
 import com.logflare.android.feature.projectdetail.ProjectDetailLog
 import com.logflare.android.feature.projectdetail.ProjectDetailUiState
 import com.logflare.android.feature.projectdetail.ProjectLogFileOption
-import com.logflare.android.ui.common.LogCardInfo
 import com.logflare.android.ui.component.common.MemberFieldStatus
 
 object SnapshotFixtures {
@@ -55,15 +54,6 @@ object SnapshotFixtures {
             loading = loading,
             items = if (empty || loading || error != null) emptyList() else sampleProjects,
             error = error,
-        )
-
-    fun logDetailPopulated(): LogCardInfo =
-        LogCardInfo(
-            level = "error",
-            timestamp = BASE_TIMESTAMP,
-            message = "Unable to resolve host qa-server.local",
-            prefix = "QA Payments",
-            suffix = "Debug",
         )
 
     fun projectEditor(
