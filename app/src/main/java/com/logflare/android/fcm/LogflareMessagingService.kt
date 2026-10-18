@@ -3,20 +3,32 @@ package com.logflare.android.fcm
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.logflare.android.data.DeviceRepository
-import com.logflare.android.data.ProjectsRepository
-import com.logflare.android.enums.LogLevel
+import com.logflare.android.data.session.SessionRepository
+import com.logflare.android.data.session.SessionState
+import com.logflare.android.di.ApplicationScope
+import com.logflare.android.push.AlertSettings
+import com.logflare.android.push.AlertSettingsRepository
+import com.logflare.android.push.HistoryEntry
+import com.logflare.android.push.NotificationHistory
+import com.logflare.android.push.PushDecision
+import com.logflare.android.push.PushMessage
+import com.logflare.android.push.decidePush
+import com.logflare.android.push.from
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
+import java.time.LocalTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import com.logflare.android.MainActivity
 import com.logflare.android.R
@@ -30,7 +42,17 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
     lateinit var deviceRepository: DeviceRepository
 
     @Inject
-    lateinit var projectRepository: ProjectsRepository
+    lateinit var sessionRepository: SessionRepository
+
+    @Inject
+    lateinit var alertSettingsRepository: AlertSettingsRepository
+
+    @Inject
+    lateinit var notificationHistory: NotificationHistory
+
+    @Inject
+    @ApplicationScope
+    lateinit var appScope: CoroutineScope
 
     private val serviceScope = CoroutineScope(Dispatchers.IO)
 
@@ -47,21 +69,59 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
         }
     }
 
-    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         deviceRepository.ensureFirebaseInitializedFromCacheAsync()
-        val errorid = message.data["errorid"]?.toIntOrNull() ?: 0
-        val type = message.data["type"] ?: "Unknown"
-        val level = message.data["level"]
-        val timestamp = message.data["timestamp"]
-        val messageText = message.data["message"]
-        val projectid = message.data["projectid"]?.toIntOrNull()
-        val isTest = message.data["test"]?.toBoolean() ?: false
-        if (!isTest && filterLogs(projectid ?: 0, level ?: "INFO", messageText ?: "")) {
-            Log.i(TAG, "Log filtered out: projectId=$projectid, level=$level, message=$messageText, isTest=$isTest")
+        val data = message.data
+        val push = PushMessage.from(data)
+        val session = sessionRepository.state.value
+        if (alertSettingsRepository.isReadyFor(session)) {
+            handle(push, data, session, alertSettingsRepository.settings.value)
+        } else {
+            // Cold start: the session and its alert settings are still being read from disk.
+            appScope.launch {
+                val (state, settings) = withTimeoutOrNull(READY_TIMEOUT_MS) { alertSettingsRepository.awaitReady() }
+                    ?: (sessionRepository.state.value to alertSettingsRepository.settings.value)
+                handle(push, data, state, settings)
+            }
+        }
+    }
+
+    private fun handle(push: PushMessage, data: Map<String, String>, session: SessionState, settings: AlertSettings) {
+        val decision = decidePush(push, session, settings, LocalTime.now())
+        if (decision == PushDecision.Drop) {
+            Log.i(TAG, "Push dropped: projectId=${push.projectId}, level=${push.level}, isTest=${push.isTest}")
             return
         }
+        appScope.launch {
+            notificationHistory.add(
+                HistoryEntry(
+                    errorId = push.errorId,
+                    projectId = push.projectId,
+                    type = push.type,
+                    level = push.level,
+                    message = push.message,
+                    receivedAt = System.currentTimeMillis(),
+                    read = false,
+                ),
+            )
+        }
+        if (decision == PushDecision.Notify) showNotification(data)
+    }
+
+    private fun showNotification(data: Map<String, String>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.i(TAG, "Notification permission not granted; push recorded only")
+            return
+        }
+        val errorid = data["errorid"]?.toIntOrNull() ?: 0
+        val type = data["type"] ?: "Unknown"
+        val level = data["level"]
+        val timestamp = data["timestamp"]
+        val messageText = data["message"]
+        val projectid = data["projectid"]?.toIntOrNull()
         val contentMessage = "$level: $type\n$messageText\n at $timestamp"
         val title = "Error: $type"
         val intent = android.content.Intent(this, MainActivity::class.java).apply {
@@ -99,29 +159,10 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
     }
 
 
-    fun filterLogs(projectId: Int, level: String, message: String): Boolean = runBlocking {
-        val globalAlertLevel = deviceRepository.getAlertLevel()
-        if (globalAlertLevel != null) {
-            if (LogLevel.fromLabel(level).code < LogLevel.fromLabel(globalAlertLevel).code) {
-                return@runBlocking true // 전역 레벨 미달로 필터링
-            }
-        }
-        val project = projectRepository.get(projectId) ?: return@runBlocking true
-        val alertLevel = project.alertLevel
-        val ignoreKeywords = project.excludeKeywords
-        if (LogLevel.fromLabel(level).code < LogLevel.fromLabel(alertLevel).code) {
-            return@runBlocking true
-        }
-        for (keyword in ignoreKeywords) {
-            if (message.contains(keyword, ignoreCase = true)) {
-                return@runBlocking true
-            }
-        }
-        return@runBlocking false
-    }
-
-
     companion object {
         private const val TAG = "LogflareFCM"
+
+        /** How long a cold-start push waits for the session and its alert settings to load. */
+        private const val READY_TIMEOUT_MS = 5_000L
     }
 }

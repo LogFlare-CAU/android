@@ -1,0 +1,160 @@
+package com.logflare.android.push
+
+import com.example.logflare.core.designsystem.v2.LfLevel
+import com.example.logflare.core.model.ProjectDTO
+import com.example.logflare.core.model.ProjectData
+import com.logflare.android.data.session.SessionKey
+import com.logflare.android.data.session.SessionState
+import com.logflare.android.data.store.FileCacheStore
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class AlertSettingsRepositoryTest {
+
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    private val sessions = MutableStateFlow<SessionState>(signedIn(A))
+    private var legacy = LegacyAlerts(globalLevel = null, projects = emptyList())
+    private var legacyReads = 0
+
+    private fun TestScope.newRepo(): AlertSettingsRepository = AlertSettingsRepository(
+        sessions = sessions,
+        store = FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)),
+        legacy = { legacyReads++; legacy },
+        scope = backgroundScope,
+    )
+
+    @Test
+    fun migratesLegacyGlobalAndProjectValues() = runTest {
+        legacy = LegacyAlerts(
+            globalLevel = "Warning",
+            projects = listOf(
+                ProjectData(ProjectDTO(1, "alpha"), excludeKeywords = setOf("timeout"), alertLevel = "Error"),
+                ProjectData(ProjectDTO(2, "beta"), alertLevel = "Critical"),
+            ),
+        )
+        val repo = newRepo()
+        runCurrent()
+
+        val expected = AlertSettings(
+            global = GlobalAlert.WarningAndAbove,
+            quietHours = false,
+            projects = mapOf(
+                1 to ProjectAlert(LfLevel.Error, setOf("timeout")),
+                2 to ProjectAlert(LfLevel.Critical, emptySet()),
+            ),
+        )
+        assertEquals(expected, repo.settings.value)
+
+        // Migrated once: a later load reads the saved settings, not the legacy stores.
+        legacy = LegacyAlerts(globalLevel = "Critical", projects = emptyList())
+        val reads = legacyReads
+        val again = newRepo()
+        runCurrent()
+        assertEquals(expected, again.settings.value)
+        assertEquals(reads, legacyReads)
+    }
+
+    @Test
+    fun legacyGlobalLabels_mapToNearest() {
+        assertEquals(GlobalAlert.Everything, GlobalAlert.fromLegacyLabel("Debug"))
+        assertEquals(GlobalAlert.Everything, GlobalAlert.fromLegacyLabel("Info"))
+        assertEquals(GlobalAlert.WarningAndAbove, GlobalAlert.fromLegacyLabel("Warning"))
+        assertEquals(GlobalAlert.ErrorAndAbove, GlobalAlert.fromLegacyLabel("error"))
+        assertEquals(GlobalAlert.CriticalOnly, GlobalAlert.fromLegacyLabel("Critical"))
+        assertEquals(GlobalAlert.ErrorAndAbove, GlobalAlert.fromLegacyLabel(null))
+    }
+
+    @Test
+    fun settingsIsolatedBySession() = runTest {
+        val repo = newRepo()
+        runCurrent()
+        repo.setGlobal(GlobalAlert.Off)
+        repo.setProjectLevel(1, LfLevel.Critical)
+        repo.setMutedKeywords(1, setOf("noise"))
+        val settingsA = AlertSettings(
+            global = GlobalAlert.Off,
+            projects = mapOf(1 to ProjectAlert(LfLevel.Critical, setOf("noise"))),
+        )
+        assertEquals(settingsA, repo.settings.value)
+
+        sessions.value = signedIn(B)
+        runCurrent()
+        assertEquals(AlertSettings(), repo.settings.value)
+        repo.setQuietHours(true)
+        assertEquals(AlertSettings(quietHours = true), repo.settings.value)
+
+        sessions.value = SessionState.SignedOut
+        runCurrent()
+        assertEquals(AlertSettings(), repo.settings.value)
+
+        sessions.value = signedIn(A)
+        runCurrent()
+        assertEquals(settingsA, repo.settings.value)
+
+        // Persisted per session across process restarts.
+        sessions.value = signedIn(B)
+        val restarted = newRepo()
+        runCurrent()
+        assertEquals(AlertSettings(quietHours = true), restarted.settings.value)
+    }
+
+    @Test
+    fun awaitReady_waitsForSessionAndLoad() = runTest {
+        sessions.value = SessionState.Loading
+        val gate = CompletableDeferred<Unit>()
+        legacy = LegacyAlerts(globalLevel = "Critical", projects = emptyList())
+        val repo = AlertSettingsRepository(
+            sessions = sessions,
+            store = FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)),
+            legacy = { gate.await(); legacy },
+            scope = backgroundScope,
+        )
+        val ready = async { repo.awaitReady() }
+        runCurrent()
+        assertFalse(ready.isCompleted)
+        assertFalse(repo.isReadyFor(sessions.value))
+
+        sessions.value = signedIn(A)
+        runCurrent()
+        assertFalse(ready.isCompleted)
+
+        gate.complete(Unit)
+        runCurrent()
+        assertTrue(ready.isCompleted)
+        val (state, settings) = ready.await()
+        assertEquals(signedIn(A), state)
+        assertEquals(GlobalAlert.CriticalOnly, settings.global)
+        assertTrue(repo.isReadyFor(signedIn(A)))
+        assertTrue(repo.isReadyFor(SessionState.SignedOut))
+    }
+
+    private companion object {
+        val A = SessionKey("aaaaaaaaaaaaaaaa")
+        val B = SessionKey("bbbbbbbbbbbbbbbb")
+
+        fun signedIn(key: SessionKey) = SessionState.SignedIn(
+            serverUrl = "https://logs.example.com",
+            token = "Bearer t-${key.value}",
+            username = "me",
+            userIdx = if (key == A) 1 else 2,
+            permission = 0,
+            key = key,
+        )
+    }
+}
