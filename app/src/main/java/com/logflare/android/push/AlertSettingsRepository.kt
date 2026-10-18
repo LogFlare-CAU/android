@@ -28,10 +28,26 @@ import kotlinx.coroutines.sync.withLock
 /** Pre-rework alert settings: DataStore `fcm`/`alert_level` and the `projects` DataStore list. */
 data class LegacyAlerts(val globalLevel: String?, val projects: List<ProjectData>)
 
-internal fun LegacyAlerts.toSettings(): AlertSettings = AlertSettings(
-    global = GlobalAlert.fromLegacyLabel(globalLevel),
-    projects = projects.associate { it.dto.id to ProjectAlert(LfLevel.parse(it.alertLevel), it.excludeKeywords) },
-)
+/**
+ * Legacy projects defaulted to "Warning", so that default (and an unset legacy global) becomes a
+ * WarningAndAbove global instead of a per-project override; projects then follow the global value.
+ * No legacy data at all yields plain defaults.
+ */
+internal fun LegacyAlerts.toSettings(): AlertSettings {
+    val global = globalLevel?.takeIf { it.isNotBlank() }
+    if (global == null && projects.isEmpty()) return AlertSettings()
+    return AlertSettings(
+        global = global?.let(GlobalAlert::fromLegacyLabel) ?: GlobalAlert.WarningAndAbove,
+        projects = projects
+            .associate { p ->
+                val level = p.alertLevel.takeUnless { it.trim().equals(LEGACY_DEFAULT_LEVEL, ignoreCase = true) }
+                p.dto.id to ProjectAlert(level?.let(LfLevel::parse), p.excludeKeywords)
+            }
+            .filterValues { it != ProjectAlert() },
+    )
+}
+
+private const val LEGACY_DEFAULT_LEVEL = "Warning"
 
 /**
  * Push alert settings of the signed-in session, persisted per [SessionKey] in [CacheStore].

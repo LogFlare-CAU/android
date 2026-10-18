@@ -42,21 +42,25 @@ class AlertSettingsRepositoryTest {
     @Test
     fun migratesLegacyGlobalAndProjectValues() = runTest {
         legacy = LegacyAlerts(
-            globalLevel = "Warning",
+            globalLevel = "Error",
             projects = listOf(
                 ProjectData(ProjectDTO(1, "alpha"), excludeKeywords = setOf("timeout"), alertLevel = "Error"),
                 ProjectData(ProjectDTO(2, "beta"), alertLevel = "Critical"),
+                // The old default level is not an override: these follow the global value.
+                ProjectData(ProjectDTO(3, "gamma"), excludeKeywords = setOf("noise"), alertLevel = "Warning"),
+                ProjectData(ProjectDTO(4, "delta"), alertLevel = "warning"),
             ),
         )
         val repo = newRepo()
         runCurrent()
 
         val expected = AlertSettings(
-            global = GlobalAlert.WarningAndAbove,
+            global = GlobalAlert.ErrorAndAbove,
             quietHours = false,
             projects = mapOf(
                 1 to ProjectAlert(LfLevel.Error, setOf("timeout")),
                 2 to ProjectAlert(LfLevel.Critical, emptySet()),
+                3 to ProjectAlert(null, setOf("noise")),
             ),
         )
         assertEquals(expected, repo.settings.value)
@@ -68,6 +72,26 @@ class AlertSettingsRepositoryTest {
         runCurrent()
         assertEquals(expected, again.settings.value)
         assertEquals(reads, legacyReads)
+    }
+
+    @Test
+    fun migratesUnsetLegacyGlobal_asWarningAndAbove() = runTest {
+        legacy = LegacyAlerts(
+            globalLevel = null,
+            projects = listOf(ProjectData(ProjectDTO(1, "alpha"), alertLevel = "Warning")),
+        )
+        val repo = newRepo()
+        runCurrent()
+        assertEquals(AlertSettings(global = GlobalAlert.WarningAndAbove), repo.settings.value)
+    }
+
+    @Test
+    fun noLegacyData_keepsDefaults() = runTest {
+        legacy = LegacyAlerts(globalLevel = null, projects = emptyList())
+        val repo = newRepo()
+        runCurrent()
+        assertEquals(AlertSettings(), repo.settings.value)
+        assertEquals(GlobalAlert.ErrorAndAbove, repo.settings.value.global)
     }
 
     @Test
