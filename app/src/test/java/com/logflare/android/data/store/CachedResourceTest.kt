@@ -4,6 +4,8 @@ import app.cash.turbine.test
 import com.logflare.android.data.session.SessionKey
 import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.take
@@ -12,6 +14,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -195,5 +198,97 @@ class CachedResourceTest {
         runCurrent()
         assertTrue(stayer.isCompleted)
         assertEquals(1, fetchCount)
+    }
+
+    @Test
+    fun cancelledCollector_fetchStillWritesToStore() = runTest {
+        val store = newStore()
+        val gate = CompletableDeferred<String>()
+        val res = resource(store) { gate.await() }
+
+        val only = backgroundScope.launch { res.stream(a).collect {} }
+        runCurrent()
+        only.cancel()
+        gate.complete("fresh")
+        runCurrent()
+
+        assertEquals(Cached("fresh", now), store.read(a, "projects", String.serializer()))
+        assertEquals(Cached("fresh", now), newStore().read(a, "projects", String.serializer()))
+    }
+
+    @Test
+    fun staleness_boundary() = runTest {
+        val store = newStore()
+        val res = resource(store)
+
+        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now - 30_000)
+        assertTrue(res.stream(a).first().refreshing) // age == maxAge → stale
+
+        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now - 29_999)
+        assertFalse(res.stream(a).first().refreshing) // just inside the window → fresh
+
+        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now + 5_000)
+        assertTrue(res.stream(a).first().refreshing) // negative age (clock moved back) → stale
+    }
+
+    @Test
+    fun failedRefresh_surfacesErrorOnOpenStream() = runTest {
+        val store = newStore()
+        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now)
+        val boom = IOException("offline")
+        val res = resource(store) { throw boom }
+
+        res.stream(a).test {
+            assertEquals(Resource("cached", refreshing = false, error = null, fetchedAt = now), awaitItem())
+            res.refresh(a) // does not throw
+            assertEquals(Resource("cached", refreshing = true, error = null, fetchedAt = now), awaitItem())
+            assertEquals(Resource("cached", refreshing = false, error = boom, fetchedAt = now), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun fetchTimeout_releasesStreams_andAllowsNewFetch() = runTest {
+        val store = newStore()
+        store.write(a, "projects", "cached", String.serializer(), fetchedAt = now - 60_000)
+        var calls = 0
+        val res = resource(store) {
+            if (calls++ == 0) withTimeout(1) { awaitCancellation() } else "fresh"
+        }
+
+        res.stream(a).test {
+            assertTrue(awaitItem().refreshing)
+            val failed = awaitItem()
+            assertEquals("cached", failed.data)
+            assertFalse(failed.refreshing)
+            assertTrue(failed.error is TimeoutCancellationException)
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals(Cached("cached", now - 60_000), store.read(a, "projects", String.serializer()))
+
+        res.stream(a).test {
+            assertTrue(awaitItem().refreshing)
+            assertEquals("fresh", awaitItem().data)
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals(2, fetchCount)
+    }
+
+    @Test
+    fun clearDuringFetch_dropsResult() = runTest {
+        val store = newStore()
+        val gate = CompletableDeferred<String>()
+        val res = resource(store) { gate.await() }
+
+        val collector = backgroundScope.launch { res.stream(a).collect {} }
+        runCurrent()
+        assertEquals(1, fetchCount)
+        store.clear(a) // sign-out while the request is still running
+        gate.complete("fresh")
+        runCurrent()
+        collector.cancel()
+
+        assertNull(store.read(a, "projects", String.serializer()))
+        assertNull(newStore().read(a, "projects", String.serializer()))
     }
 }

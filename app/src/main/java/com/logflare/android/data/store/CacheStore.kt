@@ -24,7 +24,22 @@ data class Cached<T>(val value: T, val fetchedAt: Long)
 interface CacheStore {
     suspend fun <T> read(session: SessionKey, key: String, serializer: KSerializer<T>): Cached<T>?
 
-    suspend fun <T> write(session: SessionKey, key: String, value: T, serializer: KSerializer<T>, fetchedAt: Long)
+    /**
+     * Stores [value]. When [generation] is given and [session] was [clear]ed since that
+     * [generation] was taken, the write is dropped, so a fetch that was started before a
+     * sign-out can't put that session's data back.
+     */
+    suspend fun <T> write(
+        session: SessionKey,
+        key: String,
+        value: T,
+        serializer: KSerializer<T>,
+        fetchedAt: Long,
+        generation: Long? = null,
+    )
+
+    /** Changes every time [session] is [clear]ed. Take it before a fetch and pass it to [write]. */
+    fun generation(session: SessionKey): Long
 
     /** Removes every entry of [session], in memory and on disk. Other sessions are untouched. */
     suspend fun clear(session: SessionKey)
@@ -36,6 +51,9 @@ interface CacheStore {
  * Files are written atomically (temp file + rename), so a crash mid-write never leaves a torn
  * entry. Unreadable or undecodable files are treated as missing. A failed disk write keeps the
  * in-memory value: caching is best-effort and must never fail the caller.
+ *
+ * Every memory and disk update, and every load from disk into memory, happens under one lock,
+ * which [clear] also holds, so nothing from before a [clear] can come back after it.
  */
 class FileCacheStore(
     private val root: File,
@@ -44,14 +62,19 @@ class FileCacheStore(
 ) : CacheStore {
 
     private val memory = ConcurrentHashMap<String, Cached<*>>()
-    private val diskLock = Mutex()
+    private val generations = ConcurrentHashMap<String, Long>()
+    private val lock = Mutex()
 
+    @Suppress("UNCHECKED_CAST")
     override suspend fun <T> read(session: SessionKey, key: String, serializer: KSerializer<T>): Cached<T>? {
         val id = memoryId(session, key)
-        @Suppress("UNCHECKED_CAST")
         (memory[id] as Cached<T>?)?.let { return it }
-        val fromDisk = withContext(io) { readFile(file(session, key), serializer) } ?: return null
-        return (memory.putIfAbsent(id, fromDisk) as Cached<T>?) ?: fromDisk
+        return withContext(io) {
+            lock.withLock {
+                (memory[id] as Cached<T>?)
+                    ?: readFile(file(session, key), serializer)?.also { memory[id] = it }
+            }
+        }
     }
 
     override suspend fun <T> write(
@@ -60,14 +83,16 @@ class FileCacheStore(
         value: T,
         serializer: KSerializer<T>,
         fetchedAt: Long,
+        generation: Long?,
     ) {
-        memory[memoryId(session, key)] = Cached(value, fetchedAt)
         val text = buildJsonObject {
             put(FIELD_FETCHED_AT, fetchedAt)
             put(FIELD_VALUE, json.encodeToJsonElement(serializer, value))
         }.toString()
         withContext(io) {
-            diskLock.withLock {
+            lock.withLock {
+                if (generation != null && generation != generation(session)) return@withLock
+                memory[memoryId(session, key)] = Cached(value, fetchedAt)
                 try {
                     writeAtomically(file(session, key), text)
                 } catch (_: IOException) {
@@ -77,11 +102,16 @@ class FileCacheStore(
         }
     }
 
+    override fun generation(session: SessionKey): Long = generations[session.value] ?: 0L
+
     override suspend fun clear(session: SessionKey) {
         val prefix = "${session.value}|"
-        memory.keys.removeIf { it.startsWith(prefix) }
         withContext(io) {
-            diskLock.withLock { sessionDir(session).deleteRecursively() }
+            lock.withLock {
+                generations.merge(session.value, 1L, Long::plus)
+                memory.keys.removeIf { it.startsWith(prefix) }
+                sessionDir(session).deleteRecursively()
+            }
         }
     }
 

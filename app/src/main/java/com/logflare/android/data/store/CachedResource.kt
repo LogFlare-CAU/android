@@ -4,14 +4,19 @@ import com.logflare.android.data.session.SessionKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onSubscription
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 
 /**
@@ -37,18 +42,25 @@ class CachedResource<T>(
 ) {
     private val mutex = Mutex()
     private val inFlight = mutableMapOf<String, Deferred<Result<Cached<T>>>>()
+    private var nextFetchId = 0L // guarded by mutex
     private val events = MutableSharedFlow<FetchEvent<T>>(extraBufferCapacity = EVENT_BUFFER)
 
     fun stream(session: SessionKey, force: Boolean = false): Flow<Resource<T>> = flow {
         val cached = store.read(session, key, serializer)
         val needsFetch = force || cached == null || isStale(cached)
         var current = Resource(cached?.value, refreshing = needsFetch, error = null, fetchedAt = cached?.fetchedAt)
+        var latestStarted = -1L
         emit(current)
         events
             // Start (or join) the fetch only once subscribed, so its result can't be missed.
             .onSubscription { if (needsFetch) fetchShared(session) }
             .filter { it.session == session }
             .collect { event ->
+                when (event) {
+                    is FetchEvent.Started -> latestStarted = maxOf(latestStarted, event.fetchId)
+                    // The end of an older fetch while a newer one runs: keep showing "refreshing".
+                    else -> if (event.fetchId < latestStarted) return@collect
+                }
                 val next = current.apply(event)
                 if (next != current) {
                     current = next
@@ -73,27 +85,37 @@ class CachedResource<T>(
     private suspend fun fetchShared(session: SessionKey): Deferred<Result<Cached<T>>> = mutex.withLock {
         val id = "${session.value}|$key"
         inFlight[id]?.takeIf { it.isActive }?.let { return@withLock it }
+        val fetchId = nextFetchId++
+        // Taken before the request so a clear() (sign-out) during it makes the write a no-op.
+        val generation = store.generation(session)
         scope.async {
-            events.emit(FetchEvent.Started(session))
-            val result = try {
-                val value = fetch(session)
-                val fetchedAt = clock()
-                store.write(session, key, value, serializer, fetchedAt)
-                Result.success(Cached(value, fetchedAt))
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                Result.failure(e)
+            val self = coroutineContext.job
+            var result: Result<Cached<T>> = Result.failure(CancellationException("Fetch cancelled"))
+            try {
+                events.emit(FetchEvent.Started(session, fetchId))
+                result = try {
+                    val value = fetch(session)
+                    val fetchedAt = clock()
+                    store.write(session, key, value, serializer, fetchedAt, generation)
+                    Result.success(Cached(value, fetchedAt))
+                } catch (e: Throwable) {
+                    // Only our own cancellation propagates; e.g. a withTimeout inside fetch is a failure.
+                    if (e is CancellationException && !currentCoroutineContext().isActive) throw e
+                    Result.failure(e)
+                }
+                result
+            } finally {
+                // Always release the map entry and the streams, even when cancelled.
+                withContext(NonCancellable) {
+                    mutex.withLock { if (inFlight[id] === self) inFlight.remove(id) }
+                    events.emit(
+                        result.fold(
+                            onSuccess = { FetchEvent.Succeeded(session, fetchId, it) },
+                            onFailure = { FetchEvent.Failed(session, fetchId, it) },
+                        ),
+                    )
+                }
             }
-            // Still the map's entry: a new one is only created once this one is no longer active.
-            mutex.withLock { inFlight.remove(id) }
-            events.emit(
-                result.fold(
-                    onSuccess = { FetchEvent.Succeeded(session, it) },
-                    onFailure = { FetchEvent.Failed(session, it) },
-                ),
-            )
-            result
         }.also { inFlight[id] = it }
     }
 
@@ -112,7 +134,10 @@ class CachedResource<T>(
 private sealed interface FetchEvent<out T> {
     val session: SessionKey
 
-    data class Started(override val session: SessionKey) : FetchEvent<Nothing>
-    data class Succeeded<T>(override val session: SessionKey, val cached: Cached<T>) : FetchEvent<T>
-    data class Failed(override val session: SessionKey, val error: Throwable) : FetchEvent<Nothing>
+    /** Increases with every fetch a resource starts. */
+    val fetchId: Long
+
+    data class Started(override val session: SessionKey, override val fetchId: Long) : FetchEvent<Nothing>
+    data class Succeeded<T>(override val session: SessionKey, override val fetchId: Long, val cached: Cached<T>) : FetchEvent<T>
+    data class Failed(override val session: SessionKey, override val fetchId: Long, val error: Throwable) : FetchEvent<Nothing>
 }

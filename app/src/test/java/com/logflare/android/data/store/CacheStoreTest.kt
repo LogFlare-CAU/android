@@ -61,6 +61,20 @@ class CacheStoreTest {
     }
 
     @Test
+    fun write_withGenerationFromBeforeClear_isDropped() = runTest {
+        val store = newStore()
+        val before = store.generation(a)
+        store.clear(a)
+
+        store.write(a, "k", listOf("late"), strings, fetchedAt = 1L, generation = before)
+        assertNull(store.read(a, "k", strings))
+        assertNull(newStore().read(a, "k", strings))
+
+        store.write(a, "k", listOf("current"), strings, fetchedAt = 2L, generation = store.generation(a))
+        assertEquals(Cached(listOf("current"), 2L), store.read(a, "k", strings))
+    }
+
+    @Test
     fun corruptFile_readsAsMissing() = runTest {
         val store = newStore()
         store.write(a, "k", listOf("v"), strings, fetchedAt = 1L)
