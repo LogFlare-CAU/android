@@ -18,7 +18,7 @@ import com.logflare.android.data.session.SessionState
 import com.logflare.android.feature.auth.LoginRoute
 import com.logflare.android.feature.home.HomeRoute
 import com.logflare.android.feature.log.LogDetailScreen
-import com.logflare.android.feature.log.LogListScreen
+import com.logflare.android.feature.log.LogsRoute
 import com.logflare.android.feature.mypage.AddMemberScreen
 import com.logflare.android.feature.mypage.EditMemberScreen
 import com.logflare.android.feature.mypage.LogoutScreen
@@ -137,7 +137,10 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
             onOpenLogs = { nav.openLogs(it.minLevel) },
             onOpenProjects = { nav.navigateToTab(Destinations.Projects) },
         )
-        Destinations.Logs -> LogListScreen(onLogClick = { nav.navigate(Destinations.logDetail(it)) })
+        Destinations.Logs -> LogsRoute(
+            entryState = entry.savedStateHandle,
+            onOpenLog = { nav.navigate(Destinations.logDetail(it)) },
+        )
         Destinations.Projects -> ProjectListScreen(
             onProjectClick = { nav.navigate(Destinations.projectDetail(it)) },
             onCreateProject = { nav.navigate(Destinations.ProjectCreate) },

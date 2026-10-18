@@ -15,13 +15,9 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
 import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
-import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
-import com.logflare.android.feature.log.LogListAction
-import com.logflare.android.feature.log.LogListScreenContent
-import com.logflare.android.feature.log.LogsUiState
 import com.logflare.android.feature.mypage.LogoutScreenContent
 import com.logflare.android.feature.mypage.LogoutUiState
 import com.logflare.android.feature.mypage.MyPageContent
@@ -104,51 +100,6 @@ class VisualQaSemanticsTest {
         compose.onNodeWithTag(VisualQaTags.Empty).assertExists()
         compose.onNodeWithTag(VisualQaTags.CreateProject).performClick()
         assertTrue(created)
-    }
-
-    @Test
-    fun logListExposesLogCardFilterTagsAndClicksReachCallback() {
-        var openedId: Int? = null
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                LogListScreenContent(
-                    uiState = LogsUiState(
-                        errorLogs = listOf(
-                            ErrorlogDTO(
-                                id = 5001,
-                                project_id = 101,
-                                errortype = "Timeout",
-                                message = "payment gateway timeout",
-                                level = "ERROR",
-                                timestamp = "2026-01-01T00:00:00Z",
-                            ),
-                            ErrorlogDTO(
-                                id = 5002,
-                                project_id = 202,
-                                errortype = "NullPointer",
-                                message = "checkout null cart",
-                                level = "ERROR",
-                                timestamp = "2026-01-01T00:01:00Z",
-                            ),
-                        ),
-                        projectNames = mapOf(101 to "Payments", 202 to "Checkout"),
-                        hasMore = false,
-                    ),
-                    onAction = { action ->
-                        if (action is LogListAction.OpenLog) {
-                            openedId = action.log.id
-                        }
-                    },
-                )
-            }
-        }
-        compose.onNodeWithTag(VisualQaTags.Logs).assertExists()
-        compose.onNodeWithTag(VisualQaTags.FilterLogLevel).assertExists()
-        compose.onNodeWithTag(VisualQaTags.FilterProjects).assertExists()
-        compose.onNodeWithTag(VisualQaTags.FilterSort).assertExists()
-        compose.onNodeWithTag(VisualQaTags.logCard(5001)).assertExists()
-        compose.onNodeWithTag(VisualQaTags.logCard(5002)).performClick()
-        assertEquals(5002, openedId)
     }
 
     @Test

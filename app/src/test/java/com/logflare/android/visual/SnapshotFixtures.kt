@@ -1,12 +1,8 @@
 package com.logflare.android.visual
 
-import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
-import com.logflare.android.enums.LogSort
 import com.logflare.android.enums.UserPermission
-import com.logflare.android.feature.log.LogsUiState
-import com.logflare.android.feature.log.ProjectToggleOption
 import com.logflare.android.feature.mypage.AddMemberUiState
 import com.logflare.android.feature.mypage.EditMemberUiState
 import com.logflare.android.feature.mypage.InputValidationUiState
@@ -26,46 +22,9 @@ import com.logflare.android.ui.component.common.MemberFieldStatus
 object SnapshotFixtures {
     private const val BASE_TIMESTAMP = "2026-01-15T10:30:00Z"
 
-    private val sampleLogs: List<ErrorlogDTO> = listOf(
-        ErrorlogDTO(
-            id = 1,
-            project_id = 101,
-            errortype = "NullPointerException",
-            message = "Unable to resolve host qa-server.local",
-            level = "error",
-            timestamp = BASE_TIMESTAMP,
-        ),
-        ErrorlogDTO(
-            id = 2,
-            project_id = 202,
-            errortype = "TimeoutException",
-            message = "Request timed out after 30 seconds",
-            level = "warning",
-            timestamp = "2026-01-15T10:30:01Z",
-        ),
-        ErrorlogDTO(
-            id = 3,
-            project_id = 101,
-            errortype = "IllegalStateException",
-            message = "Database connection pool exhausted",
-            level = "critical",
-            timestamp = "2026-01-15T10:30:02Z",
-        ),
-    )
-
     private val sampleProjects: List<ProjectDTO> = listOf(
         ProjectDTO(id = 101, name = "QA Payments"),
         ProjectDTO(id = 202, name = "QA Platform"),
-    )
-
-    private val sampleProjectOptions: List<ProjectToggleOption> = listOf(
-        ProjectToggleOption(id = 101, label = "QA Payments", selected = true),
-        ProjectToggleOption(id = 202, label = "QA Platform", selected = false),
-    )
-
-    private val sampleProjectNames: Map<Int, String> = mapOf(
-        101 to "QA Payments",
-        202 to "QA Platform",
     )
 
     private val sampleDetailLogs: List<ProjectDetailLog> = listOf(
@@ -96,29 +55,6 @@ object SnapshotFixtures {
             loading = loading,
             items = if (empty || loading || error != null) emptyList() else sampleProjects,
             error = error,
-        )
-
-    fun logs(
-        empty: Boolean = false,
-        loading: Boolean = false,
-        error: String? = null,
-        filteredEmpty: Boolean = false,
-        loadingMore: Boolean = false,
-    ): LogsUiState =
-        LogsUiState(
-            loading = loading,
-            errorLogs = when {
-                empty || loading || error != null || filteredEmpty -> emptyList()
-                else -> sampleLogs
-            },
-            error = error,
-            filter = if (filteredEmpty) listOf(LogLevel.ERROR) else emptyList(),
-            projectNames = sampleProjectNames,
-            selectedProject = if (filteredEmpty) 101 else null,
-            projectOptions = sampleProjectOptions,
-            sortBy = LogSort.NEWEST,
-            loadingMore = loadingMore,
-            hasMore = loadingMore || !empty,
         )
 
     fun logDetailPopulated(): LogCardInfo =
