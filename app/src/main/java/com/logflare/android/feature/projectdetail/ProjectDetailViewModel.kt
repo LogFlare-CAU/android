@@ -140,12 +140,15 @@ class ProjectDetailViewModel @Inject constructor(
         val q = state.value.query
         refreshing.value = true
         viewModelScope.launch {
-            val results = listOf(
-                async { logStore.refresh(q) },
-                async { projectStore.refresh(projectId) },
-                async { projectStore.refresh() },
-            ).awaitAll()
-            refreshing.value = false
+            val results = try {
+                listOf(
+                    async { logStore.refresh(q) },
+                    async { projectStore.refresh(projectId) },
+                    async { projectStore.refresh() },
+                ).awaitAll()
+            } finally {
+                refreshing.value = false
+            }
             if (results.any { it.isFailure }) _events.send(ProjectDetailEvent.RefreshFailed)
         }
     }
