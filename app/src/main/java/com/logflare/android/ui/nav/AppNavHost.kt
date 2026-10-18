@@ -15,7 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.logflare.android.data.session.SessionState
-import com.logflare.android.feature.auth.LoginScreen
+import com.logflare.android.feature.auth.LoginRoute
 import com.logflare.android.feature.home.HomeScreen
 import com.logflare.android.feature.log.LogDetailScreen
 import com.logflare.android.feature.log.LogListScreen
@@ -130,7 +130,7 @@ private fun NavHostController.popToProjectList() {
 private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavHostController) {
     val back: () -> Unit = { nav.popBackStack() }
     when (route) {
-        Destinations.Login -> LoginScreen(onLoginSuccess = { nav.leaveLogin() })
+        Destinations.Login -> LoginRoute(onSignedIn = { nav.leaveLogin() })
         Destinations.Home -> HomeScreen(
             onProjectSelected = { nav.navigate(Destinations.projectDetail(it)) },
             onViewMoreLogs = { nav.navigateToTab(Destinations.Logs) },

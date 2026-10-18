@@ -4,4 +4,20 @@
     <string name="tab_logs">Logs</string>
     <string name="tab_projects">Projects</string>
     <string name="tab_my">My</string>
-</resources>
+    <string name="login_title">Sign in to LogFlare</string>
+    <string name="login_subtitle">Connect to your LogFlare server.</string>
+    <string name="login_server_url">Server URL</string>
+    <string name="login_server_url_placeholder">https://your-server</string>
+    <string name="login_username">Username</string>
+    <string name="login_password">Password</string>
+    <string name="login_sign_in">Sign in</string>
+    <string name="login_recent">Recent</string>
+    <string name="login_recent_servers">Recent servers</string>
+    <string name="login_error_enter_url">Enter the server URL.</string>
+    <string name="login_error_enter_username">Enter your username.</string>
+    <string name="login_error_enter_password">Enter your password.</string>
+    <string name="login_error_url_scheme">Start with http:// or https://</string>
+    <string name="login_error_invalid_credentials">Wrong username or password.</string>
+    <string name="login_error_rate_limited">Too many attempts. Try again in a minute.</string>
+    <string name="login_error_unreachable">Can\'t reach this server.</string>
+</resources>

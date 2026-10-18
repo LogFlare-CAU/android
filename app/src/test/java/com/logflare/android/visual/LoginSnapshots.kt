@@ -1,72 +1,50 @@
 package com.logflare.android.visual
 
-import com.logflare.android.feature.auth.LoginScreenContent
+import androidx.compose.runtime.Composable
+import com.logflare.android.feature.auth.LoginContent
+import com.logflare.android.feature.auth.LoginError
+import com.logflare.android.feature.auth.LoginUiState
+import com.logflare.android.visual.ds.DsSnapshotTest
 import org.junit.Test
 
-class LoginSnapshots : VisualSnapshotTest() {
-    @Test fun login_empty_light() {
-        capture("login_empty", darkTheme = false) {
-            LoginScreenContent(
-                uiState = SnapshotFixtures.auth(),
-                form = SnapshotFixtures.loginForm(),
-                onFormChange = { _ -> },
-                onSignIn = {},
-            )
-        }
-    }
+class LoginSnapshots : DsSnapshotTest() {
+    private val recent = listOf("https://logs.example.com/", "https://staging-logs.example.com/", "http://10.0.2.2:8000/")
 
-    @Test fun login_empty_dark() {
-        capture("login_empty", darkTheme = true) {
-            LoginScreenContent(
-                uiState = SnapshotFixtures.auth(),
-                form = SnapshotFixtures.loginForm(),
-                onFormChange = { _ -> },
-                onSignIn = {},
-            )
-        }
-    }
+    @Composable
+    private fun Login(state: LoginUiState) = LoginContent(
+        state = state,
+        onUrl = {},
+        onUsername = {},
+        onPassword = {},
+        onOpenRecent = {},
+        onPickRecent = {},
+        onDismissRecent = {},
+        onSubmit = {},
+    )
 
-    @Test fun login_validation_error_light() {
-        capture("login_validation_error", darkTheme = false) {
-            LoginScreenContent(
-                uiState = SnapshotFixtures.auth(),
-                form = SnapshotFixtures.loginForm(validationError = true),
-                onFormChange = { _ -> },
-                onSignIn = {},
-            )
-        }
-    }
+    private val empty = LoginUiState(recentServers = recent)
+    private val errors = LoginUiState(
+        url = "logs.example.com",
+        urlError = LoginError.UrlScheme,
+        usernameError = LoginError.EnterUsername,
+        passwordError = LoginError.EnterPassword,
+        recentServers = recent,
+    )
+    private val submitting = LoginUiState(
+        url = "https://logs.example.com/",
+        username = "admin",
+        password = "secret",
+        submitting = true,
+        recentServers = recent,
+    )
+    private val sheet = empty.copy(url = "https://logs.example.com/", recentSheetOpen = true)
 
-    @Test fun login_validation_error_dark() {
-        capture("login_validation_error", darkTheme = true) {
-            LoginScreenContent(
-                uiState = SnapshotFixtures.auth(),
-                form = SnapshotFixtures.loginForm(validationError = true),
-                onFormChange = { _ -> },
-                onSignIn = {},
-            )
-        }
-    }
-
-    @Test fun login_loading_light() {
-        capture("login_loading", darkTheme = false) {
-            LoginScreenContent(
-                uiState = SnapshotFixtures.auth(loading = true),
-                form = SnapshotFixtures.loginForm(populated = true),
-                onFormChange = { _ -> },
-                onSignIn = {},
-            )
-        }
-    }
-
-    @Test fun login_loading_dark() {
-        capture("login_loading", darkTheme = true) {
-            LoginScreenContent(
-                uiState = SnapshotFixtures.auth(loading = true),
-                form = SnapshotFixtures.loginForm(populated = true),
-                onFormChange = { _ -> },
-                onSignIn = {},
-            )
-        }
-    }
+    @Test fun login_empty_light() = capture("login_empty", false) { Login(empty) }
+    @Test fun login_empty_dark() = capture("login_empty", true) { Login(empty) }
+    @Test fun login_errors_light() = capture("login_errors", false) { Login(errors) }
+    @Test fun login_errors_dark() = capture("login_errors", true) { Login(errors) }
+    @Test fun login_submitting_light() = capture("login_submitting", false) { Login(submitting) }
+    @Test fun login_submitting_dark() = capture("login_submitting", true) { Login(submitting) }
+    @Test fun login_recent_sheet_light() = capture("login_recent_sheet", false) { Login(sheet) }
+    @Test fun login_recent_sheet_dark() = capture("login_recent_sheet", true) { Login(sheet) }
 }

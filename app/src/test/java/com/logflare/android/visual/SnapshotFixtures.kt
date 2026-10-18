@@ -6,7 +6,6 @@ import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.LogSort
 import com.logflare.android.enums.UserPermission
 import com.logflare.android.feature.auth.AuthUiState
-import com.logflare.android.feature.auth.LoginFormState
 import com.logflare.android.feature.log.LogsUiState
 import com.logflare.android.feature.log.ProjectToggleOption
 import com.logflare.android.feature.mypage.AddMemberUiState
@@ -101,32 +100,12 @@ object SnapshotFixtures {
         ),
     )
 
-    fun auth(loading: Boolean = false, loginError: String? = null): AuthUiState =
+    fun auth(loading: Boolean = false): AuthUiState =
         AuthUiState(
             loading = loading,
             username = "qa-admin",
             permission = UserPermission.MODERATOR.code,
-            loginError = loginError,
         )
-
-    fun loginForm(
-        validationError: Boolean = false,
-        populated: Boolean = false,
-    ): LoginFormState =
-        when {
-            validationError -> LoginFormState(
-                serverUrl = "not-a-url",
-                username = "qa-admin",
-                password = "Password1!",
-                serverUrlError = "Invalid URL format",
-            )
-            populated -> LoginFormState(
-                serverUrl = "http://10.0.2.2:8000",
-                username = "qa-admin",
-                password = "qa-password",
-            )
-            else -> LoginFormState()
-        }
 
     fun projects(
         empty: Boolean = false,

@@ -203,7 +203,7 @@ class SessionRepositoryTest {
             assertNull(stored.username)
             assertNull(stored.userIdx)
 
-            // Old login path (AuthLoginUseCase): token + username in one transaction.
+            // Old login path: token + username in one transaction.
             env.auth.setTokenAndUsername("Bearer bob", "bob")
             val bob = awaitItem() as SessionState.SignedIn
             assertEquals("Bearer bob", bob.token)
