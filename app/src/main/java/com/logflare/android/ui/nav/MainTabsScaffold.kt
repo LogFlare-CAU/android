@@ -17,6 +17,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.logflare.core.designsystem.v2.LfIcons
+import com.example.logflare.core.designsystem.v2.LfLevel
 import com.example.logflare.core.designsystem.v2.components.BottomNavBar
 import com.example.logflare.core.designsystem.v2.components.LfScaffold
 import com.example.logflare.core.designsystem.v2.components.NavItem
@@ -64,6 +65,16 @@ fun NavController.navigateToTab(route: String, onReselect: (route: String) -> Un
         launchSingleTop = true
         restoreState = true
     }
+}
+
+/**
+ * Opens the Logs tab like [navigateToTab] (its state and back stack kept) and presets its level
+ * filter to [minLevel] (null: no preset) via [Destinations.LogsMinLevelArg].
+ */
+fun NavController.openLogs(minLevel: LfLevel?) {
+    navigateToTab(Destinations.Logs)
+    val entry = runCatching { getBackStackEntry(Destinations.Logs) }.getOrNull() ?: return
+    entry.savedStateHandle[Destinations.LogsMinLevelArg] = minLevel?.name?.uppercase()
 }
 
 /**

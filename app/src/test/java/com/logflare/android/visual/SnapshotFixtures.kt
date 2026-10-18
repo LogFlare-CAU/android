@@ -5,7 +5,6 @@ import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.LogSort
 import com.logflare.android.enums.UserPermission
-import com.logflare.android.feature.auth.AuthUiState
 import com.logflare.android.feature.log.LogsUiState
 import com.logflare.android.feature.log.ProjectToggleOption
 import com.logflare.android.feature.mypage.AddMemberUiState
@@ -54,18 +53,6 @@ object SnapshotFixtures {
         ),
     )
 
-    /** Intentionally huge bodies — Home must still keep Project List reachable. */
-    private val longHomeLogs: List<ErrorlogDTO> = (1..5).map { index ->
-        ErrorlogDTO(
-            id = 900 + index,
-            project_id = 101,
-            errortype = "VeryLongStackTraceException",
-            message = "Line $index " + ("STACKTRACE_PAYLOAD_".repeat(40)),
-            level = if (index % 2 == 0) "warning" else "error",
-            timestamp = "2026-01-15T10:3$index:00Z",
-        )
-    }
-
     private val sampleProjects: List<ProjectDTO> = listOf(
         ProjectDTO(id = 101, name = "QA Payments"),
         ProjectDTO(id = 202, name = "QA Platform"),
@@ -100,13 +87,6 @@ object SnapshotFixtures {
         ),
     )
 
-    fun auth(loading: Boolean = false): AuthUiState =
-        AuthUiState(
-            loading = loading,
-            username = "qa-admin",
-            permission = UserPermission.MODERATOR.code,
-        )
-
     fun projects(
         empty: Boolean = false,
         loading: Boolean = false,
@@ -124,13 +104,11 @@ object SnapshotFixtures {
         error: String? = null,
         filteredEmpty: Boolean = false,
         loadingMore: Boolean = false,
-        longMessages: Boolean = false,
     ): LogsUiState =
         LogsUiState(
             loading = loading,
             errorLogs = when {
                 empty || loading || error != null || filteredEmpty -> emptyList()
-                longMessages -> longHomeLogs
                 else -> sampleLogs
             },
             error = error,

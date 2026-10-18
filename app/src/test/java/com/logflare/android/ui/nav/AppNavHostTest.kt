@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
+import com.example.logflare.core.designsystem.v2.LfLevel
 import com.example.logflare.core.designsystem.v2.LogFlareTheme
 import com.logflare.android.data.session.SessionKey
 import com.logflare.android.data.session.SessionState
@@ -124,6 +125,30 @@ class AppNavHostTest {
         compose.runOnIdle { nav.popBackStack() }
         compose.waitForIdle()
         assertEquals(listOf(Destinations.Home), routes())
+    }
+
+    @Test
+    fun openLogs_presetsMinLevel_keepingTheTabEntry() {
+        show(SIGNED_IN)
+        compose.onNodeWithText("Logs").performClick()
+        compose.waitForIdle()
+        val logsEntry = compose.runOnIdle { nav.currentBackStackEntry }
+        compose.runOnIdle { nav.navigateToTab(Destinations.Home) }
+        compose.waitForIdle()
+
+        compose.runOnIdle { nav.openLogs(LfLevel.Warning) }
+        compose.waitForIdle()
+
+        assertEquals(listOf(Destinations.Home, Destinations.Logs), routes())
+        val entry = compose.runOnIdle { nav.currentBackStackEntry!! }
+        assertEquals(logsEntry?.id, entry.id)
+        assertEquals("WARNING", entry.savedStateHandle.get<String>(Destinations.LogsMinLevelArg))
+
+        // No preset ("See all"): clears an earlier one.
+        compose.runOnIdle { nav.navigateToTab(Destinations.Home) }
+        compose.runOnIdle { nav.openLogs(null) }
+        compose.waitForIdle()
+        assertNull(compose.runOnIdle { nav.currentBackStackEntry!!.savedStateHandle.get<String>(Destinations.LogsMinLevelArg) })
     }
 
     @Test

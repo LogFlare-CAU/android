@@ -16,7 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.logflare.android.data.session.SessionState
 import com.logflare.android.feature.auth.LoginRoute
-import com.logflare.android.feature.home.HomeScreen
+import com.logflare.android.feature.home.HomeRoute
 import com.logflare.android.feature.log.LogDetailScreen
 import com.logflare.android.feature.log.LogListScreen
 import com.logflare.android.feature.mypage.AddMemberScreen
@@ -131,10 +131,11 @@ private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavH
     val back: () -> Unit = { nav.popBackStack() }
     when (route) {
         Destinations.Login -> LoginRoute(onSignedIn = { nav.leaveLogin() })
-        Destinations.Home -> HomeScreen(
-            onProjectSelected = { nav.navigate(Destinations.projectDetail(it)) },
-            onViewMoreLogs = { nav.navigateToTab(Destinations.Logs) },
-            onCreateProject = { nav.navigate(Destinations.ProjectCreate) },
+        Destinations.Home -> HomeRoute(
+            onOpenLog = { nav.navigate(Destinations.logDetail(it)) },
+            onOpenProject = { nav.navigate(Destinations.projectDetail(it)) },
+            onOpenLogs = { nav.openLogs(it.minLevel) },
+            onOpenProjects = { nav.navigateToTab(Destinations.Projects) },
         )
         Destinations.Logs -> LogListScreen(onLogClick = { nav.navigate(Destinations.logDetail(it)) })
         Destinations.Projects -> ProjectListScreen(

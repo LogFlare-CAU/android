@@ -6,13 +6,11 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
@@ -21,8 +19,6 @@ import com.example.logflare.core.model.ErrorlogDTO
 import com.example.logflare.core.model.ProjectDTO
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.UserPermission
-import com.logflare.android.feature.auth.AuthUiState
-import com.logflare.android.feature.home.HomeScreenContent
 import com.logflare.android.feature.log.LogListAction
 import com.logflare.android.feature.log.LogListScreenContent
 import com.logflare.android.feature.log.LogsUiState
@@ -227,80 +223,6 @@ class VisualQaSemanticsTest {
         assertEquals(101, openedSettings)
         compose.onNodeWithTag(VisualQaTags.logCard(5001)).performClick()
         assertEquals(5001, openedLog)
-    }
-
-    @Test
-    fun homeCreateProjectTagReachesCallback() {
-        var created = false
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                HomeScreenContent(
-                    authState = AuthUiState(username = "qa-admin"),
-                    projectsState = ProjectsUiState(
-                        items = listOf(
-                            ProjectDTO(id = 101, name = "Payments", logfiles = emptyList()),
-                            ProjectDTO(id = 202, name = "Checkout", logfiles = emptyList()),
-                        ),
-                    ),
-                    logsState = LogsUiState(hasMore = false),
-                    onProjectSelected = {},
-                    onViewMoreLogs = {},
-                    onCreateProject = { created = true },
-                )
-            }
-        }
-        compose.onNodeWithTag(VisualQaTags.Home).assertExists()
-        compose.onNodeWithTag(VisualQaTags.projectCard(101)).assertExists()
-        compose.onNodeWithTag(VisualQaTags.projectCard(202)).assertExists()
-        compose.onNodeWithTag(VisualQaTags.CreateProject).performClick()
-        assertTrue(created)
-    }
-
-    @Test
-    fun homeProjectCardTagReachesCallbackWithoutDuplicateHandlers() {
-        var selected: Int? = null
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                HomeScreenContent(
-                    authState = AuthUiState(username = "qa-admin"),
-                    projectsState = ProjectsUiState(
-                        items = listOf(
-                            ProjectDTO(id = 101, name = "Payments", logfiles = emptyList()),
-                        ),
-                    ),
-                    logsState = LogsUiState(hasMore = false),
-                    onProjectSelected = { selected = it },
-                    onViewMoreLogs = {},
-                    onCreateProject = {},
-                )
-            }
-        }
-        compose.onNodeWithTag(VisualQaTags.projectCard(101)).performClick()
-        assertEquals(101, selected)
-    }
-
-    @Test
-    fun homeLongRecentLogsKeepProjectListReachable() {
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                HomeScreenContent(
-                    authState = SnapshotFixtures.auth(),
-                    projectsState = SnapshotFixtures.projects(),
-                    logsState = SnapshotFixtures.logs(longMessages = true),
-                    onProjectSelected = {},
-                    onViewMoreLogs = {},
-                    onCreateProject = {},
-                )
-            }
-        }
-        compose.onNodeWithTag(VisualQaTags.Home).assertExists()
-        compose.onNodeWithText("Project List").assertExists()
-        compose.onNodeWithTag(VisualQaTags.projectCard(101))
-            .performScrollTo()
-            .assertIsDisplayed()
-        compose.onNodeWithTag(VisualQaTags.CreateProject)
-            .performScrollTo()
-            .assertIsDisplayed()
     }
 
     @Test

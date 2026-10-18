@@ -52,13 +52,17 @@ data class SheetOption<T>(
     val description: String? = null,
 )
 
-/** Generic bottom sheet: surface container, 28dp top radius, drag handle, title, scrollable content. */
+/**
+ * Generic bottom sheet: surface container, 28dp top radius, drag handle, title, scrollable content.
+ * [action] sits at the end of the title row (e.g. a "Mark all read" text button).
+ */
 @Composable
 fun LfSheet(
     title: String,
     onDismiss: () -> Unit,
+    action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
-) = LfSheetFrame(title, onDismiss) { content() }
+) = LfSheetFrame(title, onDismiss, action) { content() }
 
 /**
  * Single choice. Tapping a row calls [onSelect], then animates the sheet away and calls
@@ -200,6 +204,7 @@ fun ConfirmSheet(
 private fun LfSheetFrame(
     title: String,
     onDismiss: () -> Unit,
+    action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
 ) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -229,14 +234,18 @@ private fun LfSheetFrame(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 16.dp, end = 16.dp, bottom = 28.dp),
         ) {
-            Text(
-                title,
-                style = Lf.type.cardTitle.copy(fontWeight = FontWeight.ExtraBold),
-                color = Lf.colors.textPrimary,
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 8.dp)
-                    .semantics { heading() },
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    title,
+                    style = Lf.type.cardTitle.copy(fontWeight = FontWeight.ExtraBold),
+                    color = Lf.colors.textPrimary,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 4.dp, vertical = 8.dp)
+                        .semantics { heading() },
+                )
+                action?.invoke()
+            }
             Spacer(Modifier.height(4.dp))
             content(dismiss)
         }
