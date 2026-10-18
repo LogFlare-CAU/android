@@ -79,6 +79,11 @@ class DeviceRepository @Inject constructor(
         return true
     }
 
+    override suspend fun ensureFirebaseFromCache(): Boolean {
+        val config = loadPersistedConfig() ?: return false
+        return initializeFirebase(config)
+    }
+
     /**
      * Called by [LogflareMessagingService] when Firebase issues a refreshed token.
      */

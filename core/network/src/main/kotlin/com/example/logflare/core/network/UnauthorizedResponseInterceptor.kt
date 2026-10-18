@@ -4,16 +4,18 @@ import okhttp3.Interceptor
 import okhttp3.Response
 
 /**
- * Runs [HttpUnauthorizedAction] once per 401 response. Registered last on the OkHttp client
- * so it observes the server response before outer interceptors.
+ * Runs [HttpUnauthorizedAction] once per 401 response, with the `Authorization` header that was
+ * sent. Registered last on the OkHttp client so it sees the request as sent (header included)
+ * and observes the server response before outer interceptors.
  */
 class UnauthorizedResponseInterceptor(
     private val onUnauthorized: HttpUnauthorizedAction,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val response = chain.proceed(chain.request())
+        val request = chain.request()
+        val response = chain.proceed(request)
         if (response.code == 401) {
-            onUnauthorized.onUnauthorized()
+            onUnauthorized.onUnauthorized(request.header("Authorization"))
         }
         return response
     }

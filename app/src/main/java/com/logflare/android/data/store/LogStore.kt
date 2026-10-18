@@ -49,9 +49,9 @@ class LogStore internal constructor(
     private val details = ConcurrentHashMap<Int, CachedResource<LogEventDetailDTO>>()
     private val loadMoreLock = Mutex()
 
-    /** The newest error groups (ERROR and up), first page only. */
-    fun recent(limit: Int = 5): Flow<Resource<List<LogEvent>>> =
-        events(RECENT_QUERY).map { r -> r.mapData { it.items.take(limit) } }
+    /** The newest error groups (ERROR and up), first page only. [force] refetches it. */
+    fun recent(limit: Int = 5, force: Boolean = false): Flow<Resource<List<LogEvent>>> =
+        events(RECENT_QUERY, force).map { r -> r.mapData { it.items.take(limit) } }
 
     /** The first page (plus any pages [loadMore] appended). [force] refetches the first page. */
     fun events(query: LogQuery, force: Boolean = false): Flow<Resource<LogPage>> =
@@ -82,11 +82,25 @@ class LogStore internal constructor(
         }
     }
 
-    /** One event row with its group (`GET /log/events/{id}`). */
-    fun event(id: Int): Flow<Resource<LogEventDetail>> =
+    /** One event row with its group (`GET /log/events/{id}`). [force] refetches it. */
+    fun event(id: Int, force: Boolean = false): Flow<Resource<LogEventDetail>> =
         sessions.whileSignedIn { session ->
-            detailResource(id).stream(session).map { r -> r.mapData { it.toLogEventDetail() } }
+            detailResource(id).stream(session, force).map { r -> r.mapData { it.toLogEventDetail() } }
         }
+
+    /**
+     * Pull-to-refresh of [events] for [query]: refetches the first page (dropping pages
+     * [loadMore] appended), even when fresh, and returns once done with the outcome.
+     */
+    suspend fun refresh(query: LogQuery): Result<Unit> =
+        sessions.refreshSignedIn { session -> pageResource(query).refresh(session) }
+
+    /** Pull-to-refresh of [recent]; see [refresh]. */
+    suspend fun refreshRecent(): Result<Unit> = refresh(RECENT_QUERY)
+
+    /** Pull-to-refresh of [event]; see [refresh]. */
+    suspend fun refreshEvent(id: Int): Result<Unit> =
+        sessions.refreshSignedIn { session -> detailResource(id).refresh(session) }
 
     private fun pageResource(query: LogQuery): CachedResource<LogEventPageDTO> {
         val key = eventsKey(query)

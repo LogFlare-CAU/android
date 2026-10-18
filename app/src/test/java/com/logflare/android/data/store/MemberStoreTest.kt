@@ -1,14 +1,20 @@
 package com.logflare.android.data.store
 
 import com.example.logflare.core.model.UserDTO
+import com.example.logflare.core.model.UserResponse
 import com.example.logflare.core.model.UserSequenceResponse
+import com.logflare.android.data.session.SessionKey
 import com.logflare.android.data.session.SessionState
 import com.logflare.android.data.store.model.Member
 import java.io.IOException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -19,6 +25,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MemberStoreTest {
 
     @get:Rule
@@ -30,9 +37,14 @@ class MemberStoreTest {
 
     private fun TestScope.cache() = FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler))
 
-    private fun TestScope.members() = MemberStore(api, sessions, cache(), backgroundScope) { now }
+    /** Profiles [AccountStore] handed to the session, with the session they were fetched for. */
+    private val profiles = mutableListOf<Pair<SessionKey, UserDTO>>()
 
-    private fun TestScope.account() = AccountStore(api, sessions, cache(), backgroundScope) { now }
+    private fun TestScope.account() =
+        AccountStore(api, sessions, cache(), backgroundScope, onProfile = { key, user -> profiles += key to user }) { now }
+
+    private fun TestScope.members(account: AccountStore = account()) =
+        MemberStore(api, sessions, cache(), backgroundScope, account) { now }
 
     @Test
     fun isNameTaken_caseInsensitive() = runTest {
@@ -88,6 +100,60 @@ class MemberStoreTest {
     fun delete_failure_isResult() = runTest {
         api.mutationRejected = true
         assertTrue(members().delete(2).exceptionOrNull() is ApiException)
+    }
+
+    @Test
+    fun me_fetch_updatesSessionProfile() = runTest {
+        api.me = { UserResponse(true, "ok", data = UserDTO(7, "me", 80)) }
+        account().me().first { it.data != null }
+
+        assertEquals(listOf(ProjectStoreTest.signedIn().key to UserDTO(7, "me", 80)), profiles)
+    }
+
+    @Test
+    fun me_failedFetch_leavesSessionProfile() = runTest {
+        api.me = { UserResponse(false, "nope") }
+        assertTrue(account().refresh().isFailure)
+        assertEquals(emptyList<Pair<SessionKey, UserDTO>>(), profiles)
+    }
+
+    @Test
+    fun update_ownAccount_refreshesMe() = runTest {
+        val store = members()
+        api.me = { UserResponse(true, "ok", data = UserDTO(7, "me2", 80)) }
+
+        assertTrue(store.update(7, "me2", null, 80).isSuccess)
+
+        assertEquals(1, api.count("getme"))
+        assertEquals(UserDTO(7, "me2", 80), profiles.single().second)
+    }
+
+    @Test
+    fun update_otherAccount_doesNotRefreshMe() = runTest {
+        assertTrue(members().update(2, "bobby", null, 80).isSuccess)
+        assertEquals(0, api.count("getme"))
+    }
+
+    @Test
+    fun refresh_awaitsAndReportsOutcome() = runTest {
+        val gate = CompletableDeferred<UserSequenceResponse>()
+        api.users = { gate.await() }
+        val store = members()
+
+        val result = async { store.refresh() }
+        runCurrent()
+        assertFalse(result.isCompleted)
+        gate.complete(UserSequenceResponse(false, "nope"))
+        assertTrue(result.await().exceptionOrNull() is ApiException)
+
+        api.users = { UserSequenceResponse(true, "ok", data = emptyList()) }
+        assertTrue(store.refresh().isSuccess)
+        assertTrue(account().refresh().isSuccess)
+        assertEquals(1, api.count("getme"))
+
+        sessions.value = SessionState.SignedOut
+        assertTrue(store.refresh().exceptionOrNull() is NotSignedInException)
+        assertTrue(account().refresh().exceptionOrNull() is NotSignedInException)
     }
 
     @Test

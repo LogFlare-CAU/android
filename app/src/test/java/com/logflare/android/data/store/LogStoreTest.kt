@@ -3,6 +3,7 @@ package com.logflare.android.data.store
 import app.cash.turbine.test
 import com.example.logflare.core.designsystem.v2.LfLevel
 import com.logflare.android.data.session.SessionState
+import com.example.logflare.core.model.LogEventDetailResponse
 import com.example.logflare.core.model.LogEventPageDTO
 import com.example.logflare.core.model.LogEventPageResponse
 import com.logflare.android.data.store.FakeLogflareApi.Companion.event
@@ -11,6 +12,7 @@ import com.logflare.android.data.store.model.LogEvent
 import com.logflare.android.data.store.model.LogQuery
 import com.logflare.android.data.store.model.LogSortOrder
 import com.logflare.android.data.store.model.parseServerTime
+import java.io.IOException
 import java.time.Instant
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -233,6 +235,46 @@ class LogStoreTest {
         store.events(LogQuery(), force = true).first { it.data != null && !it.refreshing }
 
         assertEquals(2, api.count("getLogEvents"))
+    }
+
+    @Test
+    fun recent_and_event_force_refetchFreshCache() = runTest {
+        api.events = { page(1) }
+        val store = newStore()
+        store.recent().first { it.data != null }
+        store.recent(force = true).first { it.data != null && !it.refreshing }
+        assertEquals(2, api.count("getLogEvents"))
+
+        store.event(5).first { it.data != null }
+        store.event(5, force = true).first { it.data != null && !it.refreshing }
+        assertEquals(2, api.count("getLogEvent"))
+    }
+
+    @Test
+    fun refresh_awaitsFetch_andReportsOutcome() = runTest {
+        val gate = CompletableDeferred<LogEventPageResponse>()
+        api.events = { gate.await() }
+        val store = newStore()
+        val query = LogQuery(projectId = 2)
+
+        val result = async { store.refresh(query) }
+        runCurrent()
+        assertFalse("refresh waits for the fetch", result.isCompleted)
+        gate.complete(page(1))
+        assertTrue(result.await().isSuccess)
+        assertEquals(2, api.eventsCalls.single().projectId)
+
+        api.events = { LogEventPageResponse(false, "nope") }
+        assertTrue(store.refresh(query).exceptionOrNull() is ApiException)
+        assertTrue(store.refreshRecent().exceptionOrNull() is ApiException)
+        assertEquals("ERROR", api.eventsCalls.last().minLevel)
+
+        val offline = IOException("offline")
+        api.eventDetail = { throw offline }
+        assertEquals(offline, store.refreshEvent(5).exceptionOrNull())
+        api.eventDetail = { LogEventDetailResponse(true, "ok", data = FakeLogflareApi.detail(it)) }
+        assertTrue(store.refreshEvent(5).isSuccess)
+        assertEquals(2, api.count("getLogEvent"))
     }
 
     @Test

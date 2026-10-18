@@ -21,6 +21,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -272,6 +273,45 @@ class ProjectStoreTest {
         api.projects = { ok(emptyList()) }
         sessions.value = signedIn()
         assertTrue(store.projects().first().isInitialLoad)
+    }
+
+    @Test
+    fun refresh_awaitsFetch_andReportsOutcome() = runTest {
+        val gate = CompletableDeferred<ProjectSequenceResponse>()
+        api.projects = { gate.await() }
+        val store = newStore()
+
+        val result = async { store.refresh() }
+        runCurrent()
+        assertFalse("refresh waits for the fetch", result.isCompleted)
+        gate.complete(ok(listOf(project(1, "alpha"))))
+        assertTrue(result.await().isSuccess)
+        assertEquals(1, api.count("listProjects"))
+        assertEquals(1, api.count("getLogSummary"))
+
+        val offline = IOException("offline")
+        api.projects = { throw offline }
+        // Not assertSame: coroutines may copy an exception thrown inside async while recovering its stack.
+        assertEquals(offline.message, (store.refresh().exceptionOrNull() as IOException).message)
+        assertEquals("pull-to-refresh always fetches, even with a fresh cache", 2, api.count("listProjects"))
+    }
+
+    @Test
+    fun refresh_projectSummary_fetchesThatProject() = runTest {
+        val asked = mutableListOf<Int?>()
+        api.summary = { asked += it; summaryOf() }
+
+        assertTrue(newStore().refresh(projectId = 3).isSuccess)
+
+        assertEquals(listOf<Int?>(3), asked)
+        assertEquals(0, api.count("listProjects"))
+    }
+
+    @Test
+    fun refresh_whileSignedOut_isNotSignedInFailure() = runTest {
+        sessions.value = SessionState.SignedOut
+        assertTrue(newStore().refresh().exceptionOrNull() is NotSignedInException)
+        assertEquals(0, api.calls.size)
     }
 
     companion object {

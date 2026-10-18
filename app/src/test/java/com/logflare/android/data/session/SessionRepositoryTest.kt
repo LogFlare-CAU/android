@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -71,6 +72,7 @@ class SessionRepositoryTest {
                     authDelayMs > 0 -> DelayedStore(store("auth"), authDelayMs)
                     else -> store("auth")
                 },
+                serverConfig.serverUrl,
             ),
             serverConfig = serverConfig,
             baseUrl = DataStoreBaseUrlProvider(serverConfig, backgroundScope),
@@ -154,6 +156,7 @@ class SessionRepositoryTest {
             state = awaitItem()
             while (state !is SessionState.SignedIn || state.permission != 3) state = awaitItem()
             assertEquals("bobby", state.username)
+            assertEquals("a profile update never changes the key", SessionKey.of("http://logs.example.com/", 7), state.key)
             cancelAndIgnoreRemainingEvents()
         }
         assertEquals("http://logs.example.com/", env.baseUrl.getBaseUrl())
@@ -243,6 +246,103 @@ class SessionRepositoryTest {
         state = repo.state.value as SessionState.SignedIn
         assertEquals("Bearer carol", state.token)
         assertEquals(SessionKey.of("https://b.example.com/", null, "carol"), state.key)
+    }
+
+    @Test
+    fun sessionKey_stableForWholeSignIn_whenProfileArrivesOrChanges() = runTest {
+        val env = env()
+        val url = "https://logs.example.com/"
+        val repo = env.session()
+        repo.state.first { it != SessionState.Loading }
+
+        // Profile unknown at sign-in: the key is derived from the username once.
+        repo.signIn(url, "Bearer t", "alice")
+        val key = (repo.state.value as SessionState.SignedIn).key
+        assertEquals(SessionKey.of(url, null, "alice"), key)
+
+        // The idx arrives later, with a different server username.
+        repo.updateProfile(UserDTO(idx = 7, username = "Alice2", permission = 2))
+        var state = repo.state.first { it is SessionState.SignedIn && it.userIdx == 7 } as SessionState.SignedIn
+        assertEquals(key, state.key)
+        assertEquals(2, state.permission)
+
+        // Old AuthMeUseCase path: a different username.
+        env.auth.setUsername("someone-else")
+        state = repo.state.first { it is SessionState.SignedIn && it.username == "someone-else" } as SessionState.SignedIn
+        assertEquals(key, state.key)
+
+        // A restart reads the persisted key instead of deriving one from the newer profile.
+        val restarted = env.session()
+        assertEquals(key, (restarted.state.first { it != SessionState.Loading } as SessionState.SignedIn).key)
+    }
+
+    @Test
+    fun sessionKey_newToken_newKey() = runTest {
+        val env = env()
+        val url = "https://logs.example.com/"
+        val repo = env.session()
+        repo.state.first { it != SessionState.Loading }
+
+        repo.signIn(url, "Bearer one", UserDTO(idx = 1, username = "alice", permission = 1))
+        assertEquals(SessionKey.of(url, 1), (repo.state.value as SessionState.SignedIn).key)
+
+        repo.signIn(url, "Bearer two", UserDTO(idx = 2, username = "bob", permission = 1))
+        assertEquals(SessionKey.of(url, 2), (repo.state.value as SessionState.SignedIn).key)
+
+        // Old login path, without signing out first: the new token still gets its own key.
+        env.auth.setTokenAndUsername("Bearer three", "carol")
+        val carol = repo.state.first { it is SessionState.SignedIn && it.token == "Bearer three" } as SessionState.SignedIn
+        assertEquals(SessionKey.of(url, null, "carol"), carol.key)
+        assertEquals(carol.key.value, env.auth.stored.first().sessionKey)
+    }
+
+    @Test
+    fun sessionKey_legacyTokenWithoutKey_derivedOnceAndPersisted() = runTest {
+        val env = env()
+        val url = "https://logs.example.com/"
+        env.serverConfig.setServerUrl(url)
+        env.auth.setToken("Bearer legacy")
+        env.auth.setUserProfile(UserDTO(idx = 3, username = "alice", permission = 1))
+        assertNull(env.auth.stored.first().sessionKey)
+        val repo = env.session()
+
+        val legacy = repo.state.first { it != SessionState.Loading } as SessionState.SignedIn
+        assertEquals(SessionKey.of(url, 3), legacy.key)
+        assertEquals(legacy.key.value, env.auth.stored.first { it.sessionKey != null }.sessionKey)
+
+        repo.updateProfile(UserDTO(idx = 9, username = "alice", permission = 1))
+        val updated = repo.state.first { it is SessionState.SignedIn && it.userIdx == 9 } as SessionState.SignedIn
+        assertEquals(legacy.key, updated.key)
+    }
+
+    @Test
+    fun updateProfile_forAnotherSession_isDropped() = runTest {
+        val env = env()
+        val url = "https://logs.example.com/"
+        val repo = env.session()
+        repo.state.first { it != SessionState.Loading }
+        repo.signIn(url, "Bearer bob", UserDTO(idx = 2, username = "bob", permission = 1))
+
+        // A /me answer for a session that has since been replaced must not land on this one.
+        repo.updateProfile(UserDTO(idx = 1, username = "alice", permission = 100), SessionKey.of(url, 1))
+        assertEquals(1, env.auth.stored.first().permission)
+
+        repo.updateProfile(UserDTO(idx = 2, username = "bob", permission = 50), SessionKey.of(url, 2))
+        assertEquals(50, (repo.state.first { it is SessionState.SignedIn && it.permission == 50 } as SessionState.SignedIn).permission)
+    }
+
+    @Test
+    fun signOut_onlyIfToken_ignoresOtherToken() = runTest {
+        val env = env()
+        val repo = env.session()
+        repo.state.first { it != SessionState.Loading }
+        repo.signIn("https://logs.example.com/", "Bearer new", UserDTO(idx = 2, username = "bob", permission = 1))
+
+        assertFalse(repo.signOut(onlyIfToken = "Bearer old"))
+        assertEquals("Bearer new", repo.currentToken())
+
+        assertTrue(repo.signOut(onlyIfToken = "Bearer new"))
+        assertNull(repo.currentToken())
     }
 
     @Test

@@ -24,6 +24,8 @@ class MemberStore internal constructor(
     private val sessions: StateFlow<SessionState>,
     private val store: CacheStore,
     scope: CoroutineScope,
+    /** Reloaded when the signed-in user edits their own account. */
+    private val account: AccountStore,
     clock: () -> Long,
 ) {
     @Inject
@@ -32,7 +34,8 @@ class MemberStore internal constructor(
         sessionRepository: SessionRepository,
         store: CacheStore,
         @ApplicationScope scope: CoroutineScope,
-    ) : this(api, sessionRepository.state, store, scope, System::currentTimeMillis)
+        account: AccountStore,
+    ) : this(api, sessionRepository.state, store, scope, account, System::currentTimeMillis)
 
     private val serializer = ListSerializer(UserDTO.serializer())
 
@@ -51,12 +54,24 @@ class MemberStore internal constructor(
             .toMember()
     }
 
-    /** Null arguments are left unchanged. */
-    suspend fun update(idx: Int, username: String?, password: String?, permission: Int?): Result<Member> = mutate { token ->
-        api.updateUser(token, idx, UserUpdateParams(username = username, permission = permission, password = password))
-            .let { requireData(it.success, it.message, it.error_code, it.data) }
-            .toMember()
+    /**
+     * Null arguments are left unchanged. Editing your own account also reloads
+     * [AccountStore.me], which updates the session's username and role.
+     */
+    suspend fun update(idx: Int, username: String?, password: String?, permission: Int?): Result<Member> {
+        val session = sessions.value as? SessionState.SignedIn
+        return mutate { token ->
+            api.updateUser(token, idx, UserUpdateParams(username = username, permission = permission, password = password))
+                .let { requireData(it.success, it.message, it.error_code, it.data) }
+                .toMember()
+        }.onSuccess {
+            // Without a known idx it may be our own account: reloading the profile is cheap.
+            if (session != null && (session.userIdx == null || session.userIdx == idx)) account.refresh()
+        }
     }
+
+    /** Pull-to-refresh: fetches now, even when fresh, and returns once done with the outcome. */
+    suspend fun refresh(): Result<Unit> = sessions.refreshSignedIn { resource.refresh(it) }
 
     suspend fun delete(idx: Int): Result<Unit> = mutate { token ->
         api.deleteUser(token, idx).let { requireSuccess(it.success, it.message, it.error_code) }

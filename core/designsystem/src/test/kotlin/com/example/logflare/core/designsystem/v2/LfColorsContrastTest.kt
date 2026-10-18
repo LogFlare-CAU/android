@@ -2,6 +2,7 @@ package com.example.logflare.core.designsystem.v2
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.example.logflare.core.designsystem.v2.components.uncheckedCheckBoxBorder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -42,6 +43,10 @@ class LfColorsContrastTest {
     @Test fun iconOnSurface() = check("icon/surface", { it.icon }, { it.surface }, 3.0)
     @Test fun onCriticalOnCritical() = check("onCritical/critical", { it.onCritical }, { it.critical }, 4.5)
     @Test fun onDisabledOnDisabled() = check("onDisabled/disabled", { it.onDisabled }, { it.disabled }, 3.0)
+
+    /** A control's boundary needs 3:1 (WCAG 1.4.11); the unchecked box has nothing else. */
+    @Test fun uncheckedCheckBoxBorderOnSurface() =
+        check("uncheckedCheckBoxBorder/surface", { uncheckedCheckBoxBorder(it) }, { it.surface }, 3.0)
 
     @Test
     fun lightValuesMatchSpec() {

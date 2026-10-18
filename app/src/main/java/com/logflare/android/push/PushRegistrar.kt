@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -32,6 +33,9 @@ interface PushTokenSource {
     /** Loads the FCM config (server, else the persisted copy) and initializes Firebase. */
     suspend fun ensureFirebase(): Boolean
 
+    /** Initializes Firebase from the persisted FCM config only, without calling the server. */
+    suspend fun ensureFirebaseFromCache(): Boolean
+
     /** This device's FCM token, or null when Firebase isn't ready. */
     suspend fun getFcmTokenOrNull(): String?
 }
@@ -43,12 +47,17 @@ interface PushTokenSource {
  * After [start], every new sign-in (new [SessionKey] or new bearer) registers once (HTTP 200 and 409 "already
  * registered" both count). A token refresh ([onNewToken]) re-registers. [unregister] runs before
  * sign-out, while the session's bearer is still available to the auth interceptor.
+ *
+ * The accepted (session, FCM token) pair is persisted ([PushRegistrationStore]): after a process
+ * restart the same pair is not sent again (no `GET /fcm/data`, no `POST /fcm/token`). It is
+ * forgotten on [unregister] and whenever the session signs out, so the next sign-in registers.
  */
 @Singleton
 class PushRegistrar internal constructor(
     private val sessions: StateFlow<SessionState>,
     private val api: LogflareApi,
     private val tokens: PushTokenSource,
+    private val registrations: PushRegistrationStore,
     private val scope: CoroutineScope,
 ) {
     @Inject
@@ -56,8 +65,9 @@ class PushRegistrar internal constructor(
         sessionRepository: SessionRepository,
         api: LogflareApi,
         deviceRepository: DeviceRepository,
+        registrations: DataStorePushRegistrationStore,
         @ApplicationScope scope: CoroutineScope,
-    ) : this(sessionRepository.state, api, deviceRepository, scope)
+    ) : this(sessionRepository.state, api, deviceRepository, registrations, scope)
 
     private val started = AtomicBoolean(false)
 
@@ -87,14 +97,21 @@ class PushRegistrar internal constructor(
     fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
-            sessions.map { it as? SessionState.SignedIn }
+            // Loading is not "signed out": it must not forget the persisted registration.
+            sessions.filter { it != SessionState.Loading }
+                .map { it as? SessionState.SignedIn }
                 // A new sign-in has a new bearer even for the same key, so it registers again
                 // even if the SignedOut in between was conflated away.
                 .distinctUntilChangedBy { it?.let { s -> s.key to s.token } }
                 .collect { session ->
                     registration.getAndSet(null)?.cancel()
                     _registeredFor.value = null
-                    if (session != null) registration.set(scope.launch { registerCurrentToken(session) })
+                    if (session != null) {
+                        registration.set(scope.launch { registerCurrentToken(session) })
+                    } else {
+                        // Also after a local sign-out (401), which never unregisters.
+                        lock.withLock { forgetRegistration() }
+                    }
                 }
         }
     }
@@ -114,6 +131,8 @@ class PushRegistrar internal constructor(
         // A registration landing after the DELETE would leave the device registered.
         registration.getAndSet(null)?.cancelAndJoin()
         lock.withLock {
+            // Signing out: the next sign-in registers again, whatever the server answers now.
+            forgetRegistration()
             val token = registeredToken ?: tokens.getFcmTokenOrNull() ?: return@withLock false
             val removed = attempt { api.unregisterFcmToken(FcmTokenParams(token)).success }.getOrDefault(false)
             if (removed) {
@@ -125,14 +144,40 @@ class PushRegistrar internal constructor(
     } ?: false
 
     private suspend fun registerCurrentToken(session: SessionState.SignedIn) {
+        if (restoreRegistration(session)) return
         if (!tokens.ensureFirebase()) return
         val token = tokens.getFcmTokenOrNull() ?: return
         register(session, token)
     }
 
+    /**
+     * The persisted registration is for [session] and this device's current FCM token (e.g. after
+     * a process restart): the server already has it, so nothing is sent. Returns whether so.
+     */
+    private suspend fun restoreRegistration(session: SessionState.SignedIn): Boolean {
+        val last = attempt { registrations.get() }.getOrNull() ?: return false
+        if (last.session != session.key || !tokens.ensureFirebaseFromCache()) return false
+        val token = tokens.getFcmTokenOrNull() ?: return false
+        if (token != last.fcmToken) return false
+        lock.withLock {
+            if (isCurrent(session)) {
+                registeredToken = token
+                _registeredFor.value = session.key
+            }
+        }
+        return true
+    }
+
+    private suspend fun forgetRegistration() {
+        attempt { registrations.set(null) }
+    }
+
+    /** The session may have changed while Firebase was getting ready. */
+    private fun isCurrent(session: SessionState.SignedIn): Boolean =
+        (sessions.value as? SessionState.SignedIn)?.key == session.key && session.token != closedBearer
+
     private suspend fun register(session: SessionState.SignedIn, token: String) = lock.withLock {
-        // The session may have changed while Firebase was getting ready.
-        if ((sessions.value as? SessionState.SignedIn)?.key != session.key || session.token == closedBearer) return@withLock
+        if (!isCurrent(session)) return@withLock
         val accepted = attempt { api.registerFcmToken(session.token, FcmTokenParams(token)) }
             .fold(
                 onSuccess = { it.success || it.errorCode == HTTP_CONFLICT },
@@ -141,6 +186,7 @@ class PushRegistrar internal constructor(
         if (accepted) {
             registeredToken = token
             _registeredFor.value = session.key
+            attempt { registrations.set(PushRegistration(session.key, token)) }
         }
     }
 

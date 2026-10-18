@@ -73,11 +73,10 @@ class CachedResource<T>(
 
     /**
      * Fetches now (joining an in-flight fetch if any) and updates the cache and every active
-     * [stream] of [session]. Failures do not throw; they surface as `error` on those streams.
+     * [stream] of [session]. Returns once the fetch is done, with its outcome; failures do not
+     * throw and also surface as `error` on those streams.
      */
-    suspend fun refresh(session: SessionKey) {
-        fetchShared(session).await()
-    }
+    suspend fun refresh(session: SessionKey): Result<Unit> = fetchShared(session).await().map { }
 
     /** Waits for the fetch of [session] that is running now, if any, without starting one. */
     suspend fun awaitInFlight(session: SessionKey) {

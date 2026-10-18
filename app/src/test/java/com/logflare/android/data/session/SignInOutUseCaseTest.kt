@@ -13,9 +13,11 @@ import com.logflare.android.data.DataStoreBaseUrlProvider
 import com.logflare.android.data.ServerConfigRepository
 import com.logflare.android.data.ThemePreference
 import com.logflare.android.data.ThemeRepository
+import com.logflare.android.data.store.AccountStore
 import com.logflare.android.data.store.FakeLogflareApi
 import com.logflare.android.data.store.FileCacheStore
 import com.logflare.android.push.HistoryEntry
+import com.logflare.android.push.InMemoryPushRegistrationStore
 import com.logflare.android.push.NotificationHistory
 import com.logflare.android.push.PushRegistrar
 import com.logflare.android.push.PushTokenSource
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.currentTime
@@ -38,6 +41,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -61,6 +65,7 @@ class SignInOutUseCaseTest {
     private class FakeTokens : PushTokenSource {
         var ready: suspend () -> Boolean = { true }
         override suspend fun ensureFirebase(): Boolean = ready()
+        override suspend fun ensureFirebaseFromCache(): Boolean = ready()
         override suspend fun getFcmTokenOrNull(): String? = "fcm-1"
     }
 
@@ -76,6 +81,7 @@ class SignInOutUseCaseTest {
         val registrar: PushRegistrar,
         val signOut: SignOutUseCase,
         val signIn: SignInUseCase,
+        val unauthorized: UnauthorizedSignOut,
     )
 
     /** Delivers every value of [delegate] [delayMs] late, like a slow session-state collector. */
@@ -90,18 +96,23 @@ class SignInOutUseCaseTest {
             scope = backgroundScope,
             produceFile = { File(tmp.root, "$name.preferences_pb") },
         )
-        val auth = AuthRepository(if (authDelayMs > 0) DelayedStore(store("auth"), authDelayMs) else store("auth"))
         val serverConfig = ServerConfigRepository(store("config"))
+        val auth = AuthRepository(
+            if (authDelayMs > 0) DelayedStore(store("auth"), authDelayMs) else store("auth"),
+            serverConfig.serverUrl,
+        )
         val baseUrl = DataStoreBaseUrlProvider(serverConfig, backgroundScope)
         val session = SessionRepository(auth, serverConfig, baseUrl, backgroundScope)
         val recent = RecentServersRepository(store("recent"))
         val cache = FileCacheStore(File(tmp.root, "cache"), Json, StandardTestDispatcher(testScheduler))
         val history = NotificationHistory(session.state, cache)
         val tokens = FakeTokens()
-        val registrar = PushRegistrar(session.state, api, tokens, backgroundScope)
-        val signOut = SignOutUseCase(session, registrar, history, cache)
+        val registrar = PushRegistrar(session.state, api, tokens, InMemoryPushRegistrationStore(), backgroundScope)
+        val localSignOut = LocalSignOut(session, history, cache)
+        val signOut = SignOutUseCase(session, registrar, localSignOut)
         val signIn = SignInUseCase(api, session, baseUrl, recent, signOut)
-        return Env(auth, serverConfig, baseUrl, session, recent, cache, history, tokens, registrar, signOut, signIn)
+        val unauthorized = UnauthorizedSignOut(session, { localSignOut }, backgroundScope)
+        return Env(auth, serverConfig, baseUrl, session, recent, cache, history, tokens, registrar, signOut, signIn, unauthorized)
     }
 
     private suspend fun Env.signedIn(): SessionState.SignedIn =
@@ -318,6 +329,74 @@ class SignInOutUseCaseTest {
         assertEquals("http://other.example.com/", bob.serverUrl)
         assertEquals(1, api.count("unregisterFcmToken"))
         assertNull(env.cache.read(alice.key, "projects", String.serializer()))
+    }
+
+    @Test
+    fun unauthorized_forAnotherToken_isIgnored() = runTest {
+        val env = env()
+        env.signIn("logs.example.com", "alice", "pw")
+        val alice = env.signedIn()
+        env.cache.write(alice.key, "projects", "cached", String.serializer(), fetchedAt = 1L)
+
+        // A late 401 for a previous session's token, and one for a request without a token.
+        env.unauthorized.onUnauthorized("Bearer jwt-previous")
+        env.unauthorized.onUnauthorized(null)
+        advanceUntilIdle()
+
+        assertEquals("Bearer jwt-alice", env.session.currentToken())
+        assertEquals("cached", env.cache.read(alice.key, "projects", String.serializer())?.value)
+    }
+
+    @Test
+    fun unauthorized_forCurrentToken_signsOutLocally() = runTest {
+        val env = env()
+        env.registrar.start()
+        env.signIn("logs.example.com", "alice", "pw")
+        val alice = env.signedIn()
+        runCurrent()
+        env.history.add(entry(1), alice.key)
+        env.cache.write(alice.key, "projects", "cached", String.serializer(), fetchedAt = 1L)
+
+        env.unauthorized.onUnauthorized("Bearer jwt-alice")
+        // The auth store writes off the test scheduler: wait for the sign-out, then the clears.
+        env.session.state.first { it == SessionState.SignedOut }
+        advanceUntilIdle()
+
+        assertNull(env.auth.token.first())
+        assertNull(env.cache.read(alice.key, "projects", String.serializer()))
+        assertNull(env.cache.read(alice.key, "notification-history", HISTORY))
+        assertEquals("the server already rejected the token: no DELETE", 0, api.count("unregisterFcmToken"))
+    }
+
+    @Test
+    fun meFetch_withNewRole_updatesSessionState_keepsKey() = runTest {
+        val env = env()
+        env.signIn("logs.example.com", "alice", "pw")
+        val before = env.signedIn()
+        assertEquals(100, before.permission)
+        // Same wiring as AccountStore's @Inject constructor.
+        val account = AccountStore(api, env.session.state, env.cache, backgroundScope, { key, user -> env.session.updateProfile(user, key) }) { 0L }
+        api.me = { UserResponse(true, "ok", data = UserDTO(7, "alice", 1)) }
+
+        assertTrue(account.refresh().isSuccess)
+
+        val after = env.session.state.value as SessionState.SignedIn
+        assertEquals(1, after.permission)
+        assertEquals("alice", after.username)
+        assertEquals(before.key, after.key)
+    }
+
+    @Test
+    fun localSignOut_onlyIfToken_keepsNewerSession() = runTest {
+        val env = env()
+        env.signIn("logs.example.com", "alice", "pw")
+        val alice = env.signedIn()
+        env.cache.write(alice.key, "projects", "cached", String.serializer(), fetchedAt = 1L)
+
+        assertFalse(LocalSignOut(env.session, env.history, env.cache)(onlyIfToken = "Bearer jwt-previous"))
+
+        assertEquals("Bearer jwt-alice", env.session.currentToken())
+        assertEquals("cached", env.cache.read(alice.key, "projects", String.serializer())?.value)
     }
 
     private companion object {

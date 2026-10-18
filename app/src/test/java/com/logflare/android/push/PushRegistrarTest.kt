@@ -32,18 +32,24 @@ class PushRegistrarTest {
         var ready: suspend () -> Boolean = { true }
         var token: suspend () -> String? = { "fcm-1" }
         var ensureCalls = 0
+        var cachedReady: suspend () -> Boolean = { true }
 
         override suspend fun ensureFirebase(): Boolean {
             ensureCalls++
             return ready()
         }
 
+        override suspend fun ensureFirebaseFromCache(): Boolean = cachedReady()
+
         override suspend fun getFcmTokenOrNull(): String? = token()
     }
 
     private val tokens = FakeTokens()
 
-    private fun TestScope.registrar() = PushRegistrar(sessions, api, tokens, backgroundScope)
+    /** Survives "process restarts": shared by every registrar a test creates. */
+    private val saved = InMemoryPushRegistrationStore()
+
+    private fun TestScope.registrar() = PushRegistrar(sessions, api, tokens, saved, backgroundScope)
 
     @Test
     fun registrar_registersOncePerSession() = runTest {
@@ -201,6 +207,72 @@ class PushRegistrarTest {
         tokens.token = { null }
         api.unregisterFcm = { RemovedResponse(true, "ok") }
         assertFalse("no token known: nothing to unregister", registrar.unregister())
+    }
+
+    @Test
+    fun restart_withSameSessionAndToken_makesNoCalls() = runTest {
+        registrar().start()
+        sessions.value = signedIn(A)
+        runCurrent()
+        assertEquals(1, api.count("registerFcmToken"))
+        assertEquals(PushRegistration(A, "fcm-1"), saved.get())
+
+        // Process restart: a new registrar with the same persisted pair.
+        tokens.ensureCalls = 0
+        val restarted = registrar()
+        restarted.start()
+        runCurrent()
+
+        assertEquals("no GET /fcm/data", 0, tokens.ensureCalls)
+        assertEquals("no POST /fcm/token", 1, api.count("registerFcmToken"))
+        assertEquals(A, restarted.registeredFor.value)
+
+        // Firebase rotates the token: registered as usual.
+        restarted.onNewToken("fcm-2")
+        assertEquals(2, api.count("registerFcmToken"))
+        assertEquals(PushRegistration(A, "fcm-2"), saved.get())
+    }
+
+    @Test
+    fun restart_withChangedFcmToken_registers() = runTest {
+        saved.set(PushRegistration(A, "fcm-old"))
+        val registrar = registrar()
+        registrar.start()
+        sessions.value = signedIn(A)
+        runCurrent()
+
+        assertEquals(1, tokens.ensureCalls)
+        assertEquals(listOf("fcm-1"), api.fcmTokens)
+        assertEquals(PushRegistration(A, "fcm-1"), saved.get())
+    }
+
+    @Test
+    fun restart_forAnotherSession_registers() = runTest {
+        saved.set(PushRegistration(B, "fcm-1"))
+        registrar().start()
+        sessions.value = signedIn(A)
+        runCurrent()
+
+        assertEquals(1, api.count("registerFcmToken"))
+        assertEquals(PushRegistration(A, "fcm-1"), saved.get())
+    }
+
+    @Test
+    fun signOutAndUnregister_forgetTheRegistration() = runTest {
+        val registrar = registrar()
+        registrar.start()
+        sessions.value = signedIn(A)
+        runCurrent()
+        assertTrue(registrar.unregister())
+        assertNull(saved.get())
+
+        sessions.value = signedIn(A, token = "Bearer a2")
+        runCurrent()
+        assertEquals(PushRegistration(A, "fcm-1"), saved.get())
+        // A local sign-out (401) never unregisters, but signing in again must still register.
+        sessions.value = SessionState.SignedOut
+        runCurrent()
+        assertNull(saved.get())
     }
 
     private companion object {

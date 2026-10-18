@@ -83,6 +83,15 @@ class ProjectStore internal constructor(
             }
         }
 
+    /**
+     * Pull-to-refresh: fetches now, even when the cache is fresh, and returns once done with the
+     * outcome. Without [projectId]: the project list and the all-projects summary; with it:
+     * that project's summary.
+     */
+    suspend fun refresh(projectId: Int? = null): Result<Unit> = sessions.refreshSignedIn { session ->
+        if (projectId == null) projectsResource.refresh(session) else summaryResource(projectId).refresh(session)
+    }
+
     suspend fun create(name: String): Result<ProjectWithToken> = mutate {
         val dto = api.createProject(it, ProjectCreateParams(name))
             .let { r -> requireData(r.success, r.message, r.error_code, r.data) }

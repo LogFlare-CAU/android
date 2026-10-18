@@ -2,8 +2,10 @@ package com.example.logflare.core.network
 
 /**
  * Invoked when an authenticated API response returns HTTP 401.
- * Typically clears the local session so the UI can route to login.
+ *
+ * [rejectedAuthorization] is the `Authorization` header the rejected request carried (null when
+ * it had none), so the handler can ignore a late 401 for a token that is no longer current.
  */
 fun interface HttpUnauthorizedAction {
-    fun onUnauthorized()
+    fun onUnauthorized(rejectedAuthorization: String?)
 }

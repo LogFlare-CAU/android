@@ -6,6 +6,7 @@ import com.example.logflare.core.model.FcmConfigResponse
 import com.example.logflare.core.model.FcmTokenParams
 import com.example.logflare.core.model.FcmTokenResponse
 import com.example.logflare.core.model.LogEventDTO
+import com.example.logflare.core.model.LogEventDetailDTO
 import com.example.logflare.core.model.LogEventDetailResponse
 import com.example.logflare.core.model.LogEventPageDTO
 import com.example.logflare.core.model.LogEventPageResponse
@@ -194,7 +195,13 @@ class FakeLogflareApi : LogflareApi {
     override suspend fun getErrors(bearer: String, projectId: Int?, limit: Int, offset: Int, sortby: String?): ErrorSequenceResponse = TODO()
     override suspend fun postError(projectKey: String, projectName: String, body: ErrorParams): Response<Unit> = TODO()
     override suspend fun getProjectLogFile(bearer: String, projectId: Int, logfileid: Int, limit: Int, offset: Int, sortBy: String?): StringSequenceResponse = TODO()
-    override suspend fun getLogEvent(id: Int): LogEventDetailResponse = TODO()
+    var eventDetail: suspend (Int) -> LogEventDetailResponse = { LogEventDetailResponse(true, "ok", data = detail(it)) }
+
+    override suspend fun getLogEvent(id: Int): LogEventDetailResponse {
+        record("getLogEvent")
+        return eventDetail(id)
+    }
+
     override suspend fun getProjectToken(projectId: Int): ProjectResponseWithToken = TODO()
 
     companion object {
@@ -224,6 +231,21 @@ class FakeLogflareApi : LogflareApi {
             occurrences = 2,
             firstSeen = "2026-10-18T08:00:00.5",
             lastSeen = "2026-10-18T09:00:00",
+        )
+
+        fun detail(id: Int) = LogEventDetailDTO(
+            id = id,
+            projectId = 1,
+            logfileName = "app.log",
+            errortype = "RuntimeError",
+            message = "boom $id",
+            level = "ERROR",
+            timestamp = "2026-10-18T09:00:00",
+            occurrences = 2,
+            firstSeen = "2026-10-18T08:00:00",
+            lastSeen = "2026-10-18T09:00:00",
+            occurredAt = "2026-10-18T09:00:00",
+            rowLevel = "ERROR",
         )
 
         fun page(vararg ids: Int, cursor: String? = null) =

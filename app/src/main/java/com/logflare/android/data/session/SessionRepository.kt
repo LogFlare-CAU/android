@@ -6,6 +6,7 @@ import com.logflare.android.data.AuthRepository
 import com.logflare.android.data.DataStoreBaseUrlProvider
 import com.logflare.android.data.ServerConfigRepository
 import com.logflare.android.data.StoredAuth
+import com.logflare.android.data.store.attempt
 import com.logflare.android.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -67,8 +68,15 @@ class SessionRepository @Inject constructor(
             combine(
                 serverConfig.serverUrl.catch { emit(null) },
                 auth.stored.catch { emit(StoredAuth(null, null, null, null)) },
-                ::toState,
-            ).collect { _state.value = it }
+            ) { url, stored -> url to stored }
+                .collect { (url, stored) ->
+                    val state = toState(url, stored)
+                    _state.value = state
+                    // Installs from before session keys: the key derived now is kept from here on.
+                    if (state is SessionState.SignedIn && stored.sessionKey == null) {
+                        attempt { auth.ensureSessionKey(state.token, state.key) }
+                    }
+                }
         }
     }
 
@@ -78,18 +86,17 @@ class SessionRepository @Inject constructor(
      */
     suspend fun signIn(serverUrl: String, token: String, user: UserDTO) {
         switchServer(serverUrl)
-        auth.setSession(token, user)
-        awaitSignedIn(token, SessionKey.of(serverUrl, user.idx))
+        awaitSignedIn(token, auth.setSession(token, user))
     }
 
     /**
-     * Sign-in whose profile couldn't be loaded: the session key falls back to [username] until
-     * the profile is known. [token] must already include the `Bearer ` prefix.
+     * Sign-in whose profile couldn't be loaded: the session key is derived from [username] and
+     * stays for the whole session, even when the profile arrives later. [token] must already
+     * include the `Bearer ` prefix.
      */
     suspend fun signIn(serverUrl: String, token: String, username: String) {
         switchServer(serverUrl)
-        auth.setTokenAndUsername(token, username)
-        awaitSignedIn(token, SessionKey.of(serverUrl, null, username))
+        awaitSignedIn(token, auth.setTokenAndUsername(token, username))
     }
 
     private suspend fun switchServer(serverUrl: String) {
@@ -98,17 +105,32 @@ class SessionRepository @Inject constructor(
         baseUrlProvider.setBaseUrl(serverUrl)
     }
 
-    suspend fun updateProfile(user: UserDTO) {
-        auth.setUserProfile(user)
+    /**
+     * Refreshes username, idx and permission of the signed-in session; the session key never
+     * changes with the profile. With [session], the update is dropped unless that session is
+     * still the stored one (e.g. a `/me` answer that arrives after an account switch).
+     */
+    suspend fun updateProfile(user: UserDTO, session: SessionKey? = null) {
+        if (!auth.setUserProfile(user, session)) return
+        // Returns once [state] shows the profile, so callers can read it right away.
+        awaitState {
+            it !is SessionState.SignedIn ||
+                it.userIdx == user.idx && it.permission == user.permission && it.username == user.username
+        }
     }
 
     /**
      * Clears the token and user identity; the server URL is kept for the next login. Returns once
      * [state] has left [SessionState.SignedIn], so no request after it carries the old token.
+     *
+     * With [onlyIfToken], signs out only while that is still the stored token (checked in the
+     * same write), so a late 401 for a previous token can't end a newer session. Returns whether
+     * a session was signed out.
      */
-    suspend fun signOut() {
-        auth.clearToken()
-        awaitState { it !is SessionState.SignedIn }
+    suspend fun signOut(onlyIfToken: String? = null): Boolean {
+        val cleared = auth.clearTokenIf(onlyIfToken)
+        if (cleared || onlyIfToken == null) awaitState { it !is SessionState.SignedIn }
+        return cleared
     }
 
     private suspend fun awaitSignedIn(token: String, key: SessionKey) =
@@ -138,7 +160,7 @@ class SessionRepository @Inject constructor(
             username = username,
             userIdx = stored.userIdx,
             permission = stored.permission,
-            key = SessionKey.of(url, stored.userIdx, username),
+            key = stored.sessionKey?.let(::SessionKey) ?: SessionKey.of(url, stored.userIdx, username),
         )
     }
 }

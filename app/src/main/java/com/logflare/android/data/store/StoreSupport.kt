@@ -51,6 +51,17 @@ internal fun <T> StateFlow<SessionState>.whileSignedIn(open: (SessionKey) -> Flo
         .distinctUntilChanged()
         .flatMapLatest { key -> if (key == null) flowOf(Resource(null, false, null, null)) else open(key) }
 
+/**
+ * Pull-to-refresh: runs [refresh] for the signed-in session and returns its outcome, or a
+ * [NotSignedInException] failure when signed out.
+ */
+internal suspend fun StateFlow<SessionState>.refreshSignedIn(
+    refresh: suspend (SessionKey) -> Result<Unit>,
+): Result<Unit> {
+    val session = (value as? SessionState.SignedIn)?.key ?: return Result.failure(NotSignedInException())
+    return refresh(session)
+}
+
 /** The current session; throws [NotSignedInException] when signed out. */
 internal fun StateFlow<SessionState>.signedIn(): SessionState.SignedIn =
     value as? SessionState.SignedIn ?: throw NotSignedInException()

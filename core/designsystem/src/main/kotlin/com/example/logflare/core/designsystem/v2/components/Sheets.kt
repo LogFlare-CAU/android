@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -41,6 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.v2.Lf
+import com.example.logflare.core.designsystem.v2.LfColors
 import kotlinx.coroutines.launch
 
 /** One row in a [SelectionSheet] or [MultiSelectSheet]. */
@@ -285,6 +287,9 @@ private fun <T> SheetRow(
     }
 }
 
+/** Border of an unchecked box: the box's only boundary, so it must reach 3:1 on the surface. */
+internal fun uncheckedCheckBoxBorder(colors: LfColors): Color = colors.icon
+
 @Composable
 private fun CheckBox(checked: Boolean, locked: Boolean) {
     val shape = RoundedCornerShape(7.dp)
@@ -295,7 +300,7 @@ private fun CheckBox(checked: Boolean, locked: Boolean) {
         if (checked) {
             box.background(if (locked) Lf.colors.icon else Lf.colors.primaryAction)
         } else {
-            box.background(Lf.colors.surface).border(2.dp, Lf.colors.disabled, shape)
+            box.background(Lf.colors.surface).border(2.dp, uncheckedCheckBoxBorder(Lf.colors), shape)
         },
         contentAlignment = Alignment.Center,
     ) {
