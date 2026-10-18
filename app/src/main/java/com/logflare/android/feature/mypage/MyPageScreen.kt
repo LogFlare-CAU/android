@@ -53,7 +53,7 @@ fun MyPageScreen(
     onBack: () -> Unit = {},
     onLogout: () -> Unit,
     onAddMember: () -> Unit = {},
-    onEditMember: (String) -> Unit = {},
+    onEditMember: (idx: Int) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MyPageViewModel = hiltViewModel(),
     themeViewModel: ThemeViewModel = hiltViewModel(),
@@ -79,7 +79,9 @@ fun MyPageScreen(
         themePreference = themePreference,
         onLogout = onLogout,
         onAddMember = onAddMember,
-        onEditMember = onEditMember,
+        onEditMember = { username ->
+            uiState.members.firstOrNull { it.username == username }?.let { onEditMember(it.idx) }
+        },
         onSelectLogLevel = viewModel::selectLogLevel,
         onSelectTheme = themeViewModel::setPreference,
         modifier = modifier,

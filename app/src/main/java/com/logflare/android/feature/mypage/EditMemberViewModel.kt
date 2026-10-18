@@ -7,9 +7,10 @@ import com.example.logflare.core.model.UserDTO
 import com.logflare.android.enums.UserPermission
 import com.logflare.android.feature.usecase.AuthMeUseCase
 import com.logflare.android.feature.usecase.DeleteUserUseCase
-import com.logflare.android.feature.usecase.GetUserUseCase
+import com.logflare.android.feature.usecase.GetUsersUseCase
 import com.logflare.android.feature.usecase.UpdateUserUseCase
 import com.logflare.android.ui.component.common.MemberFieldStatus
+import com.logflare.android.ui.nav.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -41,15 +42,16 @@ data class EditMemberUiState(
 class EditMemberViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val authMeUseCase: AuthMeUseCase,
-    private val getUserUseCase: GetUserUseCase,
+    private val getUsersUseCase: GetUsersUseCase,
     private val updateUserUseCase: UpdateUserUseCase,
     private val deleteUserUseCase: DeleteUserUseCase
 ) : ViewModel() {
 
-    private val requestedUsername: String = savedStateHandle.get<String>("username") ?: ""
+    /** The `my/members/{idx}` route names the member by idx; the old screen loads it from the list. */
+    private val requestedIdx: Int = checkNotNull(savedStateHandle[Destinations.MemberIdxArg])
     private var requestedUser: UserDTO? = null
     private var me: UserDTO? = null
-    private val _ui = MutableStateFlow(EditMemberUiState(originalUsername = requestedUsername))
+    private val _ui = MutableStateFlow(EditMemberUiState())
     val ui: StateFlow<EditMemberUiState> = _ui
 
     private var usernameValidationJob: Job? = null
@@ -65,7 +67,7 @@ class EditMemberViewModel @Inject constructor(
 
     private suspend fun initUsers() {
         _ui.update { it.copy(isLoading = true) }
-        requestedUser = getUserUseCase(requestedUsername)
+        requestedUser = getUsersUseCase()?.firstOrNull { it.idx == requestedIdx }
         me = authMeUseCase().getOrNull()
         _ui.update { it.copy(isLoading = false) }
     }

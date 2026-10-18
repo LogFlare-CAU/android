@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.logflare.android.R
 import com.example.logflare.core.designsystem.AppTheme
 import com.logflare.android.ui.VisualQaTags
@@ -32,7 +34,7 @@ fun LogDetailScreen(
     onBack: () -> Unit,
     vm: LogDetailViewModel = hiltViewModel(),
 ) {
-    val log = vm.getLogDetail()
+    val log by vm.log.collectAsStateWithLifecycle()
     LogDetailScreenContent(
         onBack = onBack,
         log = log,

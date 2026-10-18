@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">LogFlare</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_logs">Logs</string>
+    <string name="tab_projects">Projects</string>
+    <string name="tab_my">My</string>
 </resources>

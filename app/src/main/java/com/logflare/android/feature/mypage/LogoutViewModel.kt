@@ -2,9 +2,9 @@ package com.logflare.android.feature.mypage
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.logflare.android.data.session.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -15,8 +15,11 @@ data class LogoutUiState(
     val errorMessage: String? = null
 )
 
+/** Old confirm screen, kept until Task 11; signs out through [SignOutUseCase] like every path. */
 @HiltViewModel
-class LogoutViewModel @Inject constructor() : ViewModel() {
+class LogoutViewModel @Inject constructor(
+    private val signOut: SignOutUseCase,
+) : ViewModel() {
 
     private val _ui = MutableStateFlow(LogoutUiState())
     val ui: StateFlow<LogoutUiState> = _ui
@@ -27,7 +30,7 @@ class LogoutViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _ui.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                delay(800)
+                signOut()
                 _ui.update { LogoutUiState() }
                 onSuccess()
             } catch (e: Exception) {

@@ -1,33 +1,29 @@
 package com.logflare.android
 
-import android.os.Bundle
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.viewModels
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.logflare.core.designsystem.v2.LogFlareTheme
 import com.logflare.android.data.ThemePreference
 import com.logflare.android.data.session.SessionState
-import com.logflare.android.feature.auth.LoginScreen
-import com.logflare.android.feature.main.MainScaffold
 import com.logflare.android.ui.VisualQaAppRoot
-import com.logflare.android.ui.navigation.Route
+import com.logflare.android.ui.nav.AppNavHost
 import com.logflare.android.ui.theme.LogflareandroidTheme
 import com.logflare.android.viewmodel.AppViewModel
 import com.logflare.android.viewmodel.ThemeViewModel
@@ -42,14 +38,17 @@ class MainActivity : Hilt_MainActivity() {
 
     private val appViewModel: AppViewModel by viewModels()
 
+    /** Error id of a tapped push notification, until the nav host has handled it. */
+    private var deepLinkErrorId by mutableStateOf<Int?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Keep the splash up until the stored session is read, so the start destination is decided once.
         installSplashScreen().setKeepOnScreenCondition {
             appViewModel.session.value is SessionState.Loading
         }
         super.onCreate(savedInstanceState)
-        val projectId = intent.getIntExtra("projectid", -1).takeIf { it != -1 }
-        val errorId = intent.getIntExtra("errorid", -1).takeIf { it != -1 }
+        // A recreated activity restores its back stack, which already holds the link if it was opened.
+        if (savedInstanceState == null) deepLinkErrorId = intent.deepLinkErrorId()
         enableEdgeToEdge()
 
         // Request notification permission on Android 13+
@@ -65,88 +64,55 @@ class MainActivity : Hilt_MainActivity() {
 
         setContent {
             val themeViewModel: ThemeViewModel = hiltViewModel()
-            val preference by themeViewModel.preference.collectAsState()
+            val preference by themeViewModel.preference.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
             val darkTheme = when (preference) {
                 ThemePreference.SYSTEM -> systemDark
                 ThemePreference.LIGHT -> false
                 ThemePreference.DARK -> true
             }
-            LogflareandroidTheme(darkTheme = darkTheme) {
-                VisualQaAppRoot {
-                    App(
-                        vm = appViewModel,
-                        intentProjectId = projectId,
-                        intentErrorId = errorId,
-                        themeViewModel = themeViewModel,
-                    )
+            // The legacy theme stays inside until the last old screen is gone (Task 12).
+            LogFlareTheme(darkTheme = darkTheme) {
+                LogflareandroidTheme(darkTheme = darkTheme) {
+                    VisualQaAppRoot {
+                        App(
+                            vm = appViewModel,
+                            deepLinkErrorId = deepLinkErrorId,
+                            onDeepLinkConsumed = { deepLinkErrorId = null },
+                        )
+                    }
                 }
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.deepLinkErrorId()?.let { deepLinkErrorId = it }
+    }
 }
+
+/** The `errorid` extra of a push tap; none when relaunched from Recents (stale extras). */
+private fun Intent.deepLinkErrorId(): Int? {
+    if (flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
+    return getIntExtra(EXTRA_ERROR_ID, 0).takeIf { it > 0 }
+}
+
+private const val EXTRA_ERROR_ID = "errorid"
 
 @Composable
 fun App(
-    vm: AppViewModel = hiltViewModel(),
-    themeViewModel: ThemeViewModel = hiltViewModel(),
-    intentProjectId: Int? = null,
-    intentErrorId: Int? = null
+    vm: AppViewModel,
+    deepLinkErrorId: Int?,
+    onDeepLinkConsumed: () -> Unit,
 ) {
-    val session by vm.session.collectAsState()
+    val session by vm.session.collectAsStateWithLifecycle()
     // The splash screen covers Loading; build nothing until the stored session is known.
     if (session is SessionState.Loading) return
-    val signedIn = session is SessionState.SignedIn
-    val navController = rememberNavController()
-    // Decided once from the state read off disk — no redirect on first composition.
-    val start = remember { if (signedIn) Route.Main.path else Route.Auth.path }
-
-    // Later transitions only (logout, 401 clearing the token, login from another path).
-    LaunchedEffect(signedIn) {
-        val currentRoute = navController.currentDestination?.route ?: return@LaunchedEffect
-        if (!signedIn && currentRoute != Route.Auth.path) {
-            navController.navigate(Route.Auth.path) {
-                popUpTo(Route.Main.path) { inclusive = true }
-                launchSingleTop = true
-            }
-        } else if (signedIn && currentRoute == Route.Auth.path) {
-            navController.navigate(Route.Main.path) {
-                popUpTo(Route.Auth.path) { inclusive = true }
-                launchSingleTop = true
-            }
-        }
-    }
-    NavHost(navController = navController, startDestination = start) {
-        composable(Route.Auth.path) {
-            LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Route.Main.path) {
-                        popUpTo(Route.Auth.path) { inclusive = true }
-                    }
-                },
-                themeViewModel = themeViewModel,
-            )
-        }
-        composable(Route.Main.path) {
-            MainScaffold(
-                onLogout = {
-                    vm.logout()
-                    navController.navigate(Route.Auth.path) {
-                        popUpTo(Route.Main.path) { inclusive = true }
-                    }
-                },
-                intentProjectId = intentProjectId,
-                intentErrorId = intentErrorId,
-                themeViewModel = themeViewModel,
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    LogflareandroidTheme {
-        MainScaffold(onLogout = {})
-    }
+    AppNavHost(
+        session = session,
+        deepLinkErrorId = deepLinkErrorId,
+        onDeepLinkConsumed = onDeepLinkConsumed,
+    )
 }

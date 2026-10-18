@@ -7,7 +7,6 @@ import com.logflare.android.data.LogsRepository
 import com.logflare.android.data.ProjectsRepository
 import com.logflare.android.enums.LogLevel
 import com.logflare.android.enums.LogSort
-import com.logflare.android.ui.common.LogCardInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +34,6 @@ data class LogsUiState(
 class LogViewModel @Inject constructor(
     private val repo: LogsRepository,
     private val projectsRepo: ProjectsRepository,
-    private val pendingLogDetailStore: PendingLogDetailStore,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(LogsUiState())
     val ui: StateFlow<LogsUiState> = _ui
@@ -168,18 +166,6 @@ class LogViewModel @Inject constructor(
         getLogs(
             projectid = _ui.value.selectedProject,
             sortBy = sortBy
-        )
-    }
-
-    fun onLogClick(log: ErrorlogDTO) {
-        pendingLogDetailStore.setPending(
-            LogCardInfo(
-                level = log.level,
-                timestamp = log.timestamp,
-                message = log.message,
-                prefix = _ui.value.projectNames[log.project_id] ?: "Project #${log.project_id}",
-                suffix = log.errortype ?: "Unknown"
-            )
         )
     }
 

@@ -6,11 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.logflare.core.model.LogFileDTO
 import com.example.logflare.core.model.ProjectData
 import com.logflare.android.enums.LogLevel
-import com.logflare.android.feature.log.PendingLogDetailStore
 import com.logflare.android.enums.LogSort
 import com.logflare.android.feature.usecase.GetProjectDetailUseCase
 import com.logflare.android.feature.usecase.GetProjectLogsUseCase
-import com.logflare.android.ui.common.LogCardInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,7 +70,6 @@ class ProjectDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getProjectDetailUseCase: GetProjectDetailUseCase,
     private val getProjectLogsUseCase: GetProjectLogsUseCase,
-    private val pendingLogDetailStore: PendingLogDetailStore,
 ) : ViewModel() {
 
     private val projectId: Int = savedStateHandle["projectId"] ?: 0
@@ -297,17 +294,5 @@ class ProjectDetailViewModel @Inject constructor(
         viewModelScope.launch {
             getLogs()
         }
-    }
-
-    fun onLogClick(log: ProjectDetailLog) {
-        pendingLogDetailStore.setPending(
-            LogCardInfo(
-                level = log.level.label,
-                timestamp = log.timestamp,
-                message = log.message,
-                prefix = log.projectName,
-                suffix = log.fileName
-            )
-        )
     }
 }

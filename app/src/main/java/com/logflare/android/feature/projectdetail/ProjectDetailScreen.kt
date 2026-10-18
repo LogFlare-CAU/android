@@ -38,7 +38,7 @@ import com.logflare.android.ui.components.BackHeader
 fun ProjectDetailScreen(
     onBack: () -> Unit,
     onOpenProjectSettings: (Int) -> Unit,
-    onLogClick: () -> Unit,
+    onLogClick: (errorId: Int) -> Unit,
     onProjectNameResolved: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: ProjectDetailViewModel = hiltViewModel()
@@ -62,7 +62,7 @@ fun ProjectDetailScreen(
             onLevelSelected = { level -> viewModel.onLevelSelected(level) },
             onLogfileSelected = { id -> viewModel.onLogfileSelected(id) },
             onSortSelected = { sort -> viewModel.onSortSelected(sort) },
-            onLogClick = { log -> viewModel.onLogClick(log); onLogClick() },
+            onLogClick = { log -> onLogClick(log.id) },
             onLoadMore = { viewModel.loadMoreLogs() },
         )
     }

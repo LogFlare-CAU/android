@@ -29,7 +29,8 @@ data class MyPageUiState(
 
 data class MyPageMemberUiModel(
     val username: String,
-    val role: UserPermission
+    val role: UserPermission,
+    val idx: Int = 0,
 )
 
 @HiltViewModel
@@ -112,7 +113,8 @@ class MyPageViewModel @Inject constructor(
         val memberUiModels = users.map { user ->
             MyPageMemberUiModel(
                 username = user.username,
-                role = UserPermission.fromCode(user.permission)
+                role = UserPermission.fromCode(user.permission),
+                idx = user.idx,
             )
         }
         _ui.update {

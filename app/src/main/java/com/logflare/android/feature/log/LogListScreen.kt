@@ -38,7 +38,7 @@ sealed interface LogListAction {
 
 @Composable
 fun LogListScreen(
-    onLogClick: () -> Unit,
+    onLogClick: (errorId: Int) -> Unit,
     viewModel: LogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.ui.collectAsState()
@@ -47,10 +47,7 @@ fun LogListScreen(
         uiState = uiState,
         onAction = { action ->
             when (action) {
-                is LogListAction.OpenLog -> {
-                    viewModel.onLogClick(action.log)
-                    onLogClick()
-                }
+                is LogListAction.OpenLog -> onLogClick(action.log.id)
                 LogListAction.LoadMore -> viewModel.loadMore()
                 is LogListAction.SelectProject -> {
                     action.projectId?.let { viewModel.toggleProjectOption(it) }
