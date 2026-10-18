@@ -15,12 +15,12 @@ import com.logflare.android.data.session.SessionState
 import com.logflare.android.di.ApplicationScope
 import com.logflare.android.push.AlertSettings
 import com.logflare.android.push.AlertSettingsRepository
-import com.logflare.android.push.HistoryEntry
 import com.logflare.android.push.NotificationHistory
 import com.logflare.android.push.PushDecision
 import com.logflare.android.push.PushMessage
-import com.logflare.android.push.decidePush
+import com.logflare.android.push.decideIncoming
 import com.logflare.android.push.from
+import com.logflare.android.push.toHistoryEntry
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -75,37 +75,28 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
         val data = message.data
         val push = PushMessage.from(data)
         val session = sessionRepository.state.value
-        if (alertSettingsRepository.isReadyFor(session)) {
-            handle(push, data, session, alertSettingsRepository.settings.value)
+        val settings = alertSettingsRepository.settingsFor(session)
+        if (settings != null) {
+            handle(push, data, session, settings)
         } else {
             // Cold start: the session and its alert settings are still being read from disk.
             appScope.launch {
-                val (state, settings) = withTimeoutOrNull(READY_TIMEOUT_MS) { alertSettingsRepository.awaitReady() }
-                    ?: (sessionRepository.state.value to alertSettingsRepository.settings.value)
-                handle(push, data, state, settings)
+                val (state, ready) = withTimeoutOrNull(READY_TIMEOUT_MS) { alertSettingsRepository.awaitReady() }
+                    ?: sessionRepository.state.value.let { it to alertSettingsRepository.settingsFor(it) }
+                handle(push, data, state, ready)
             }
         }
     }
 
-    private fun handle(push: PushMessage, data: Map<String, String>, session: SessionState, settings: AlertSettings) {
-        val decision = decidePush(push, session, settings, LocalTime.now())
-        if (decision == PushDecision.Drop) {
+    /** [settings] null: the session's own settings aren't loaded; see [decideIncoming]. */
+    private fun handle(push: PushMessage, data: Map<String, String>, session: SessionState, settings: AlertSettings?) {
+        val decision = decideIncoming(push, session, settings, LocalTime.now())
+        if (decision == PushDecision.Drop || session !is SessionState.SignedIn) {
             Log.i(TAG, "Push dropped: projectId=${push.projectId}, level=${push.level}, isTest=${push.isTest}")
             return
         }
-        appScope.launch {
-            notificationHistory.add(
-                HistoryEntry(
-                    errorId = push.errorId,
-                    projectId = push.projectId,
-                    type = push.type,
-                    level = push.level,
-                    message = push.message,
-                    receivedAt = System.currentTimeMillis(),
-                    read = false,
-                ),
-            )
-        }
+        val entry = push.toHistoryEntry(receivedAt = System.currentTimeMillis())
+        appScope.launch { notificationHistory.add(entry, session.key) }
         if (decision == PushDecision.Notify) showNotification(data)
     }
 

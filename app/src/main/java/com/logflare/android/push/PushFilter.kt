@@ -62,3 +62,26 @@ fun decidePush(msg: PushMessage, session: SessionState, settings: AlertSettings,
     if (settings.quietHours && isQuietTime(now) && msg.level < LfLevel.Critical) return PushDecision.RecordOnly
     return PushDecision.Notify
 }
+
+/**
+ * [decidePush] for an incoming push whose settings may be unavailable: [settings] null means the
+ * signed-in session's own settings aren't loaded (cold-start timeout). Never notify on settings
+ * that aren't the session's: record only. Test pushes don't depend on settings and still notify.
+ */
+fun decideIncoming(msg: PushMessage, session: SessionState, settings: AlertSettings?, now: LocalTime): PushDecision =
+    when {
+        settings != null -> decidePush(msg, session, settings, now)
+        session !is SessionState.SignedIn -> PushDecision.Drop
+        msg.isTest -> PushDecision.Notify
+        else -> PushDecision.RecordOnly
+    }
+
+fun PushMessage.toHistoryEntry(receivedAt: Long): HistoryEntry = HistoryEntry(
+    errorId = errorId,
+    projectId = projectId,
+    type = type,
+    level = level,
+    message = message,
+    receivedAt = receivedAt,
+    read = false,
+)

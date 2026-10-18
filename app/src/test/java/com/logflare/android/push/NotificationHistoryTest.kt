@@ -43,7 +43,7 @@ class NotificationHistoryTest {
     @Test
     fun capsAt50_newestFirst() = runTest {
         val history = newHistory()
-        for (id in 1..60) history.add(entry(id))
+        for (id in 1..60) history.add(entry(id), A)
 
         val entries = history.entries.first()
         assertEquals(50, entries.size)
@@ -57,9 +57,9 @@ class NotificationHistoryTest {
     @Test
     fun markAllRead_zeroUnread() = runTest {
         val history = newHistory()
-        history.add(entry(1))
-        history.add(entry(2))
-        history.add(entry(3))
+        history.add(entry(1), A)
+        history.add(entry(2), A)
+        history.add(entry(3), A)
         assertEquals(3, history.unreadCount.first())
 
         history.markRead(2)
@@ -74,16 +74,16 @@ class NotificationHistoryTest {
     @Test
     fun historyIsPerSession_andClearable() = runTest {
         val history = newHistory()
-        history.add(entry(1))
+        history.add(entry(1), A)
 
         sessions.value = signedIn(B)
         assertEquals(emptyList<HistoryEntry>(), history.entries.first())
-        history.add(entry(2))
+        history.add(entry(2), B)
 
         sessions.value = SessionState.SignedOut
         assertEquals(emptyList<HistoryEntry>(), history.entries.first())
         assertEquals(0, history.unreadCount.first())
-        history.add(entry(3)) // ignored while signed out
+        history.markAllRead() // no-op while signed out
 
         sessions.value = signedIn(A)
         assertEquals(listOf(1), history.entries.first().map { it.errorId })
@@ -92,6 +92,31 @@ class NotificationHistoryTest {
 
         sessions.value = signedIn(B)
         assertEquals(listOf(2), history.entries.first().map { it.errorId })
+        assertEquals(1, history.unreadCount.first())
+    }
+
+    @Test
+    fun add_recordsUnderDecisionSession_notCurrentOne() = runTest {
+        val history = newHistory()
+        // Decided for A, but the user switched to B before the record was written.
+        sessions.value = signedIn(B)
+        history.add(entry(7), A)
+        assertEquals(emptyList<HistoryEntry>(), history.entries.first())
+
+        sessions.value = signedIn(A)
+        assertEquals(listOf(7), history.entries.first().map { it.errorId })
+    }
+
+    @Test
+    fun rejectedWrite_isDropped() = runTest {
+        val store = ClearingCacheStore(FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)))
+        val history = NotificationHistory(sessions, store)
+        history.add(entry(1), A)
+
+        // The session's cache is cleared (sign-out cleanup) while the add is in flight.
+        store.clearBeforeNextWrite = true
+        history.add(entry(2), A)
+        assertEquals(emptyList<HistoryEntry>(), history.entries.first())
     }
 
     private companion object {

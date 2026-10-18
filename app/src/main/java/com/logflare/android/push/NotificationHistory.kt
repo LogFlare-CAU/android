@@ -34,7 +34,7 @@ data class HistoryEntry(
 
 /**
  * Recent pushes of the signed-in session, newest first, at most [CAPACITY], persisted per
- * [SessionKey] in [CacheStore]. Empty while signed out; [add] is then ignored.
+ * [SessionKey] in [CacheStore]. Empty while signed out.
  */
 @Singleton
 class NotificationHistory internal constructor(
@@ -60,27 +60,37 @@ class NotificationHistory internal constructor(
 
     val unreadCount: Flow<Int> = entries.map { list -> list.count { !it.read } }.distinctUntilChanged()
 
-    suspend fun add(e: HistoryEntry) = edit { (listOf(e) + it).take(CAPACITY) }
+    /** Records [e] under [session], the session the push was decided for (even if it changed since). */
+    suspend fun add(e: HistoryEntry, session: SessionKey) = edit(session) { (listOf(e) + it).take(CAPACITY) }
 
-    suspend fun markRead(errorId: Int) = edit { list -> list.map { if (it.errorId == errorId) it.copy(read = true) else it } }
+    suspend fun markRead(errorId: Int) =
+        editCurrent { list -> list.map { if (it.errorId == errorId) it.copy(read = true) else it } }
 
-    suspend fun markAllRead() = edit { list -> list.map { it.copy(read = true) } }
+    suspend fun markAllRead() = editCurrent { list -> list.map { it.copy(read = true) } }
 
     suspend fun clear(session: SessionKey) {
         lock.withLock { write(session, emptyList()) }
     }
 
-    /** Read-modify-write of the signed-in session's list. No-op when signed out. */
-    private suspend fun edit(transform: (List<HistoryEntry>) -> List<HistoryEntry>) {
+    /** [edit] of the signed-in session's list. No-op when signed out. */
+    private suspend fun editCurrent(transform: (List<HistoryEntry>) -> List<HistoryEntry>) {
         val key = (sessions.value as? SessionState.SignedIn)?.key ?: return
-        lock.withLock { write(key, transform(read(key))) }
+        edit(key, transform)
+    }
+
+    /** Read-modify-write; dropped if [key]'s cache is cleared meanwhile (generation guard). */
+    private suspend fun edit(key: SessionKey, transform: (List<HistoryEntry>) -> List<HistoryEntry>) {
+        lock.withLock {
+            val generation = store.generation(key)
+            write(key, transform(read(key)), generation)
+        }
     }
 
     private suspend fun read(key: SessionKey): List<HistoryEntry> =
         store.read(key, KEY, serializer)?.value.orEmpty()
 
-    private suspend fun write(key: SessionKey, list: List<HistoryEntry>) {
-        store.write(key, KEY, list, serializer, clock())
+    private suspend fun write(key: SessionKey, list: List<HistoryEntry>, generation: Long? = null) {
+        store.write(key, KEY, list, serializer, clock(), generation)
         version.value++
     }
 

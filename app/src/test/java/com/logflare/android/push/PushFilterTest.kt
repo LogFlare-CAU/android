@@ -137,6 +137,25 @@ class PushFilterTest {
     }
 
     @Test
+    fun decideIncoming_settingsNotLoaded_recordsOnly() {
+        // Cold-start timeout: signed in, but the session's own settings never loaded.
+        assertEquals(PushDecision.RecordOnly, decideIncoming(msg(level = LfLevel.Critical), signedIn, null, noon))
+        assertEquals(PushDecision.Notify, decideIncoming(msg(isTest = true), signedIn, null, noon))
+        assertEquals(PushDecision.Drop, decideIncoming(msg(), SessionState.Loading, null, noon))
+        assertEquals(PushDecision.Drop, decideIncoming(msg(), SessionState.SignedOut, null, noon))
+        // Loaded settings go through the normal rules.
+        val off = AlertSettings(global = GlobalAlert.Off)
+        assertEquals(PushDecision.Drop, decideIncoming(msg(), signedIn, off, noon))
+        assertEquals(PushDecision.Notify, decideIncoming(msg(), signedIn, AlertSettings(), noon))
+    }
+
+    @Test
+    fun toHistoryEntry_isUnread() {
+        val e = msg().toHistoryEntry(receivedAt = 5L)
+        assertEquals(HistoryEntry(42, 1, "ValueError", LfLevel.Error, "something broke", 5L, read = false), e)
+    }
+
+    @Test
     fun globalThresholds() {
         assertEquals(null, GlobalAlert.Off.threshold())
         assertEquals(LfLevel.Critical, GlobalAlert.CriticalOnly.threshold())

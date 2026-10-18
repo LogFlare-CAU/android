@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -152,7 +153,7 @@ class AlertSettingsRepositoryTest {
         val ready = async { repo.awaitReady() }
         runCurrent()
         assertFalse(ready.isCompleted)
-        assertFalse(repo.isReadyFor(sessions.value))
+        assertNull(repo.settingsFor(sessions.value))
 
         sessions.value = signedIn(A)
         runCurrent()
@@ -164,8 +165,37 @@ class AlertSettingsRepositoryTest {
         val (state, settings) = ready.await()
         assertEquals(signedIn(A), state)
         assertEquals(GlobalAlert.CriticalOnly, settings.global)
-        assertTrue(repo.isReadyFor(signedIn(A)))
-        assertTrue(repo.isReadyFor(SessionState.SignedOut))
+        assertEquals(settings, repo.settingsFor(signedIn(A)))
+        assertEquals(AlertSnapshot(A, settings), repo.snapshot.value)
+        assertNull(repo.settingsFor(signedIn(B)))
+        assertEquals(AlertSettings(), repo.settingsFor(SessionState.SignedOut))
+    }
+
+    @Test
+    fun clearProjectLevel_followsGlobalAgain() = runTest {
+        val repo = newRepo()
+        runCurrent()
+        repo.setProjectLevel(1, LfLevel.Critical)
+        repo.setProjectLevel(2, LfLevel.Debug)
+        repo.setMutedKeywords(2, setOf("noise"))
+        repo.clearProjectLevel(1)
+        repo.setProjectLevel(2, null)
+        assertEquals(AlertSettings(projects = mapOf(2 to ProjectAlert(null, setOf("noise")))), repo.settings.value)
+    }
+
+    @Test
+    fun rejectedWrite_leavesMemoryUnchanged() = runTest {
+        val store = ClearingCacheStore(FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)))
+        val repo = AlertSettingsRepository(sessions, store, { legacy }, backgroundScope)
+        runCurrent()
+        repo.setQuietHours(true)
+        assertEquals(AlertSettings(quietHours = true), repo.settings.value)
+
+        // The session's cache is cleared (sign-out cleanup) while the write is in flight.
+        store.clearBeforeNextWrite = true
+        repo.setGlobal(GlobalAlert.Off)
+        assertEquals(AlertSettings(quietHours = true), repo.settings.value)
+        assertEquals(AlertSnapshot(A, AlertSettings(quietHours = true)), repo.snapshot.value)
     }
 
     private companion object {

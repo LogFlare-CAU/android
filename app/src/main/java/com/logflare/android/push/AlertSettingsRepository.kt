@@ -49,12 +49,16 @@ internal fun LegacyAlerts.toSettings(): AlertSettings {
 
 private const val LEGACY_DEFAULT_LEVEL = "Warning"
 
+/** [settings] together with the session they belong to; [session] null = none loaded. */
+data class AlertSnapshot(val session: SessionKey?, val settings: AlertSettings)
+
 /**
  * Push alert settings of the signed-in session, persisted per [SessionKey] in [CacheStore].
  *
  * [settings] is hot and in memory so the messaging service can read `.value` without blocking.
  * It switches when the session key changes (defaults while signed out or still loading). A
  * session without saved settings gets the legacy values migrated once, on its first load.
+ * [snapshot] pairs the settings with their session so both are read in one atomic step.
  */
 @Singleton
 class AlertSettingsRepository internal constructor(
@@ -78,11 +82,11 @@ class AlertSettingsRepository internal constructor(
         scope = scope,
     )
 
+    private val _snapshot = MutableStateFlow(AlertSnapshot(null, AlertSettings()))
+    val snapshot: StateFlow<AlertSnapshot> = _snapshot.asStateFlow()
+
     private val _settings = MutableStateFlow(AlertSettings())
     val settings: StateFlow<AlertSettings> = _settings.asStateFlow()
-
-    /** Session whose settings [settings] currently holds; null while switching or signed out. */
-    private val loadedFor = MutableStateFlow<SessionKey?>(null)
 
     /** Serializes loads and read-modify-write updates. */
     private val lock = Mutex()
@@ -93,53 +97,69 @@ class AlertSettingsRepository internal constructor(
                 .distinctUntilChanged()
                 .collectLatest { key ->
                     lock.withLock {
-                        loadedFor.value = null
-                        _settings.value = AlertSettings()
-                        if (key != null) {
-                            _settings.value = loadOrMigrate(key)
-                            loadedFor.value = key
-                        }
+                        publish(AlertSnapshot(null, AlertSettings()))
+                        if (key != null) publish(AlertSnapshot(key, loadOrMigrate(key)))
                     }
                 }
         }
     }
 
-    /** True when [settings] belongs to [session] (always for signed out; never while loading). */
-    fun isReadyFor(session: SessionState): Boolean = when (session) {
-        SessionState.Loading -> false
-        SessionState.SignedOut -> true
-        is SessionState.SignedIn -> loadedFor.value == session.key
-    }
+    /**
+     * The settings that belong to [session], or null when they aren't loaded yet (or the session
+     * is still [SessionState.Loading]). Signed out has nothing to wait for.
+     */
+    fun settingsFor(session: SessionState, snapshot: AlertSnapshot = _snapshot.value): AlertSettings? =
+        when (session) {
+            SessionState.Loading -> null
+            SessionState.SignedOut -> AlertSettings()
+            is SessionState.SignedIn -> snapshot.settings.takeIf { snapshot.session == session.key }
+        }
 
     /** Waits until the session is known and its settings are loaded; returns both. */
     suspend fun awaitReady(): Pair<SessionState, AlertSettings> {
-        val state = combine(sessions, loadedFor) { s, _ -> s }.first { isReadyFor(it) }
-        return state to _settings.value
+        val (state, settings) = combine(sessions, _snapshot) { s, snap -> s to settingsFor(s, snap) }
+            .first { it.second != null }
+        return state to checkNotNull(settings)
     }
 
     suspend fun setGlobal(v: GlobalAlert) = update { it.copy(global = v) }
 
     suspend fun setQuietHours(on: Boolean) = update { it.copy(quietHours = on) }
 
-    suspend fun setProjectLevel(projectId: Int, level: LfLevel) = updateProject(projectId) { it.copy(level = level) }
+    /** [level] null returns the project to the global threshold. */
+    suspend fun setProjectLevel(projectId: Int, level: LfLevel?) = updateProject(projectId) { it.copy(level = level) }
+
+    suspend fun clearProjectLevel(projectId: Int) = setProjectLevel(projectId, null)
 
     suspend fun setMutedKeywords(projectId: Int, keywords: Set<String>) =
         updateProject(projectId) { it.copy(mutedKeywords = keywords) }
 
+    /** An entry back at [ProjectAlert] defaults is removed: the project follows the global value. */
     private suspend fun updateProject(projectId: Int, transform: (ProjectAlert) -> ProjectAlert) = update {
-        it.copy(projects = it.projects + (projectId to transform(it.projects[projectId] ?: ProjectAlert())))
+        val next = transform(it.projects[projectId] ?: ProjectAlert())
+        it.copy(projects = if (next == ProjectAlert()) it.projects - projectId else it.projects + (projectId to next))
     }
 
-    /** Applies [transform] to the signed-in session's settings and saves them. No-op when signed out. */
+    /**
+     * Applies [transform] to the signed-in session's settings and saves them. No-op when signed
+     * out. If the session's cache was cleared meanwhile, the write is rejected and memory is kept.
+     */
     private suspend fun update(transform: (AlertSettings) -> AlertSettings) {
         val key = (sessions.value as? SessionState.SignedIn)?.key ?: return
         lock.withLock {
             val generation = store.generation(key)
-            val current = if (loadedFor.value == key) _settings.value else loadOrMigrate(key)
-            val next = transform(current)
+            val loaded = _snapshot.value.takeIf { it.session == key }
+            val next = transform(loaded?.settings ?: loadOrMigrate(key))
             store.write(key, KEY, next, AlertSettings.serializer(), clock(), generation)
-            if (loadedFor.value == key) _settings.value = next
+            // Generations only grow, so a changed one means the write was dropped (or undone).
+            val accepted = store.generation(key) == generation
+            if (accepted && loaded != null) publish(AlertSnapshot(key, next))
         }
+    }
+
+    private fun publish(snapshot: AlertSnapshot) {
+        _snapshot.value = snapshot
+        _settings.value = snapshot.settings
     }
 
     private suspend fun loadOrMigrate(key: SessionKey): AlertSettings {
