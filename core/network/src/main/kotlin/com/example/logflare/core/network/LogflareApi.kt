@@ -1,6 +1,10 @@
 package com.example.logflare.core.network
 
 import com.example.logflare.core.model.ErrorSequenceResponse
+import com.example.logflare.core.model.LogEventDetailResponse
+import com.example.logflare.core.model.LogEventPageResponse
+import com.example.logflare.core.model.LogSummaryResponse
+import com.example.logflare.core.model.RemovedResponse
 import com.example.logflare.core.model.FcmConfigResponse
 import com.example.logflare.core.model.FcmTokenParams
 import com.example.logflare.core.model.FcmTokenResponse
@@ -22,6 +26,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -147,4 +152,31 @@ interface LogflareApi {
         @Body body: FcmTokenParams
     ): FcmTokenResponse
 
+    // Authorization is supplied by AuthHeaderInterceptor.
+    @GET("/log/summary")
+    suspend fun getLogSummary(
+        @Query("project_id") projectId: Int? = null,
+        @Query("hours") hours: Int = 24
+    ): LogSummaryResponse
+
+    @GET("/log/events")
+    suspend fun getLogEvents(
+        @Query("project_id") projectId: Int?,
+        @Query("min_level") minLevel: String?,
+        @Query("logfile_id") logfileId: Int?,
+        @Query("q") query: String?,
+        @Query("sort") sort: String = "newest",
+        @Query("grouped") grouped: Boolean = true,
+        @Query("limit") limit: Int = 50,
+        @Query("cursor") cursor: String? = null
+    ): LogEventPageResponse
+
+    @GET("/log/events/{id}")
+    suspend fun getLogEvent(@Path("id") id: Int): LogEventDetailResponse
+
+    @GET("/project/{projectid}/token")
+    suspend fun getProjectToken(@Path("projectid") projectId: Int): ProjectResponseWithToken
+
+    @HTTP(method = "DELETE", path = "/fcm/token", hasBody = true)
+    suspend fun unregisterFcmToken(@Body body: FcmTokenParams): RemovedResponse
 }

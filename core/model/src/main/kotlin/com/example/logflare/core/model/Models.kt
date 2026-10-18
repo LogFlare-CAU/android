@@ -212,3 +212,99 @@ data class ProjectPermsDTO(
     val view: Boolean,
     val project: ProjectDTO? = null,
 )
+
+@Serializable
+data class ProjectSummaryDTO(
+    @SerialName("project_id") val projectId: Int,
+    @SerialName("error_count") val errorCount: Int,
+    @SerialName("warning_count") val warningCount: Int,
+    @SerialName("last_error_at") val lastErrorAt: String? = null,
+)
+
+@Serializable
+data class LogSummaryDTO(
+    @SerialName("window_hours") val windowHours: Int,
+    val since: String,
+    val counts: Map<String, Int> = emptyMap(),
+    val projects: List<ProjectSummaryDTO> = emptyList(),
+)
+
+@Serializable
+data class LogSummaryResponse(
+    val success: Boolean,
+    val message: String,
+    @SerialName("error_code") val errorCode: Int? = null,
+    val data: LogSummaryDTO? = null,
+)
+
+/** Row of GET /log/events (grouped by default; group-wide level/timestamp/occurrences). */
+@Serializable
+data class LogEventDTO(
+    val id: Int,
+    @SerialName("project_id") val projectId: Int,
+    @SerialName("logfile_id") val logfileId: Int? = null,
+    @SerialName("logfile_name") val logfileName: String? = null,
+    val errortype: String? = null,
+    val message: String,
+    val level: String,
+    val timestamp: String,
+    val occurrences: Int,
+    @SerialName("first_seen") val firstSeen: String,
+    @SerialName("last_seen") val lastSeen: String,
+)
+
+@Serializable
+data class LogEventPageDTO(
+    val items: List<LogEventDTO> = emptyList(),
+    @SerialName("next_cursor") val nextCursor: String? = null,
+)
+
+@Serializable
+data class LogEventPageResponse(
+    val success: Boolean,
+    val message: String,
+    @SerialName("error_code") val errorCode: Int? = null,
+    val data: LogEventPageDTO? = null,
+)
+
+/**
+ * GET /log/events/{id}. id, raw, occurredAt, rowLevel and logfile_* describe the requested row;
+ * occurrences, firstSeen, lastSeen, level and timestamp describe the whole group.
+ */
+@Serializable
+data class LogEventDetailDTO(
+    val id: Int,
+    @SerialName("project_id") val projectId: Int,
+    @SerialName("logfile_id") val logfileId: Int? = null,
+    @SerialName("logfile_name") val logfileName: String? = null,
+    val errortype: String? = null,
+    val message: String,
+    val level: String,
+    val timestamp: String,
+    val occurrences: Int,
+    @SerialName("first_seen") val firstSeen: String,
+    @SerialName("last_seen") val lastSeen: String,
+    val raw: String? = null,
+    @SerialName("recent_ids") val recentIds: List<Int> = emptyList(),
+    @SerialName("occurred_at") val occurredAt: String,
+    @SerialName("row_level") val rowLevel: String,
+)
+
+@Serializable
+data class LogEventDetailResponse(
+    val success: Boolean,
+    val message: String,
+    @SerialName("error_code") val errorCode: Int? = null,
+    val data: LogEventDetailDTO? = null,
+)
+
+@Serializable
+data class RemovedDTO(val removed: Boolean)
+
+@Serializable
+data class RemovedResponse(
+    val success: Boolean,
+    val message: String,
+    @SerialName("error_code") val errorCode: Int? = null,
+    val data: RemovedDTO? = null,
+)
