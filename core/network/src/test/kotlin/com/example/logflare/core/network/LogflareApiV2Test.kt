@@ -134,4 +134,20 @@ class LogflareApiV2Test {
         assertEquals("""{"fcm_token":"t1"}""", req.body.readUtf8())
         assertFalse(res.data!!.removed)
     }
+
+    @Test fun formerHeaderEndpoints_getInterceptorToken() = runTest {
+        enqueue("""{"success":true,"message":"ok","data":[]}""")
+        api.listProjects()
+        val req = server.takeRequest()
+        assertEquals("/project/", req.path)
+        assertEquals("Bearer tok", req.getHeader("Authorization"))
+    }
+
+    @Test fun getMeAs_sendsItsOwnBearer() = runTest {
+        enqueue("""{"success":true,"message":"ok","data":{"idx":1,"username":"a","permission":0}}""")
+        api.getMeAs("Bearer new")
+        val req = server.takeRequest()
+        assertEquals("/user/me", req.path)
+        assertEquals(listOf("Bearer new"), req.headers.values("Authorization"))
+    }
 }

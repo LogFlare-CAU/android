@@ -48,7 +48,7 @@ class AccountStore internal constructor(
     )
 
     private val resource = CachedResource("me", UserDTO.serializer(), store, clock, scope) { session ->
-        val user = sessions.fetchAs(session) { api.getme(it) }.let { requireData(it.success, it.message, it.error_code, it.data) }
+        val user = sessions.fetchAs(session) { api.getme() }.let { requireData(it.success, it.message, it.error_code, it.data) }
         // Best effort: a profile that can't be stored still is the answer to show.
         attempt { onProfile(session, user) }
         user

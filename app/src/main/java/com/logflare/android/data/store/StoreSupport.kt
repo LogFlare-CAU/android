@@ -67,19 +67,20 @@ internal fun StateFlow<SessionState>.signedIn(): SessionState.SignedIn =
     value as? SessionState.SignedIn ?: throw NotSignedInException()
 
 /**
- * Runs [block] with [session]'s token and checks the session again afterwards: if the user
- * signed out or switched accounts meanwhile, the result is rejected ([NotSignedInException])
- * rather than cached under [session]. This matters for the new endpoints, whose header the
- * interceptor adds from whoever is signed in when the request goes out.
+ * Runs [block] for [session] and checks the session before and after: if the user signed out or
+ * switched accounts meanwhile, the result is rejected ([NotSignedInException]) rather than cached
+ * under [session]. The interceptor adds the header of whoever is signed in when the request
+ * goes out.
  */
-internal inline fun <T> StateFlow<SessionState>.fetchAs(session: SessionKey, block: (token: String) -> T): T {
-    val token = tokenFor(session)
-    return block(token).also { tokenFor(session) }
+internal inline fun <T> StateFlow<SessionState>.fetchAs(session: SessionKey, block: () -> T): T {
+    requireSignedInAs(session)
+    return block().also { requireSignedInAs(session) }
 }
 
 /**
- * The token to fetch [session]'s data with. Throws [NotSignedInException] when [session] is no
- * longer the signed-in one, so a late fetch never sends another user's token.
+ * Throws [NotSignedInException] when [session] is no longer the signed-in one, so a late fetch
+ * never goes out (or is cached) under another user's token.
  */
-internal fun StateFlow<SessionState>.tokenFor(session: SessionKey): String =
-    signedIn().takeIf { it.key == session }?.token ?: throw NotSignedInException()
+internal fun StateFlow<SessionState>.requireSignedInAs(session: SessionKey) {
+    if (signedIn().key != session) throw NotSignedInException()
+}

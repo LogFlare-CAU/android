@@ -206,7 +206,7 @@ class SignInOutUseCaseTest {
 
         assertEquals(SessionState.SignedOut, env.session.state.first { it != SessionState.Loading })
         assertEquals("a failed sign-in remembers nothing", emptyList<String>(), env.recent.servers.first())
-        assertEquals(0, api.count("getme"))
+        assertEquals(0, api.count("getMeAs"))
     }
 
     @Test

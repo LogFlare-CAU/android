@@ -178,7 +178,7 @@ class PushRegistrar internal constructor(
 
     private suspend fun register(session: SessionState.SignedIn, token: String) = lock.withLock {
         if (!isCurrent(session)) return@withLock
-        val accepted = attempt { api.registerFcmToken(session.token, FcmTokenParams(token)) }
+        val accepted = attempt { api.registerFcmToken(FcmTokenParams(token)) }
             .fold(
                 onSuccess = { it.success || it.errorCode == HTTP_CONFLICT },
                 onFailure = { it is HttpException && it.code() == HTTP_CONFLICT },

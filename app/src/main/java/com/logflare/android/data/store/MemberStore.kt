@@ -40,7 +40,7 @@ class MemberStore internal constructor(
     private val serializer = ListSerializer(UserDTO.serializer())
 
     private val resource = CachedResource(KEY, serializer, store, clock, scope) { session ->
-        sessions.fetchAs(session) { api.getAllUsers(it) }.let { requireData(it.success, it.message, it.error_code, it.data) }
+        sessions.fetchAs(session) { api.getAllUsers() }.let { requireData(it.success, it.message, it.error_code, it.data) }
     }
 
     fun members(force: Boolean = false): Flow<Resource<List<Member>>> =
@@ -48,8 +48,8 @@ class MemberStore internal constructor(
             resource.stream(session, force).map { r -> r.mapData { users -> users.map { it.toMember() } } }
         }
 
-    suspend fun add(username: String, password: String, permission: Int): Result<Member> = mutate { token ->
-        api.createUser(token, UserCreateParams(username, permission, password))
+    suspend fun add(username: String, password: String, permission: Int): Result<Member> = mutate {
+        api.createUser(UserCreateParams(username, permission, password))
             .let { requireData(it.success, it.message, it.error_code, it.data) }
             .toMember()
     }
@@ -60,8 +60,8 @@ class MemberStore internal constructor(
      */
     suspend fun update(idx: Int, username: String?, password: String?, permission: Int?): Result<Member> {
         val session = sessions.value as? SessionState.SignedIn
-        return mutate { token ->
-            api.updateUser(token, idx, UserUpdateParams(username = username, permission = permission, password = password))
+        return mutate {
+            api.updateUser(idx, UserUpdateParams(username = username, permission = permission, password = password))
                 .let { requireData(it.success, it.message, it.error_code, it.data) }
                 .toMember()
         }.onSuccess {
@@ -73,8 +73,8 @@ class MemberStore internal constructor(
     /** Pull-to-refresh: fetches now, even when fresh, and returns once done with the outcome. */
     suspend fun refresh(): Result<Unit> = sessions.refreshSignedIn { resource.refresh(it) }
 
-    suspend fun delete(idx: Int): Result<Unit> = mutate { token ->
-        api.deleteUser(token, idx).let { requireSuccess(it.success, it.message, it.error_code) }
+    suspend fun delete(idx: Int): Result<Unit> = mutate {
+        api.deleteUser(idx).let { requireSuccess(it.success, it.message, it.error_code) }
     }
 
     /**
@@ -91,10 +91,10 @@ class MemberStore internal constructor(
         return users.any { it.username.equals(wanted, ignoreCase = true) }
     }
 
-    /** Runs [block] with the session token, then refreshes the member list on success. */
-    private suspend fun <T> mutate(block: suspend (token: String) -> T): Result<T> {
+    /** Runs [block] while signed in, then refreshes the member list on success. */
+    private suspend fun <T> mutate(block: suspend () -> T): Result<T> {
         val session = sessions.value as? SessionState.SignedIn ?: return Result.failure(NotSignedInException())
-        return attempt { block(session.token) }.onSuccess { resource.refresh(session.key) }
+        return attempt { block() }.onSuccess { resource.refresh(session.key) }
     }
 
     private companion object {

@@ -55,9 +55,9 @@ class ProjectStore internal constructor(
         clock = clock,
         scope = scope,
     ) { session ->
-        val cache = sessions.fetchAs(session) { token ->
+        val cache = sessions.fetchAs(session) {
             coroutineScope {
-                val list = async { api.listProjects(token).let { requireData(it.success, it.message, it.error_code, it.data) } }
+                val list = async { api.listProjects().let { requireData(it.success, it.message, it.error_code, it.data) } }
                 val summary = async { api.getLogSummary(null).let { requireData(it.success, it.message, it.errorCode, it.data) } }
                 list.await() to summary.await()
             }
@@ -93,17 +93,17 @@ class ProjectStore internal constructor(
     }
 
     suspend fun create(name: String): Result<ProjectWithToken> = mutate {
-        val dto = api.createProject(it, ProjectCreateParams(name))
+        val dto = api.createProject(ProjectCreateParams(name))
             .let { r -> requireData(r.success, r.message, r.error_code, r.data) }
         ProjectWithToken(dto.id, dto.name, dto.token)
     }
 
     suspend fun rename(id: Int, name: String): Result<Unit> = mutate {
-        api.changeProjectName(it, id, ProjectCreateParams(name)).let { r -> requireSuccess(r.success, r.message, r.error_code) }
+        api.changeProjectName(id, ProjectCreateParams(name)).let { r -> requireSuccess(r.success, r.message, r.error_code) }
     }
 
     suspend fun delete(id: Int): Result<Unit> = mutate {
-        api.deleteProject(it, id).let { r -> requireSuccess(r.success, r.message, r.error_code) }
+        api.deleteProject(id).let { r -> requireSuccess(r.success, r.message, r.error_code) }
     }
 
     /** The project's ingest key (moderators and up). */
@@ -113,14 +113,14 @@ class ProjectStore internal constructor(
     }
 
     suspend fun rotateToken(id: Int): Result<String> = attempt {
-        val token = sessions.signedIn().token
-        api.rotateProjectToken(token, id).let { requireData(it.success, it.message, it.error_code, it.data) }.token
+        sessions.signedIn()
+        api.rotateProjectToken(id).let { requireData(it.success, it.message, it.error_code, it.data) }.token
     }
 
     /** User indexes that can view the project. */
     suspend fun members(id: Int): Result<Set<Int>> = attempt {
-        val token = sessions.signedIn().token
-        api.getProjectPermissions(token, id)
+        sessions.signedIn()
+        api.getProjectPermissions(id)
             .let { requireData(it.success, it.message, it.error_code, it.data) }
             .filter { it.view }
             .mapTo(mutableSetOf()) { it.user_id }
@@ -128,7 +128,7 @@ class ProjectStore internal constructor(
 
     /** Replaces who can view the project. */
     suspend fun setMembers(id: Int, usernames: Set<String>): Result<Unit> = mutate {
-        api.resetProjectPerms(it, ProjectPermsBatchParams(id, usernames))
+        api.resetProjectPerms(ProjectPermsBatchParams(id, usernames))
             .let { r -> requireSuccess(r.success, r.message, r.error_code) }
     }
 
@@ -140,9 +140,9 @@ class ProjectStore internal constructor(
             }
         }
 
-    /** Runs [block] with the session token, then refreshes the project list on success. */
-    private suspend fun <T> mutate(block: suspend (token: String) -> T): Result<T> {
+    /** Runs [block] while signed in, then refreshes the project list on success. */
+    private suspend fun <T> mutate(block: suspend () -> T): Result<T> {
         val session = sessions.value as? SessionState.SignedIn ?: return Result.failure(NotSignedInException())
-        return attempt { block(session.token) }.onSuccess { projectsResource.refresh(session.key) }
+        return attempt { block() }.onSuccess { projectsResource.refresh(session.key) }
     }
 }

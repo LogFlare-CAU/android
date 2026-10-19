@@ -10,21 +10,27 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.logflare.core.designsystem.v2.Lf
 import com.example.logflare.core.designsystem.v2.LogFlareTheme
 import com.logflare.android.data.ThemePreference
 import com.logflare.android.data.session.SessionState
 import com.logflare.android.ui.VisualQaAppRoot
 import com.logflare.android.ui.nav.AppNavHost
 import com.logflare.android.ui.theme.ThemeController
-import com.logflare.android.ui.theme.LogflareandroidTheme
 import com.logflare.android.viewmodel.AppViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -72,16 +78,22 @@ class MainActivity : Hilt_MainActivity() {
                 ThemePreference.LIGHT -> false
                 ThemePreference.DARK -> true
             }
-            // The legacy theme stays inside until the last old screen is gone (Task 12).
+            // System bar icons follow the app theme, not the system one.
+            SideEffect {
+                window.statusBarColor = Color.Transparent.toArgb()
+                window.navigationBarColor = Color.Transparent.toArgb()
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !darkTheme
+                    isAppearanceLightNavigationBars = !darkTheme
+                }
+            }
             LogFlareTheme(darkTheme = darkTheme) {
-                LogflareandroidTheme(darkTheme = darkTheme) {
-                    VisualQaAppRoot {
-                        App(
-                            vm = appViewModel,
-                            deepLinkErrorId = deepLinkErrorId,
-                            onDeepLinkConsumed = { deepLinkErrorId = null },
-                        )
-                    }
+                VisualQaAppRoot(Modifier.background(Lf.colors.background)) {
+                    App(
+                        vm = appViewModel,
+                        deepLinkErrorId = deepLinkErrorId,
+                        onDeepLinkConsumed = { deepLinkErrorId = null },
+                    )
                 }
             }
         }

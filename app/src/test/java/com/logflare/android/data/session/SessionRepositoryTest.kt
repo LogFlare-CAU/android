@@ -266,7 +266,7 @@ class SessionRepositoryTest {
         assertEquals(key, state.key)
         assertEquals(2, state.permission)
 
-        // Old AuthMeUseCase path: a different username.
+        // A username written straight to the stored auth (pre-rework path).
         env.auth.setUsername("someone-else")
         state = repo.state.first { it is SessionState.SignedIn && it.username == "someone-else" } as SessionState.SignedIn
         assertEquals(key, state.key)

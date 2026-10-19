@@ -74,11 +74,6 @@ class AuthRepository internal constructor(
         }
     }
 
-    suspend fun getToken(): String {
-        val token: String = dataStore.data.first()[KEY_TOKEN]?: throw IllegalStateException("No token found")
-        return token
-    }
-
     /**
      * Removes the token, the session key and the whole user identity (username/idx/permission)
      * so a later login as someone else can't inherit the previous user's session.
@@ -183,10 +178,6 @@ class AuthRepository internal constructor(
         dataStore.edit { prefs ->
             prefs[KEY_USERNAME] = username
         }
-    }
-
-    suspend fun getUsername(): String? {
-        return dataStore.data.first()[KEY_USERNAME]
     }
 
 }

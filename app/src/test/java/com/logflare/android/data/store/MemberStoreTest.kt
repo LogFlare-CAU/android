@@ -31,7 +31,7 @@ class MemberStoreTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val api = FakeLogflareApi()
+    private val api = FakeLogflareApi().apply { authHeader = { (sessions.value as? SessionState.SignedIn)?.token } }
     private val sessions = MutableStateFlow<SessionState>(ProjectStoreTest.signedIn())
     private var now = 1_000_000L
 

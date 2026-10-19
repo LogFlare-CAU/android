@@ -44,7 +44,7 @@ data class EventsCall(
 
 /**
  * Hand-written [LogflareApi] for store tests: canned responses that tests can swap, and a log of
- * every call (method name) plus the Authorization header the old endpoints were given.
+ * every call (method name) plus the Authorization header each request went out with.
  */
 class FakeLogflareApi : LogflareApi {
     val calls = mutableListOf<String>()
@@ -52,6 +52,9 @@ class FakeLogflareApi : LogflareApi {
     val eventsCalls = mutableListOf<EventsCall>()
 
     fun count(method: String) = calls.count { it == method }
+
+    /** What AuthHeaderInterceptor would add (the signed-in session's token); null = no header. */
+    var authHeader: () -> String? = { null }
 
     var projects: suspend () -> ProjectSequenceResponse = { ok(projects = listOf(project(1, "alpha"))) }
     var summary: suspend (Int?) -> LogSummaryResponse = { summaryOf() }
@@ -62,13 +65,14 @@ class FakeLogflareApi : LogflareApi {
         ProjectResponseWithToken(true, "ok", data = ProjectDTOWithToken(id = 99, name = name, token = "tok-99"))
     }
 
-    private fun record(method: String, token: String? = null) {
+    /** [explicit] is a header the call sets itself; the interceptor leaves those alone. */
+    private fun record(method: String, explicit: String? = null) {
         calls += method
-        if (token != null) tokens += token
+        (explicit ?: authHeader())?.let { tokens += it }
     }
 
-    override suspend fun listProjects(bearer: String): ProjectSequenceResponse {
-        record("listProjects", bearer)
+    override suspend fun listProjects(): ProjectSequenceResponse {
+        record("listProjects")
         return projects()
     }
 
@@ -93,28 +97,33 @@ class FakeLogflareApi : LogflareApi {
         return events(call)
     }
 
-    override suspend fun createProject(bearer: String, body: ProjectCreateParams): ProjectResponseWithToken {
-        record("createProject", bearer)
+    override suspend fun createProject(body: ProjectCreateParams): ProjectResponseWithToken {
+        record("createProject")
         return createProjectResult(body.name)
     }
 
-    override suspend fun getAllUsers(token: String): UserSequenceResponse {
-        record("getAllUsers", token)
+    override suspend fun getAllUsers(): UserSequenceResponse {
+        record("getAllUsers")
         return users()
     }
 
-    override suspend fun getme(token: String): UserResponse {
-        record("getme", token)
+    override suspend fun getme(): UserResponse {
+        record("getme")
         return me()
     }
 
-    override suspend fun getFirebaseConfig(bearer: String): FcmConfigResponse {
-        record("getFirebaseConfig", bearer)
+    override suspend fun getMeAs(bearer: String): UserResponse {
+        record("getMeAs", explicit = bearer)
+        return me()
+    }
+
+    override suspend fun getFirebaseConfig(): FcmConfigResponse {
+        record("getFirebaseConfig")
         return FcmConfigResponse(true, "ok")
     }
 
-    override suspend fun getFcmConfig(bearer: String): FcmConfigResponse {
-        record("getFcmConfig", bearer)
+    override suspend fun getFcmConfig(): FcmConfigResponse {
+        record("getFcmConfig")
         return FcmConfigResponse(true, "ok")
     }
 
@@ -125,8 +134,8 @@ class FakeLogflareApi : LogflareApi {
     var authenticateResult: suspend (UserAuthParams) -> StringResponse = { StringResponse(true, "ok", data = "jwt-${it.username}") }
     val authCalls = mutableListOf<UserAuthParams>()
 
-    override suspend fun registerFcmToken(bearer: String, body: FcmTokenParams): FcmTokenResponse {
-        record("registerFcmToken", bearer)
+    override suspend fun registerFcmToken(body: FcmTokenParams): FcmTokenResponse {
+        record("registerFcmToken")
         fcmTokens += body.fcmToken
         return registerFcm(body)
     }
@@ -149,32 +158,31 @@ class FakeLogflareApi : LogflareApi {
     /** When true, every mutation endpoint answers `success: false` with [REJECTED]. */
     var mutationRejected = false
 
-    private suspend fun <T> mutation(method: String, token: String?, ok: () -> T, rejected: () -> T): T {
-        record(method, token)
+    private suspend fun <T> mutation(method: String, ok: () -> T, rejected: () -> T): T {
+        record(method)
         mutationError?.let { throw it }
         return if (mutationRejected) rejected() else ok()
     }
 
-    override suspend fun changeProjectName(bearer: String, projectId: Int, body: ProjectCreateParams): ProjectResponse =
-        mutation("changeProjectName", bearer, { ProjectResponse(true, "ok", data = ProjectDTO(projectId, body.name)) }) {
+    override suspend fun changeProjectName(projectId: Int, body: ProjectCreateParams): ProjectResponse =
+        mutation("changeProjectName", { ProjectResponse(true, "ok", data = ProjectDTO(projectId, body.name)) }) {
             ProjectResponse(false, REJECTED, 400)
         }
 
-    override suspend fun deleteProject(bearer: String, projectId: Int): StringResponse =
-        mutation("deleteProject", bearer, { StringResponse(true, "ok") }) { StringResponse(false, REJECTED, 404) }
+    override suspend fun deleteProject(projectId: Int): StringResponse =
+        mutation("deleteProject", { StringResponse(true, "ok") }) { StringResponse(false, REJECTED, 404) }
 
-    override suspend fun rotateProjectToken(bearer: String, projectId: Int): ProjectResponseWithToken =
+    override suspend fun rotateProjectToken(projectId: Int): ProjectResponseWithToken =
         mutation(
             "rotateProjectToken",
-            bearer,
             { ProjectResponseWithToken(true, "ok", data = ProjectDTOWithToken(projectId, "p$projectId", token = "rotated-$projectId")) },
         ) { ProjectResponseWithToken(false, REJECTED, 403) }
 
     /** Bodies of every [resetProjectPerms] call. */
     val permsResets = mutableListOf<ProjectPermsBatchParams>()
 
-    override suspend fun resetProjectPerms(bearer: String, body: ProjectPermsBatchParams): ProjectPermsSequenceResponse =
-        also { permsResets += body }.mutation("resetProjectPerms", bearer, { ProjectPermsSequenceResponse(true, "ok", data = emptyList()) }) {
+    override suspend fun resetProjectPerms(body: ProjectPermsBatchParams): ProjectPermsSequenceResponse =
+        also { permsResets += body }.mutation("resetProjectPerms", { ProjectPermsSequenceResponse(true, "ok", data = emptyList()) }) {
             ProjectPermsSequenceResponse(false, REJECTED, 400)
         }
 
@@ -182,32 +190,31 @@ class FakeLogflareApi : LogflareApi {
     val userCreates = mutableListOf<UserCreateParams>()
     val userUpdates = mutableListOf<Pair<Int, UserUpdateParams>>()
 
-    override suspend fun createUser(token: String, body: UserCreateParams): UserResponse =
-        also { userCreates += body }.mutation("createUser", token, { UserResponse(true, "ok", data = UserDTO(50, body.username, body.permission)) }) {
+    override suspend fun createUser(body: UserCreateParams): UserResponse =
+        also { userCreates += body }.mutation("createUser", { UserResponse(true, "ok", data = UserDTO(50, body.username, body.permission)) }) {
             UserResponse(false, REJECTED, 409)
         }
 
-    override suspend fun updateUser(token: String, userId: Int, body: UserUpdateParams): UserResponse =
+    override suspend fun updateUser(userId: Int, body: UserUpdateParams): UserResponse =
         also { userUpdates += userId to body }.mutation(
             "updateUser",
-            token,
             { UserResponse(true, "ok", data = UserDTO(userId, body.username ?: "unchanged", body.permission ?: 0)) },
         ) { UserResponse(false, REJECTED, 404) }
 
-    override suspend fun deleteUser(token: String, userId: Int): UserResponse =
-        mutation("deleteUser", token, { UserResponse(true, "ok") }) { UserResponse(false, REJECTED, 404) }
+    override suspend fun deleteUser(userId: Int): UserResponse =
+        mutation("deleteUser", { UserResponse(true, "ok") }) { UserResponse(false, REJECTED, 404) }
 
-    override suspend fun getUserByUsername(token: String, username: String): UserResponse = TODO()
+    override suspend fun getUserByUsername(username: String): UserResponse = TODO()
     var projectPerms: suspend (Int) -> ProjectPermsSequenceResponse = { ProjectPermsSequenceResponse(true, "ok", data = emptyList()) }
 
-    override suspend fun getProjectPermissions(bearer: String, projectId: Int): ProjectPermsSequenceResponse {
-        record("getProjectPermissions", bearer)
+    override suspend fun getProjectPermissions(projectId: Int): ProjectPermsSequenceResponse {
+        record("getProjectPermissions")
         return projectPerms(projectId)
     }
 
-    override suspend fun getErrors(bearer: String, projectId: Int?, limit: Int, offset: Int, sortby: String?): ErrorSequenceResponse = TODO()
+    override suspend fun getErrors(projectId: Int?, limit: Int, offset: Int, sortby: String?): ErrorSequenceResponse = TODO()
     override suspend fun postError(projectKey: String, projectName: String, body: ErrorParams): Response<Unit> = TODO()
-    override suspend fun getProjectLogFile(bearer: String, projectId: Int, logfileid: Int, limit: Int, offset: Int, sortBy: String?): StringSequenceResponse = TODO()
+    override suspend fun getProjectLogFile(projectId: Int, logfileid: Int, limit: Int, offset: Int, sortBy: String?): StringSequenceResponse = TODO()
     var eventDetail: suspend (Int) -> LogEventDetailResponse = { LogEventDetailResponse(true, "ok", data = detail(it)) }
 
     override suspend fun getLogEvent(id: Int): LogEventDetailResponse {

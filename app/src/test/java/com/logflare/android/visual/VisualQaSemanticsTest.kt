@@ -18,8 +18,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import com.example.logflare.core.designsystem.components.navigation.LogFlareTopAppBar
-import com.example.logflare.core.designsystem.components.navigation.TopAppBarTitleType
 import com.example.logflare.core.designsystem.v2.LogFlareTheme
 import com.logflare.android.data.store.model.Member
 import com.logflare.android.feature.mypage.MyActions
@@ -35,7 +33,6 @@ import com.logflare.android.data.store.model.LogEvent
 import com.example.logflare.core.designsystem.v2.LfLevel
 import com.logflare.android.ui.VisualQaAppRoot
 import com.logflare.android.ui.VisualQaTags
-import com.logflare.android.ui.theme.LogflareandroidTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -55,7 +52,7 @@ class VisualQaSemanticsTest {
     @Test
     fun appRootExposesTestTagsAsResourceId() {
         compose.setContent {
-            LogflareandroidTheme(false) {
+            LogFlareTheme(darkTheme = false) {
                 VisualQaAppRoot {
                     Text("inside")
                 }
@@ -70,7 +67,7 @@ class VisualQaSemanticsTest {
     fun projectListExposesProjectCardTagsAndClicksReachCallback() {
         var clicked: Int? = null
         compose.setContent {
-            LogflareandroidTheme(false) {
+            LogFlareTheme(darkTheme = false) {
                 ProjectsContent(
                     state = ProjectsUiState(
                         items = listOf(qaProject(101, "Payments"), qaProject(202, "Checkout")),
@@ -102,7 +99,7 @@ class VisualQaSemanticsTest {
     fun projectListEmptyCreateTagReachesCallback() {
         var created = false
         compose.setContent {
-            LogflareandroidTheme(false) {
+            LogFlareTheme(darkTheme = false) {
                 ProjectsContent(
                     state = ProjectsUiState(initialLoad = false, canCreate = true),
                     now = Instant.parse("2026-10-18T12:00:00Z"),
@@ -197,7 +194,7 @@ class VisualQaSemanticsTest {
         var openedSettings = 0
         var openedLog: Int? = null
         compose.setContent {
-            LogflareandroidTheme(false) {
+            LogFlareTheme(darkTheme = false) {
                 ProjectDetailContent(
                     state = ProjectDetailUiState(
                         project = ProjectItem(101, "Payments", emptyList(), 0, 0, null),
@@ -256,26 +253,9 @@ class VisualQaSemanticsTest {
     }
 
     @Test
-    fun topAppBarBackControlExposesNavigateBackTag() {
-        var back = false
-        compose.setContent {
-            LogflareandroidTheme(false) {
-                LogFlareTopAppBar(
-                    titleType = TopAppBarTitleType.Title,
-                    titleText = "LOGS",
-                    onBack = { back = true },
-                    backTestTag = VisualQaTags.NavigateBack,
-                )
-            }
-        }
-        compose.onNodeWithTag(VisualQaTags.NavigateBack).performClick()
-        assertTrue(back)
-    }
-
-    @Test
     fun appRootIsSingleFullScreenResourceIdHost() {
         compose.setContent {
-            LogflareandroidTheme(false) {
+            LogFlareTheme(darkTheme = false) {
                 VisualQaAppRoot(modifier = Modifier.fillMaxSize()) {
                     Column {
                         Text("child")

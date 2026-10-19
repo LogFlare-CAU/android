@@ -3,7 +3,7 @@ package com.logflare.android.push
 import com.example.logflare.core.designsystem.v2.LfLevel
 import com.example.logflare.core.model.ProjectData
 import com.logflare.android.data.DeviceRepository
-import com.logflare.android.data.ProjectsRepository
+import com.logflare.android.data.LegacyProjectSettingsReader
 import com.logflare.android.data.session.SessionKey
 import com.logflare.android.data.session.SessionRepository
 import com.logflare.android.data.session.SessionState
@@ -73,12 +73,12 @@ class AlertSettingsRepository internal constructor(
         sessionRepository: SessionRepository,
         store: CacheStore,
         deviceRepository: DeviceRepository,
-        projectsRepository: ProjectsRepository,
+        legacyProjects: LegacyProjectSettingsReader,
         @ApplicationScope scope: CoroutineScope,
     ) : this(
         sessions = sessionRepository.state,
         store = store,
-        legacy = { LegacyAlerts(deviceRepository.getAlertLevel(), projectsRepository.getAll()) },
+        legacy = { LegacyAlerts(deviceRepository.getAlertLevel(), legacyProjects.readAll()) },
         scope = scope,
     )
 

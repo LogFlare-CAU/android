@@ -24,7 +24,7 @@ import retrofit2.Response
 @OptIn(ExperimentalCoroutinesApi::class)
 class PushRegistrarTest {
 
-    private val api = FakeLogflareApi()
+    private val api = FakeLogflareApi().apply { authHeader = { (sessions.value as? SessionState.SignedIn)?.token } }
     private val sessions = MutableStateFlow<SessionState>(SessionState.SignedOut)
 
     /** [PushTokenSource] whose behavior each test can swap. */

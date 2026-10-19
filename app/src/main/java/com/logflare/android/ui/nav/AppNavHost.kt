@@ -45,7 +45,7 @@ fun AppNavHost(
     modifier: Modifier = Modifier,
     onDeepLinkConsumed: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
-    screen: DestinationContent = { route, entry, nav -> LegacyDestination(route, entry, nav) },
+    screen: DestinationContent = { route, entry, nav -> AppDestination(route, entry, nav) },
 ) {
     val signedIn = session is SessionState.SignedIn
     val start = remember { if (signedIn) Destinations.Home else Destinations.Login }
@@ -130,12 +130,9 @@ internal fun NavHostController.popToProjectList() {
     navigateToTab(Destinations.Projects)
 }
 
-/**
- * The pre-rework screens, until each screen's task replaces its branch. Sub-screens that relied on
- * the old shell's top bar have no Back button meanwhile (system Back works).
- */
+/** The screen of each route, wired to navigation. */
 @Composable
-private fun LegacyDestination(route: String, entry: NavBackStackEntry, nav: NavHostController) {
+private fun AppDestination(route: String, entry: NavBackStackEntry, nav: NavHostController) {
     val back: () -> Unit = { nav.popBackStack() }
     when (route) {
         Destinations.Login -> LoginRoute(onSignedIn = { nav.leaveLogin() })

@@ -2,10 +2,10 @@ package com.logflare.android.visual
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import com.example.logflare.core.designsystem.v2.LogFlareTheme
 import com.logflare.android.feature.project.ProjectSettingsActions
 import com.logflare.android.feature.project.ProjectSettingsContent
 import com.logflare.android.ui.VisualQaTags
-import com.logflare.android.ui.theme.LogflareandroidTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,7 +17,7 @@ class ProjectScreenRenderTest {
 
     @Test fun projectSettingsRendersFromStateOnly() {
         compose.setContent {
-            LogflareandroidTheme(false) {
+            LogFlareTheme(darkTheme = false) {
                 ProjectSettingsContent(
                     state = ProjectSettingsFixtures.admin,
                     actions = ProjectSettingsActions(),

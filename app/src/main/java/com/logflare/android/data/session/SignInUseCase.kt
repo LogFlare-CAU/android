@@ -64,7 +64,7 @@ class SignInUseCase @Inject constructor(
 
         // Loaded before the session is stored so the session key is final in a single write.
         // Without it the key falls back to the username; sign-in still succeeds.
-        val user: UserDTO? = attempt { api.getme(bearer) }.getOrNull()?.takeIf { it.success }?.data
+        val user: UserDTO? = attempt { api.getMeAs(bearer) }.getOrNull()?.takeIf { it.success }?.data
         attempt {
             if (user != null) sessionRepository.signIn(url, bearer, user) else sessionRepository.signIn(url, bearer, username)
         }.onFailure { return SignInResult.ServerUnreachable(it) }

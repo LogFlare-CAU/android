@@ -47,21 +47,11 @@ class DeviceRepository @Inject constructor(
     }
 
     /**
-     * Fetches FCM configuration from the backend, persists it locally, ensures Firebase is
-     * initialized, and registers the current device token with the server.
-     */
-    suspend fun syncConfigAndRegister() {
-        val bearer = auth.token.firstOrNull() ?: return
-        if (!ensureFirebase()) return
-        registerCurrentToken(bearer)
-    }
-
-    /**
      * Fetches the FCM config from the backend (falling back to the persisted copy), persists it,
      * and initializes Firebase if needed. Returns whether Firebase is ready.
      */
     override suspend fun ensureFirebase(): Boolean {
-        val remoteConfig = auth.token.firstOrNull()?.let { fetchRemoteConfig(it) }
+        val remoteConfig = auth.token.firstOrNull()?.let { fetchRemoteConfig() }
         val config = remoteConfig ?: loadPersistedConfig()
         if (config == null) {
             Log.w(TAG, "No FCM config available from backend or cache")
@@ -88,9 +78,9 @@ class DeviceRepository @Inject constructor(
      * Called by [LogflareMessagingService] when Firebase issues a refreshed token.
      */
     suspend fun registerDevice(fcmToken: String) {
-        val bearer = auth.token.firstOrNull() ?: return
+        auth.token.firstOrNull() ?: return
         runCatching {
-            api.registerFcmToken(bearer, FcmTokenParams(fcmToken))
+            api.registerFcmToken(FcmTokenParams(fcmToken))
         }.onFailure { error ->
             if (error.isFcmAlreadyRegistered()) {
                 Log.i(TAG, "FCM token already registered")
@@ -108,9 +98,9 @@ class DeviceRepository @Inject constructor(
         }.getOrNull()
     }
 
-    private suspend fun fetchRemoteConfig(bearer: String): FcmConfig? {
+    private suspend fun fetchRemoteConfig(): FcmConfig? {
         return runCatching<FcmConfigResponse> {
-            api.getFirebaseConfig(bearer)
+            api.getFirebaseConfig()
         }.onFailure { error ->
             Log.w(TAG, "Fetching FCM config failed", error)
         }.getOrNull()?.takeIf { it.success }?.data
@@ -186,23 +176,6 @@ class DeviceRepository @Inject constructor(
         }
     }
 
-    private suspend fun registerCurrentToken(bearer: String) {
-        val token = getFcmTokenOrNull()
-            ?: run {
-                Log.w(TAG, "No FCM token available to register")
-                return
-            }
-        runCatching {
-            api.registerFcmToken(bearer, FcmTokenParams(token))
-        }.onFailure { error ->
-            if (error.isFcmAlreadyRegistered()) {
-                Log.i(TAG, "FCM token already registered")
-            } else {
-                Log.w(TAG, "Failed to register current Firebase token", error)
-            }
-        }
-    }
-
     private fun buildFirebaseOptions(config: FcmConfig): FirebaseOptions {
         val applicationId = config.mobilesdkAppId?.takeIf { it.isNotBlank() }
             ?: error("FCM config missing mobilesdk_app_id")
@@ -225,12 +198,6 @@ class DeviceRepository @Inject constructor(
         return context.fcmDataStore.data
             .map { it[KEY_ALERT_LEVEL] }
             .firstOrNull()
-    }
-
-    suspend fun setAlertLevel(level: String) {
-        context.fcmDataStore.edit { prefs ->
-            prefs[KEY_ALERT_LEVEL] = level
-        }
     }
 
 }
