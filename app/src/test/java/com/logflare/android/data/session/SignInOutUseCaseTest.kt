@@ -156,6 +156,27 @@ class SignInOutUseCaseTest {
     }
 
     @Test
+    fun signInWithAccess_savesTheQrServer_andRemembersItInRecent() = runTest {
+        val env = env()
+        env.recent.remember("https://old.example.com")
+
+        env.signIn.signInWithAccess("https://logs.example.com", "id", "secret")
+
+        assertEquals("https://logs.example.com/", env.baseUrl.getBaseUrl())
+        assertEquals(listOf("https://logs.example.com/", "https://old.example.com/"), env.recent.servers.first())
+    }
+
+    @Test
+    fun signInWithAccess_failure_remembersNothing() = runTest {
+        val env = env()
+        api.authenticateAccessResult = { throw httpError(403) }
+
+        env.signIn.signInWithAccess("https://logs.example.com", "id", "secret")
+
+        assertEquals(emptyList<String>(), env.recent.servers.first())
+    }
+
+    @Test
     fun signInWithAccess_keepLoggedInFalse_reachesTheServer() = runTest {
         val env = env()
 

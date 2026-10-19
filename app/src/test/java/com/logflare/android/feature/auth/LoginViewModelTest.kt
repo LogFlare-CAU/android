@@ -280,8 +280,8 @@ class LoginViewModelTest {
         vm.fill()
         advanceUntilIdle()
 
-        // Both tabs, so a host whose Access policy blocks the lookup can still reach the QR scan.
-        assertEquals(listOf(LoginMode.Password, LoginMode.Access), vm.state.value.modes)
+        // Unknown modes never close a tab: the QR scan works whatever the lookup said.
+        assertNull(vm.state.value.modes)
         vm.selectMode(LoginMode.Access)
         vm.scan()
         assertEquals(LoginStep.Scan, vm.state.value.step)
@@ -306,14 +306,45 @@ class LoginViewModelTest {
         assertEquals(listOf("https://a.example.com/"), modeCalls)
     }
 
-    @Test fun modes_oneMethod_isSelectedWithoutTabs() = runTest {
-        modesAnswer = { AuthModesResult.Ready(listOf("access")) }
+    @Test fun tabs_startOnPassword_andNeverDependOnTheModesLookup() = runTest {
         val vm = vm()
+        assertEquals(LoginMode.Password, vm.state.value.selectedMode)
+
+        vm.selectMode(LoginMode.Access)
+        assertEquals(LoginMode.Access, vm.state.value.selectedMode)
         vm.onUrl("https://logs.example.com")
         advanceUntilIdle()
+        assertEquals("a lookup answer does not move the selection", LoginMode.Access, vm.state.value.selectedMode)
+        vm.selectMode(LoginMode.Password)
+        assertEquals(LoginMode.Password, vm.state.value.selectedMode)
+    }
 
-        assertEquals(listOf(LoginMode.Access), vm.state.value.modes)
-        assertEquals(LoginMode.Access, vm.state.value.selectedMode)
+    @Test fun password_blockedWhenTheServerLacksIt_noRequestIsSent() = runTest {
+        modesAnswer = { AuthModesResult.Ready(listOf("access")) }
+        val vm = vm()
+        vm.fill()
+        advanceUntilIdle()
+
+        assertTrue(vm.state.value.passwordBlocked)
+        assertEquals(LoginMode.Password, vm.state.value.selectedMode)
+
+        vm.submit()
+        advanceUntilIdle()
+        assertTrue(calls.isEmpty())
+        assertFalse(vm.state.value.submitting)
+    }
+
+    @Test fun password_notBlocked_forLegacyEmptyOrUnknownModes() = runTest {
+        modesAnswer = { AuthModesResult.Ready(listOf("password")) }
+        val vm = vm()
+        vm.fill()
+        advanceUntilIdle()
+        assertFalse(vm.state.value.passwordBlocked)
+
+        vm.onUrl("https://empty.example.com")
+        modesAnswer = { AuthModesResult.Ready(emptyList()) }
+        advanceUntilIdle()
+        assertFalse("an empty list is the no-methods box, not this error", vm.state.value.passwordBlocked)
     }
 
     @Test fun noModes_isAStateOfItsOwn_andSignInDoesNothing() = runTest {
@@ -427,7 +458,7 @@ class LoginViewModelTest {
         }
     }
 
-    @Test fun access_scanAndManual_needAnAccessModeFirst() = runTest {
+    @Test fun access_scanAndManual_needTheAccessTab() = runTest {
         val vm = vm()
         vm.fill()
         advanceUntilIdle()
@@ -435,6 +466,34 @@ class LoginViewModelTest {
         vm.enterManual()
 
         assertEquals(LoginStep.Form, vm.state.value.step)
+    }
+
+    @Test fun access_scanWorks_withNoUrlTyped_noModesLookup_andUsesTheQrServer() = runTest {
+        val vm = vm()
+        vm.selectMode(LoginMode.Access)
+        vm.scan()
+        assertEquals(LoginStep.Scan, vm.state.value.step)
+
+        vm.onQr(qr)
+        assertEquals("logs.example.com", vm.state.value.accessServer)
+        vm.confirmAccess()
+        advanceUntilIdle()
+
+        assertTrue("no lookup was needed", modeCalls.isEmpty())
+        assertEquals("https://logs.example.com", accessCalls.single()[0])
+        assertEquals(LoginEvent.SignedIn, vm.events.first())
+    }
+
+    @Test fun access_qrServerWins_overADifferentTypedUrl() = runTest {
+        val vm = accessVm()
+        vm.onUrl("https://typed.example.com")
+        vm.selectMode(LoginMode.Access)
+        vm.scan()
+        vm.onQr(qr)
+        vm.confirmAccess()
+        advanceUntilIdle()
+
+        assertEquals("https://logs.example.com", accessCalls.single()[0])
     }
 
     @Test fun access_qrOutsideTheScanStep_isIgnored() = runTest {
@@ -461,7 +520,43 @@ class LoginViewModelTest {
         assertNull(vm.state.value.manualSecretError)
     }
 
-    @Test fun manual_continue_confirmsAgainstTheUrlField_andKeepsTheSecretOutOfState() = runTest {
+    @Test fun manual_serverIsPrefilledFromThePasswordTabUrl_orEmpty() = runTest {
+        val typed = accessVm()
+        typed.enterManual()
+        assertEquals("https://logs.example.com", typed.state.value.manualServer)
+
+        val blank = vm()
+        blank.selectMode(LoginMode.Access)
+        blank.enterManual()
+        assertEquals("", blank.state.value.manualServer)
+    }
+
+    @Test fun manual_serverIsValidated_httpsOnly() = runTest {
+        val vm = vm()
+        vm.selectMode(LoginMode.Access)
+        vm.enterManual()
+
+        vm.submitManual("id-1", "secret-1")
+        assertEquals(LoginError.EnterUrl, vm.state.value.manualServerError)
+        vm.onManualServer("http://logs.example.com")
+        vm.submitManual("id-1", "secret-1")
+        assertEquals(LoginError.NeedsHttps, vm.state.value.manualServerError)
+        vm.onManualServer("logs.example.com")
+        vm.submitManual("id-1", "secret-1")
+        assertEquals(LoginError.UrlScheme, vm.state.value.manualServerError)
+        assertEquals(LoginStep.Manual, vm.state.value.step)
+
+        vm.onManualServer("https://own.example.com/")
+        assertNull(vm.state.value.manualServerError)
+        vm.submitManual("id-1", "secret-1")
+        assertEquals(LoginStep.Confirm, vm.state.value.step)
+        assertEquals("own.example.com", vm.state.value.accessServer)
+        vm.confirmAccess()
+        advanceUntilIdle()
+        assertEquals("https://own.example.com", accessCalls.single()[0])
+    }
+
+    @Test fun manual_continue_confirmsAgainstTheServerField_andKeepsTheSecretOutOfState() = runTest {
         val vm = accessVm()
         vm.enterManual()
 

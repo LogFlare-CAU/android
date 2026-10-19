@@ -33,6 +33,7 @@ fun LoginRoute(onSignedIn: () -> Unit, viewModel: LoginViewModel = hiltViewModel
         onQr = viewModel::onQr,
         onManualContinue = viewModel::submitManual,
         onManualEdit = viewModel::onManualEdit,
+        onManualServer = viewModel::onManualServer,
         onKeepLoggedIn = viewModel::setKeepLoggedIn,
         onConfirmAccess = viewModel::confirmAccess,
         onBack = viewModel::back,

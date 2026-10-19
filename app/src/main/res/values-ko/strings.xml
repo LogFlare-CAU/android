@@ -29,6 +29,7 @@
     <string name="login_error_access_rejected">이 토큰으로는 이 서버에 로그인할 수 없어요. 서버 관리자에게 허용을 요청해 주세요.</string>
     <string name="login_error_access_unavailable">이 서버는 Access 로그인을 쓰지 않아요.</string>
     <string name="login_error_qr_invalid">LogFlare 로그인 QR이 아니에요. LogFlare 설정에서 QR을 열어 주세요.</string>
+    <string name="login_error_password_not_allowed">이 서버는 비밀번호 로그인을 쓰지 않아요.</string>
     <string name="login_error_enter_client_id">클라이언트 ID를 입력해 주세요.</string>
     <string name="login_error_enter_client_secret">클라이언트 시크릿을 입력해 주세요.</string>
     <string name="login_mode_password">비밀번호</string>
@@ -47,7 +48,7 @@
     <string name="login_camera_allow">카메라 허용</string>
     <string name="login_camera_settings">설정 열기</string>
     <string name="login_manual_title">토큰 직접 입력</string>
-    <string name="login_manual_hint">Access 서비스 토큰의 클라이언트 ID와 시크릿을 입력해 주세요. 서버는 앞에서 입력한 URL이에요.</string>
+    <string name="login_manual_hint">Access 서비스 토큰의 서버 주소, 클라이언트 ID, 시크릿을 입력해 주세요.</string>
     <string name="login_client_id">클라이언트 ID</string>
     <string name="login_client_secret">클라이언트 시크릿</string>
     <string name="login_continue">계속</string>

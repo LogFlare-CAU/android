@@ -61,7 +61,7 @@ data class LoginUiState(
     val formError: LoginError? = null,
     val recentServers: List<String> = emptyList(),
     val recentSheetOpen: Boolean = false,
-    /** Null until this URL's modes have been read. Password fields stay up until then. An empty list means no sign-in method. */
+    /** Null until this URL's modes have been read (or when the lookup failed). An empty list means no sign-in method. */
     val modes: List<LoginMode>? = null,
     val selectedMode: LoginMode = LoginMode.Password,
     val step: LoginStep = LoginStep.Form,
@@ -70,9 +70,15 @@ data class LoginUiState(
     val accessClientMasked: String = "",
     val keepLoggedIn: Boolean = true,
     val scanError: LoginError? = null,
+    /** Server of the manual-entry step; starts as the password tab's URL. */
+    val manualServer: String = "",
+    val manualServerError: LoginError? = null,
     val manualIdError: LoginError? = null,
     val manualSecretError: LoginError? = null,
-)
+) {
+    /** The server answered, and password sign-in is not among its methods (an empty list is the no-methods state). */
+    val passwordBlocked: Boolean get() = modes != null && modes.isNotEmpty() && LoginMode.Password !in modes
+}
 
 sealed interface LoginEvent {
     /** Sign-in succeeded. The session flip already redirects to Home; this is for routes that navigate themselves. */
@@ -144,7 +150,6 @@ class LoginViewModel internal constructor(
                 formError = null,
                 modes = null,
                 modesLoading = false,
-                selectedMode = LoginMode.Password,
                 step = LoginStep.Form,
                 scanError = null,
                 accessServer = "",
@@ -169,7 +174,6 @@ class LoginViewModel internal constructor(
     }
 
     fun selectMode(mode: LoginMode) {
-        if (_state.value.modes?.contains(mode) != true) return
         _state.update { it.copy(selectedMode = mode, formError = null, usernameError = null, passwordError = null) }
     }
 
@@ -189,11 +193,19 @@ class LoginViewModel internal constructor(
 
     private fun enterAccessStep(step: LoginStep) {
         val current = _state.value
-        if (current.submitting || current.modesLoading) return
-        if (current.selectedMode != LoginMode.Access || current.modes?.contains(LoginMode.Access) != true) return
+        if (current.submitting || current.selectedMode != LoginMode.Access) return
         pendingQr = null
         _state.update {
-            it.copy(step = step, scanError = null, formError = null, manualIdError = null, manualSecretError = null)
+            it.copy(
+                step = step,
+                scanError = null,
+                formError = null,
+                // The password tab's URL (typed or saved) is only a starting point; it can be changed here.
+                manualServer = if (step == LoginStep.Manual && it.manualServer.isEmpty()) it.url else it.manualServer,
+                manualServerError = null,
+                manualIdError = null,
+                manualSecretError = null,
+            )
         }
     }
 
@@ -215,6 +227,7 @@ class LoginViewModel internal constructor(
                     step = LoginStep.Form,
                     scanError = null,
                     formError = null,
+                    manualServerError = null,
                     manualIdError = null,
                     manualSecretError = null,
                 )
@@ -224,26 +237,27 @@ class LoginViewModel internal constructor(
 
     fun setKeepLoggedIn(value: Boolean) = _state.update { it.copy(keepLoggedIn = value) }
 
-    fun onManualEdit() = _state.update { it.copy(manualIdError = null, manualSecretError = null) }
+    fun onManualEdit() = _state.update { it.copy(manualServerError = null, manualIdError = null, manualSecretError = null) }
 
-    /** Manual entry. The server is the URL field; the secret goes straight into a private field. */
+    fun onManualServer(value: String) = _state.update { it.copy(manualServer = value, manualServerError = null) }
+
+    /** Manual entry. The server is the step's own field; the secret goes straight into a private field. */
     fun submitManual(clientId: String, secret: String) {
         val current = _state.value
         if (current.step != LoginStep.Manual) return
         val id = clientId.trim()
         val secretValue = secret.trim()
-        val urlError = urlProblem(current.url.trim())
-        if (urlError != null) {
-            _state.update { it.copy(step = LoginStep.Form, urlError = urlError) }
-            return
-        }
+        val server = current.manualServer.trim()
+        val serverError = urlProblem(server)
         val idError = if (id.isEmpty()) LoginError.EnterClientId else null
         val secretError = if (secretValue.isEmpty()) LoginError.EnterClientSecret else null
-        if (idError != null || secretError != null) {
-            _state.update { it.copy(manualIdError = idError, manualSecretError = secretError) }
+        if (serverError != null || idError != null || secretError != null) {
+            _state.update {
+                it.copy(manualServerError = serverError, manualIdError = idError, manualSecretError = secretError)
+            }
             return
         }
-        showConfirm(AccessQr(current.url.trim().trimEnd('/'), id, secretValue), LoginStep.Manual)
+        showConfirm(AccessQr(server.trimEnd('/'), id, secretValue), LoginStep.Manual)
     }
 
     fun onQr(raw: String) {
@@ -303,7 +317,12 @@ class LoginViewModel internal constructor(
         _state.update { it.copy(submitting = true, formError = null, urlError = null) }
         viewModelScope.launch {
             val modes = fetchModes(url, reportFailure = true) ?: return@launch
-            if (LoginMode.Password !in modes || _state.value.selectedMode != LoginMode.Password) {
+            if (LoginMode.Password !in modes) {
+                // Shown by the form (LoginUiState.passwordBlocked); an empty list shows the no-methods box.
+                _state.update { it.copy(submitting = false) }
+                return@launch
+            }
+            if (_state.value.selectedMode != LoginMode.Password) {
                 _state.update { it.copy(submitting = false) }
                 return@launch
             }
@@ -356,11 +375,9 @@ class LoginViewModel internal constructor(
         if (_state.value.url.trim() != url) return null
         return when (result) {
             AuthModesResult.Unreachable -> {
-                // A host behind Cloudflare Access can block this anonymous lookup, so both tabs stay
-                // open and the QR path is still reachable. Not cached: the next lookup asks again.
+                // Unknown modes: the password form is tried anyway. Not cached, so the next lookup asks again.
                 _state.update {
                     it.copy(
-                        modes = UNKNOWN_MODES,
                         modesLoading = false,
                         submitting = if (reportFailure) false else it.submitting,
                         formError = if (reportFailure) LoginError.Unreachable else it.formError,
@@ -371,12 +388,7 @@ class LoginViewModel internal constructor(
             is AuthModesResult.Ready -> {
                 val modes = result.modes.mapNotNull { it.toLoginMode() }.distinct()
                 modesFor = url
-                val selected = when {
-                    modes.size == 1 -> modes.first()
-                    _state.value.selectedMode in modes -> _state.value.selectedMode
-                    else -> modes.firstOrNull() ?: LoginMode.Password
-                }
-                _state.update { it.copy(modesLoading = false, modes = modes, selectedMode = selected) }
+                _state.update { it.copy(modesLoading = false, modes = modes) }
                 modes
             }
         }
@@ -390,9 +402,6 @@ class LoginViewModel internal constructor(
         is SignInResult.ServerUnreachable -> LoginError.Unreachable
     }
 }
-
-/** Shown when the modes lookup failed: both, so Access stays reachable. */
-private val UNKNOWN_MODES = listOf(LoginMode.Password, LoginMode.Access)
 
 private fun String.toLoginMode(): LoginMode? = when (this) {
     "password" -> LoginMode.Password

@@ -19,6 +19,8 @@ object VisualQaTags {
     const val LoginScanCancel = "login_scan_cancel"
     const val LoginManualScreen = "login_manual_screen"
     const val LoginManualId = "login_manual_id"
+    const val LoginManualServer = "login_manual_server"
+    const val LoginPasswordBlocked = "login_password_blocked"
     const val LoginManualSecret = "login_manual_secret"
     const val LoginManualContinue = "login_manual_continue"
     const val LoginAccessKeep = "login_access_keep"

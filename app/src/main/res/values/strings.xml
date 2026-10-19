@@ -24,6 +24,7 @@
     <string name="login_error_access_rejected">This token can\'t sign in to this server. Ask the server admin to allow it.</string>
     <string name="login_error_access_unavailable">This server doesn\'t accept Access sign-in.</string>
     <string name="login_error_qr_invalid">This isn\'t a LogFlare sign-in QR. Open the QR from LogFlare Settings.</string>
+    <string name="login_error_password_not_allowed">This server doesn\'t accept password sign-in.</string>
     <string name="login_error_enter_client_id">Enter the client ID.</string>
     <string name="login_error_enter_client_secret">Enter the client secret.</string>
     <string name="login_mode_password">Password</string>
@@ -42,7 +43,7 @@
     <string name="login_camera_allow">Allow camera</string>
     <string name="login_camera_settings">Open settings</string>
     <string name="login_manual_title">Enter token manually</string>
-    <string name="login_manual_hint">Use the Client ID and Client secret of the Access service token. The server is the URL you entered.</string>
+    <string name="login_manual_hint">Enter the server, Client ID and Client secret of the Access service token.</string>
     <string name="login_client_id">Client ID</string>
     <string name="login_client_secret">Client secret</string>
     <string name="login_continue">Continue</string>

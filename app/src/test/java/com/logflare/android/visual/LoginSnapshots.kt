@@ -54,7 +54,9 @@ class LoginSnapshots : DsSnapshotTest() {
     private val server = "https://logflare.code0987.me"
     private val bothModes = listOf(LoginMode.Password, LoginMode.Access)
     private val passwordMode = LoginUiState(url = server, username = "admin", modes = bothModes, recentServers = recent)
-    private val accessMode = passwordMode.copy(selectedMode = LoginMode.Access, username = "")
+    // No URL: the Access tab has no server field.
+    private val accessMode = LoginUiState(selectedMode = LoginMode.Access, recentServers = recent)
+    private val passwordBlocked = passwordMode.copy(modes = listOf(LoginMode.Access), password = "")
     private val noModes = LoginUiState(url = server, modes = emptyList(), recentServers = recent)
     private val scan = accessMode.copy(step = LoginStep.Scan)
     private val scanWrong = scan.copy(scanError = LoginError.QrInvalid)
@@ -65,8 +67,9 @@ class LoginSnapshots : DsSnapshotTest() {
     )
     private val confirmRejected = confirm.copy(formError = LoginError.AccessRejected)
     private val confirmUnreachable = confirm.copy(formError = LoginError.Unreachable, keepLoggedIn = false)
-    private val manual = accessMode.copy(step = LoginStep.Manual)
+    private val manual = accessMode.copy(step = LoginStep.Manual, manualServer = server)
     private val manualErrors = manual.copy(
+        manualServerError = LoginError.NeedsHttps,
         manualIdError = LoginError.EnterClientId,
         manualSecretError = LoginError.EnterClientSecret,
     )
@@ -76,6 +79,9 @@ class LoginSnapshots : DsSnapshotTest() {
     @Test fun login_access_mode_light() = capture("login_access_mode", false) { Login(accessMode) }
     @Test fun login_access_mode_dark() = capture("login_access_mode", true) { Login(accessMode) }
     @Config(qualifiers = "+ko") @Test fun login_access_mode_ko_light() = capture("login_access_mode_ko", false) { Login(accessMode) }
+    @Test fun login_password_not_allowed_light() = capture("login_password_not_allowed", false) { Login(passwordBlocked) }
+    @Test fun login_password_not_allowed_dark() = capture("login_password_not_allowed", true) { Login(passwordBlocked) }
+    @Config(qualifiers = "+ko") @Test fun login_password_not_allowed_ko_light() = capture("login_password_not_allowed_ko", false) { Login(passwordBlocked) }
     @Test fun login_no_modes_light() = capture("login_no_modes", false) { Login(noModes) }
     @Test fun login_no_modes_dark() = capture("login_no_modes", true) { Login(noModes) }
     @Test fun login_scan_light() = capture("login_scan", false) { Login(scan) }

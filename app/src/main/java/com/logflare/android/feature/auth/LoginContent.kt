@@ -115,6 +115,7 @@ fun LoginContent(
     onQr: (String) -> Unit = {},
     onManualContinue: (clientId: String, secret: String) -> Unit = { _, _ -> },
     onManualEdit: () -> Unit = {},
+    onManualServer: (String) -> Unit = {},
     onKeepLoggedIn: (Boolean) -> Unit = {},
     onConfirmAccess: () -> Unit = {},
     onBack: () -> Unit = {},
@@ -127,7 +128,7 @@ fun LoginContent(
             return
         }
         LoginStep.Manual -> {
-            ManualStep(state, onManualContinue, onManualEdit, onBack, modifier)
+            ManualStep(state, onManualContinue, onManualEdit, onManualServer, onBack, modifier)
             return
         }
         LoginStep.Confirm -> {
@@ -144,7 +145,7 @@ fun LoginContent(
         onSubmit()
     }
     val noModes = state.modes?.isEmpty() == true
-    val access = !noModes && state.selectedMode == LoginMode.Access && state.modes?.contains(LoginMode.Access) == true
+    val access = state.selectedMode == LoginMode.Access
     Column(
         modifier
             .fillMaxSize()
@@ -162,28 +163,30 @@ fun LoginContent(
         ) {
             Header()
             Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                AppTextField(
-                    value = state.url,
-                    onValueChange = onUrl,
-                    label = stringResource(R.string.login_server_url),
-                    placeholder = stringResource(R.string.login_server_url_placeholder),
-                    modifier = Modifier.testTag(VisualQaTags.LoginServerUrl),
-                    error = state.urlError.text(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Uri,
-                        autoCorrectEnabled = false,
-                        imeAction = ImeAction.Next,
-                    ),
-                    keyboardActions = KeyboardActions(onNext = { onCommitUrl() }),
-                    trailing = if (state.recentServers.isEmpty()) null else {
-                        { RecentButton(onOpenRecent) }
-                    },
-                )
-                ModePicker(state, onSelectMode)
-                when {
-                    noModes -> NoModesBox()
-                    access -> AccessCard(onScan, onEnterManually)
-                    else -> {
+                ModePicker(state.selectedMode, onSelectMode)
+                if (access) {
+                    AccessCard(onScan, onEnterManually)
+                } else {
+                    AppTextField(
+                        value = state.url,
+                        onValueChange = onUrl,
+                        label = stringResource(R.string.login_server_url),
+                        placeholder = stringResource(R.string.login_server_url_placeholder),
+                        modifier = Modifier.testTag(VisualQaTags.LoginServerUrl),
+                        error = state.urlError.text(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Uri,
+                            autoCorrectEnabled = false,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { onCommitUrl() }),
+                        trailing = if (state.recentServers.isEmpty()) null else {
+                            { RecentButton(onOpenRecent) }
+                        },
+                    )
+                    if (noModes) {
+                        NoModesBox()
+                    } else {
                         AppTextField(
                             value = state.username,
                             onValueChange = onUsername,
@@ -211,6 +214,14 @@ fun LoginContent(
                 }
             }
         }
+        if (!access && state.passwordBlocked) {
+            Text(
+                stringResource(R.string.login_error_password_not_allowed),
+                style = Lf.type.secondary.copy(fontWeight = FontWeight.SemiBold),
+                color = Lf.colors.error,
+                modifier = Modifier.padding(top = 12.dp).testTag(VisualQaTags.LoginPasswordBlocked),
+            )
+        }
         state.formError.text()?.let {
             Text(
                 it,
@@ -221,7 +232,7 @@ fun LoginContent(
         }
         Spacer(Modifier.height(16.dp))
         when {
-            noModes -> Unit
+            !access && noModes -> Unit
             access -> Text(
                 stringResource(R.string.login_access_caption),
                 style = Lf.type.caption,
@@ -288,16 +299,13 @@ private fun RecentButton(onClick: () -> Unit) {
     }
 }
 
+/** The two top-level sign-in methods. Always shown: Access does not depend on any server lookup. */
 @Composable
-private fun ModePicker(state: LoginUiState, onSelectMode: (LoginMode) -> Unit) {
-    val modes = state.modes ?: return
-    if (modes.size < 2) return
-    val labels = modes.map { mode ->
-        stringResource(if (mode == LoginMode.Password) R.string.login_mode_password else R.string.login_mode_access)
-    }
+private fun ModePicker(selected: LoginMode, onSelectMode: (LoginMode) -> Unit) {
+    val modes = listOf(LoginMode.Password, LoginMode.Access)
     SegmentedControl(
-        options = labels,
-        selectedIndex = modes.indexOf(state.selectedMode).coerceAtLeast(0),
+        options = listOf(stringResource(R.string.login_mode_password), stringResource(R.string.login_mode_access)),
+        selectedIndex = modes.indexOf(selected),
         onSelect = { index -> modes.getOrNull(index)?.let(onSelectMode) },
         modifier = Modifier.testTag(VisualQaTags.LoginModes),
     )
@@ -457,6 +465,7 @@ private fun ManualStep(
     state: LoginUiState,
     onContinue: (String, String) -> Unit,
     onEdit: () -> Unit,
+    onServer: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier,
 ) {
@@ -482,6 +491,19 @@ private fun ManualStep(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Text(stringResource(R.string.login_manual_hint), style = Lf.type.body, color = Lf.colors.textMuted)
+            AppTextField(
+                value = state.manualServer,
+                onValueChange = onServer,
+                label = stringResource(R.string.login_server_url),
+                placeholder = stringResource(R.string.login_server_url_placeholder),
+                modifier = Modifier.testTag(VisualQaTags.LoginManualServer),
+                error = state.manualServerError.text(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Next,
+                ),
+            )
             AppTextField(
                 value = clientId,
                 onValueChange = { clientId = it; onEdit() },
