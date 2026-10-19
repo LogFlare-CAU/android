@@ -1,6 +1,7 @@
 package com.example.logflare.core.network
 
 import com.example.logflare.core.model.FcmTokenParams
+import com.example.logflare.core.model.LogoutParams
 import com.example.logflare.core.network.auth.AuthHeaderInterceptor
 import com.example.logflare.core.network.auth.AuthTokenProvider
 import com.example.logflare.core.network.di.NetworkModule
@@ -133,6 +134,22 @@ class LogflareApiV2Test {
         assertEquals("/fcm/token", req.path)
         assertEquals("""{"fcm_token":"t1"}""", req.body.readUtf8())
         assertFalse(res.data!!.removed)
+    }
+
+    @Test fun logout_postsOptionalTokenAndParsesResult() = runTest {
+        enqueue("""{"success":true,"message":"ok","data":{"logged_out":true,"fcm_removed":true}}""")
+        val res = api.logout(LogoutParams("t1"))
+        val req = server.takeRequest()
+        assertEquals("POST", req.method)
+        assertEquals("/user/logout", req.path)
+        assertEquals("Bearer tok", req.getHeader("Authorization"))
+        assertEquals("""{"fcm_token":"t1"}""", req.body.readUtf8())
+        assertTrue(res.data!!.loggedOut)
+        assertTrue(res.data!!.fcmRemoved)
+
+        enqueue("""{"success":true,"message":"ok","data":{"logged_out":true,"fcm_removed":false}}""")
+        api.logout(LogoutParams())
+        assertEquals("{}", server.takeRequest().body.readUtf8())
     }
 
     @Test fun formerHeaderEndpoints_getInterceptorToken() = runTest {

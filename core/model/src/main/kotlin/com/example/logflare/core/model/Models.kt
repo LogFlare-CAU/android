@@ -142,6 +142,26 @@ data class FcmTokenParams(
     @SerialName("fcm_token") val fcmToken: String
 )
 
+/** Body of `POST /user/logout`; the token is optional (removes that FCM row too). */
+@Serializable
+data class LogoutParams(
+    @SerialName("fcm_token") val fcmToken: String? = null
+)
+
+@Serializable
+data class LogoutDTO(
+    @SerialName("logged_out") val loggedOut: Boolean,
+    @SerialName("fcm_removed") val fcmRemoved: Boolean = false
+)
+
+@Serializable
+data class LogoutResponse(
+    val success: Boolean,
+    val message: String,
+    @SerialName("error_code") val errorCode: Int? = null,
+    val data: LogoutDTO? = null
+)
+
 @Serializable
 data class FcmTokenResponse(
     val success: Boolean,

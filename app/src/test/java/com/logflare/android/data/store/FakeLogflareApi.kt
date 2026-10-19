@@ -3,6 +3,9 @@ package com.logflare.android.data.store
 import com.example.logflare.core.model.FcmConfigResponse
 import com.example.logflare.core.model.FcmTokenParams
 import com.example.logflare.core.model.FcmTokenResponse
+import com.example.logflare.core.model.LogoutDTO
+import com.example.logflare.core.model.LogoutParams
+import com.example.logflare.core.model.LogoutResponse
 import com.example.logflare.core.model.LogEventDTO
 import com.example.logflare.core.model.LogEventDetailDTO
 import com.example.logflare.core.model.LogEventDetailResponse
@@ -124,6 +127,17 @@ class FakeLogflareApi : LogflareApi {
     var unregisterFcm: suspend (FcmTokenParams) -> RemovedResponse = { RemovedResponse(true, "ok") }
     var authenticateResult: suspend (UserAuthParams) -> StringResponse = { StringResponse(true, "ok", data = "jwt-${it.username}") }
     val authCalls = mutableListOf<UserAuthParams>()
+
+    /** Bodies sent to [logout], in call order. */
+    val logoutBodies = mutableListOf<LogoutParams>()
+    var logoutResult: suspend (LogoutParams) -> LogoutResponse =
+        { LogoutResponse(true, "ok", data = LogoutDTO(loggedOut = true, fcmRemoved = it.fcmToken != null)) }
+
+    override suspend fun logout(body: LogoutParams): LogoutResponse {
+        record("logout")
+        logoutBodies += body
+        return logoutResult(body)
+    }
 
     override suspend fun registerFcmToken(body: FcmTokenParams): FcmTokenResponse {
         record("registerFcmToken")

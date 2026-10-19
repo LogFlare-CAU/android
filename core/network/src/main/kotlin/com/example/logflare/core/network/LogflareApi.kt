@@ -7,6 +7,8 @@ import com.example.logflare.core.model.RemovedResponse
 import com.example.logflare.core.model.FcmConfigResponse
 import com.example.logflare.core.model.FcmTokenParams
 import com.example.logflare.core.model.FcmTokenResponse
+import com.example.logflare.core.model.LogoutParams
+import com.example.logflare.core.model.LogoutResponse
 import com.example.logflare.core.model.ProjectCreateParams
 import com.example.logflare.core.model.ProjectSequenceResponse
 import com.example.logflare.core.model.StringResponse
@@ -134,4 +136,11 @@ interface LogflareApi {
 
     @HTTP(method = "DELETE", path = "/fcm/token", hasBody = true)
     suspend fun unregisterFcmToken(@Body body: FcmTokenParams): RemovedResponse
+
+    /**
+     * Ends the current login on the server and drops its push registrations. A server without
+     * the route answers 404/405; a second call 401s (the login is already gone).
+     */
+    @POST("/user/logout")
+    suspend fun logout(@Body body: LogoutParams): LogoutResponse
 }

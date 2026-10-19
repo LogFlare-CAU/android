@@ -17,6 +17,7 @@ import com.logflare.android.data.store.AccountStore
 import com.logflare.android.data.store.FakeLogflareApi
 import com.logflare.android.data.store.FileCacheStore
 import com.logflare.android.push.HistoryEntry
+import com.example.logflare.core.model.LogoutParams
 import com.logflare.android.push.InMemoryPushRegistrationStore
 import com.logflare.android.push.NotificationHistory
 import com.logflare.android.push.PushRegistrar
@@ -274,15 +275,16 @@ class SignInOutUseCaseTest {
         env.history.add(entry(1), alice.key)
         env.cache.write(alice.key, "projects", "cached", String.serializer(), fetchedAt = 1L)
         var tokenAtUnregister: String? = "not called"
-        api.unregisterFcm = {
+        api.logoutResult = {
             tokenAtUnregister = env.session.currentToken()
-            com.example.logflare.core.model.RemovedResponse(true, "ok")
+            com.example.logflare.core.model.LogoutResponse(true, "ok")
         }
 
         env.signOut()
 
-        assertEquals("unregistered while the bearer was still there", "Bearer jwt-alice", tokenAtUnregister)
-        assertEquals(listOf("fcm-1", "fcm-1"), api.fcmTokens)
+        assertEquals("logged out while the bearer was still there", "Bearer jwt-alice", tokenAtUnregister)
+        assertEquals(listOf(LogoutParams("fcm-1")), api.logoutBodies)
+        assertEquals(0, api.count("unregisterFcmToken"))
         assertEquals(SessionState.SignedOut, env.session.state.first { it !is SessionState.SignedIn })
         assertNull(env.auth.token.first())
         assertNull(env.cache.read(alice.key, "projects", String.serializer()))
@@ -300,12 +302,46 @@ class SignInOutUseCaseTest {
     }
 
     @Test
+    fun signOut_oldServer405_fallsBackToDeleteFcmToken_andSignsOut() = runTest {
+        val env = env()
+        env.registrar.start()
+        env.signIn("logs.example.com", "alice", "pw")
+        val alice = env.signedIn()
+        runCurrent()
+        env.cache.write(alice.key, "projects", "cached", String.serializer(), fetchedAt = 1L)
+        api.logoutResult = { throw retrofit2.HttpException(retrofit2.Response.error<Any>(405, "{}".toResponseBody(null))) }
+
+        env.signOut()
+
+        assertEquals(1, api.count("logout"))
+        assertEquals(1, api.count("unregisterFcmToken"))
+        assertEquals(SessionState.SignedOut, env.session.state.first { it !is SessionState.SignedIn })
+        assertNull(env.cache.read(alice.key, "projects", String.serializer()))
+    }
+
+    @Test
+    fun signOut_logoutFails_stillSignsOut() = runTest {
+        val env = env()
+        env.registrar.start()
+        env.signIn("logs.example.com", "alice", "pw")
+        val alice = env.signedIn()
+        runCurrent()
+        env.cache.write(alice.key, "projects", "cached", String.serializer(), fetchedAt = 1L)
+        api.logoutResult = { throw java.io.IOException("down") }
+
+        env.signOut()
+
+        assertEquals(SessionState.SignedOut, env.session.state.first { it !is SessionState.SignedIn })
+        assertNull(env.cache.read(alice.key, "projects", String.serializer()))
+    }
+
+    @Test
     fun signOut_unregisterTimeout_stillSignsOut() = runTest {
         val env = env()
         env.signIn("logs.example.com", "alice", "pw")
         val alice = env.signedIn()
         env.cache.write(alice.key, "projects", "cached", String.serializer(), fetchedAt = 1L)
-        api.unregisterFcm = { awaitCancellation() }
+        api.logoutResult = { awaitCancellation() }
 
         val start = currentTime
         env.signOut()
@@ -327,7 +363,7 @@ class SignInOutUseCaseTest {
 
         val bob = env.session.state.first { it is SessionState.SignedIn && it.userIdx == 8 } as SessionState.SignedIn
         assertEquals("http://other.example.com/", bob.serverUrl)
-        assertEquals(1, api.count("unregisterFcmToken"))
+        assertEquals(1, api.count("logout"))
         assertNull(env.cache.read(alice.key, "projects", String.serializer()))
     }
 
@@ -365,7 +401,7 @@ class SignInOutUseCaseTest {
         assertNull(env.auth.token.first())
         assertNull(env.cache.read(alice.key, "projects", String.serializer()))
         assertNull(env.cache.read(alice.key, "notification-history", HISTORY))
-        assertEquals("the server already rejected the token: no DELETE", 0, api.count("unregisterFcmToken"))
+        assertEquals("the server already rejected the token: no logout call", 0, api.count("logout"))
     }
 
     @Test

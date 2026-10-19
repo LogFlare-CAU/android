@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.logflare.android.data.session.SessionKey
@@ -34,6 +35,9 @@ class DataStorePushRegistrationStore internal constructor(
 
     override suspend fun get(): PushRegistration? {
         val prefs = dataStore.data.first()
+        // Rows written before the server bound pushes to login sessions carry no version: ignored,
+        // so the next start registers once more and the server binds them to the login token.
+        if (prefs[KEY_VERSION] != SCHEMA_VERSION) return null
         val session = prefs[KEY_SESSION] ?: return null
         val token = prefs[KEY_FCM_TOKEN] ?: return null
         return PushRegistration(SessionKey(session), token)
@@ -44,9 +48,11 @@ class DataStorePushRegistrationStore internal constructor(
             if (registration == null) {
                 prefs.remove(KEY_SESSION)
                 prefs.remove(KEY_FCM_TOKEN)
+                prefs.remove(KEY_VERSION)
             } else {
                 prefs[KEY_SESSION] = registration.session.value
                 prefs[KEY_FCM_TOKEN] = registration.fcmToken
+                prefs[KEY_VERSION] = SCHEMA_VERSION
             }
         }
     }
@@ -54,5 +60,9 @@ class DataStorePushRegistrationStore internal constructor(
     private companion object {
         val KEY_SESSION = stringPreferencesKey("session_key")
         val KEY_FCM_TOKEN = stringPreferencesKey("fcm_token")
+        val KEY_VERSION = intPreferencesKey("schema_version")
+
+        /** 2: the registration is bound to a login session server-side (push-sessions release). */
+        const val SCHEMA_VERSION = 2
     }
 }

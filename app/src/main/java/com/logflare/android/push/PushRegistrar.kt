@@ -1,6 +1,7 @@
 package com.logflare.android.push
 
 import com.example.logflare.core.model.FcmTokenParams
+import com.example.logflare.core.model.LogoutParams
 import com.example.logflare.core.network.LogflareApi
 import com.logflare.android.data.DeviceRepository
 import com.logflare.android.data.session.SessionKey
@@ -123,8 +124,10 @@ class PushRegistrar internal constructor(
     }
 
     /**
-     * Removes this device's token from the server, giving up after [timeoutMs]. Must run while
-     * still signed in. Returns whether the server confirmed it.
+     * Ends the login on the server (`POST /user/logout`, which also drops this device's push
+     * registration), giving up after [timeoutMs]. Must run while still signed in. A server that
+     * predates the route (404/405) gets the old `DELETE /fcm/token` instead. A 401 means the
+     * login is already gone: [UnauthorizedSignOut] handles it. Returns whether the server confirmed.
      */
     suspend fun unregister(timeoutMs: Long = 3_000): Boolean = withTimeoutOrNull(timeoutMs) {
         closedBearer = (sessions.value as? SessionState.SignedIn)?.token
@@ -133,8 +136,16 @@ class PushRegistrar internal constructor(
         lock.withLock {
             // Signing out: the next sign-in registers again, whatever the server answers now.
             forgetRegistration()
-            val token = registeredToken ?: tokens.getFcmTokenOrNull() ?: return@withLock false
-            val removed = attempt { api.unregisterFcmToken(FcmTokenParams(token)).success }.getOrDefault(false)
+            val token = registeredToken ?: tokens.getFcmTokenOrNull()
+            val removed = attempt { api.logout(LogoutParams(token)).success }
+                .recoverCatching { e ->
+                    if (e is HttpException && e.code() in LOGOUT_MISSING && token != null) {
+                        api.unregisterFcmToken(FcmTokenParams(token)).success
+                    } else {
+                        throw e
+                    }
+                }
+                .getOrDefault(false)
             if (removed) {
                 registeredToken = null
                 _registeredFor.value = null
@@ -193,5 +204,8 @@ class PushRegistrar internal constructor(
     private companion object {
         /** The server already has this token for this user. */
         const val HTTP_CONFLICT = 409
+
+        /** Not found / method not allowed: the server has no `POST /user/logout` (old deploy). */
+        val LOGOUT_MISSING = setOf(404, 405)
     }
 }

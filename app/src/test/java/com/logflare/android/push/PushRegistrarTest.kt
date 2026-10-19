@@ -1,6 +1,8 @@
 package com.logflare.android.push
 
 import com.example.logflare.core.model.FcmTokenResponse
+import com.example.logflare.core.model.LogoutParams
+import com.example.logflare.core.model.LogoutResponse
 import com.example.logflare.core.model.RemovedResponse
 import com.logflare.android.data.session.SessionKey
 import com.logflare.android.data.session.SessionState
@@ -139,17 +141,63 @@ class PushRegistrarTest {
     }
 
     @Test
-    fun unregister_sendsRegisteredToken_andForgetsIt() = runTest {
+    fun unregister_callsLogoutWithRegisteredToken_andForgetsIt() = runTest {
         val registrar = registrar()
         registrar.start()
-        sessions.value = signedIn(A)
+        sessions.value = signedIn(A, token = "Bearer a")
         runCurrent()
         tokens.token = { error("Firebase must not be needed for a token we registered") }
 
         assertTrue(registrar.unregister())
-        assertEquals(listOf("fcm-1", "fcm-1"), api.fcmTokens)
-        assertEquals(1, api.count("unregisterFcmToken"))
+        assertEquals(listOf(LogoutParams("fcm-1")), api.logoutBodies)
+        assertEquals("logout carries the session bearer", "Bearer a", api.tokens.last())
+        assertEquals("no DELETE when logout exists", 0, api.count("unregisterFcmToken"))
         assertNull(registrar.registeredFor.value)
+        assertNull(saved.get())
+    }
+
+    @Test
+    fun unregister_withoutKnownToken_stillLogsOut() = runTest {
+        tokens.token = { null }
+        val registrar = registrar()
+        sessions.value = signedIn(A)
+
+        assertTrue(registrar.unregister())
+        assertEquals(listOf(LogoutParams(null)), api.logoutBodies)
+        assertEquals(0, api.count("unregisterFcmToken"))
+    }
+
+    @Test
+    fun unregister_oldServer404or405_fallsBackToDeleteFcmToken() = runTest {
+        for (code in listOf(404, 405)) {
+            api.logoutResult = { throw httpError(code) }
+            val registrar = registrar()
+            sessions.value = signedIn(A, token = "Bearer $code")
+            registrar.start()
+            runCurrent()
+            val deletes = api.count("unregisterFcmToken")
+
+            assertTrue("code $code", registrar.unregister())
+            assertEquals("code $code", deletes + 1, api.count("unregisterFcmToken"))
+            assertEquals("fcm-1", api.fcmTokens.last())
+        }
+    }
+
+    @Test
+    fun unregister_otherLogoutFailures_doNotFallBack() = runTest {
+        val failures = listOf<() -> Nothing>(
+            { throw httpError(401) },
+            { throw httpError(500) },
+            { throw java.io.IOException("down") },
+        )
+        for (failure in failures) {
+            api.logoutResult = { failure() }
+            val registrar = registrar()
+            sessions.value = signedIn(A)
+
+            assertFalse(registrar.unregister())
+        }
+        assertEquals(0, api.count("unregisterFcmToken"))
     }
 
     @Test
@@ -189,7 +237,7 @@ class PushRegistrarTest {
 
     @Test
     fun unregister_timesOut() = runTest {
-        api.unregisterFcm = { awaitCancellation() }
+        api.logoutResult = { awaitCancellation() }
         val registrar = registrar()
         sessions.value = signedIn(A)
 
@@ -199,14 +247,17 @@ class PushRegistrarTest {
 
     @Test
     fun unregister_failureReturnsFalse() = runTest {
-        api.unregisterFcm = { RemovedResponse(false, "nope") }
+        api.logoutResult = { LogoutResponse(false, "nope") }
         val registrar = registrar()
         sessions.value = signedIn(A)
         assertFalse(registrar.unregister())
 
+        api.logoutResult = { throw httpError(404) }
+        api.unregisterFcm = { RemovedResponse(false, "nope") }
+        assertFalse("fallback DELETE failed too", registrar.unregister())
+
         tokens.token = { null }
-        api.unregisterFcm = { RemovedResponse(true, "ok") }
-        assertFalse("no token known: nothing to unregister", registrar.unregister())
+        assertFalse("no token known: the DELETE fallback has nothing to send", registrar.unregister())
     }
 
     @Test

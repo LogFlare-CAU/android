@@ -6,7 +6,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 /**
- * Signs out (the user asked to): unregisters this device's push token, then [LocalSignOut]
+ * Signs out (the user asked to): logs out on the server (which drops this device's push token), then [LocalSignOut]
  * removes the session and its local data (spec §5).
  */
 class SignOutUseCase @Inject constructor(
@@ -17,8 +17,8 @@ class SignOutUseCase @Inject constructor(
     /** Runs to the end even if the caller is cancelled; takes at most ~3 s for the server. */
     suspend operator fun invoke() {
         withContext(NonCancellable) {
-            // Best effort, before the token is gone: the DELETE needs the session's bearer. Pushes
-            // that still arrive after a failed unregister are dropped while signed out.
+            // Best effort, before the token is gone: the logout needs the session's bearer. Pushes
+            // that still arrive after a failed logout are dropped while signed out.
             if (sessionRepository.state.value is SessionState.SignedIn) pushRegistrar.unregister()
             localSignOut()
         }
