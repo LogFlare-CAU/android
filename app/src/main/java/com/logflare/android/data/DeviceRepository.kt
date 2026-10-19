@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.logflare.core.model.FcmConfig
 import com.example.logflare.core.model.FcmConfigResponse
-import com.example.logflare.core.model.FcmTokenParams
 import com.example.logflare.core.network.LogflareApi
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
@@ -29,12 +28,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import retrofit2.HttpException
 
 private val Context.fcmDataStore by preferencesDataStore(name = "fcm")
 
-private fun Throwable.isFcmAlreadyRegistered(): Boolean =
-    this is HttpException && code() == 409
 
 @Singleton
 class DeviceRepository internal constructor(
@@ -86,22 +82,6 @@ class DeviceRepository internal constructor(
         return initializeFirebase(config)
     }
 
-    /**
-     * Called by [LogflareMessagingService] when Firebase issues a refreshed token. Signed out
-     * there is no token for the interceptor to send, so nothing is registered.
-     */
-    suspend fun registerDevice(fcmToken: String) {
-        if (!isSignedIn()) return
-        runCatching {
-            api.registerFcmToken(FcmTokenParams(fcmToken))
-        }.onFailure { error ->
-            if (error.isFcmAlreadyRegistered()) {
-                Log.i(TAG, "FCM token already registered")
-            } else {
-                Log.w(TAG, "Failed to register FCM token", error)
-            }
-        }
-    }
 
     /**
      * Whether a session is signed in, from the same state the auth interceptor reads; waits while
@@ -183,13 +163,8 @@ class DeviceRepository internal constructor(
                 }
 
                 Log.i(TAG, "Firebase reinitialized in MessagingService")
-                val newToken = getFcmTokenOrNull()
-                if (!newToken.isNullOrBlank()) {
-                    registerDevice(newToken)
-                    Log.i(TAG, "Re-registered FCM token: $newToken")
-                } else {
-                    Log.w(TAG, "Could not get new FCM token after reinit")
-                }
+                // Registration is PushRegistrar's job (it honours the sign-out guard); a refreshed
+                // token reaches it through LogflareMessagingService.onNewToken.
             } catch (e: Exception) {
                 Log.e(TAG, "Error while reinitializing Firebase from cache", e)
             }
