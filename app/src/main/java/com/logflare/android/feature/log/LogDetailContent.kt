@@ -31,13 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import com.logflare.android.ui.copyText
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -105,10 +105,10 @@ fun LogDetailContent(
     zone: ZoneId = ZoneId.systemDefault(),
     toast: LfToastState? = null,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val appContext = LocalContext.current
     val copiedLabel = stringResource(R.string.log_copied)
     val copy: (String) -> Unit = { text ->
-        clipboard.setText(AnnotatedString(text))
+        appContext.copyText(text)
         toast?.show(copiedLabel)
     }
     val detail = state.detail

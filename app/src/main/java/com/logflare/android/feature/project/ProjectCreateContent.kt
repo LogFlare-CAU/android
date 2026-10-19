@@ -25,10 +25,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import com.logflare.android.ui.copyText
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -59,7 +59,7 @@ fun ProjectCreateRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val toast = rememberLfToastState()
-    val clipboard = LocalClipboardManager.current
+    val appContext = LocalContext.current
     val createFailed = stringResource(R.string.project_create_failed)
     val rotated = stringResource(R.string.project_create_token_rotated)
     val rotateFailed = stringResource(R.string.project_create_rotate_failed)
@@ -90,7 +90,7 @@ fun ProjectCreateRoute(
         onToggleReveal = viewModel::toggleReveal,
         onCopy = {
             state.created?.let {
-                clipboard.setText(AnnotatedString(it.token))
+                appContext.copyText(it.token, sensitive = true)
                 toast.show(copied)
             }
         },

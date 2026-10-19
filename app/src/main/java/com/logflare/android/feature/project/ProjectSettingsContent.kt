@@ -13,10 +13,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import com.logflare.android.ui.copyText
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,7 +42,7 @@ fun ProjectSettingsRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val toast = rememberLfToastState()
-    val clipboard = LocalClipboardManager.current
+    val appContext = LocalContext.current
     val saved = stringResource(R.string.project_settings_saved)
     val saveFailed = stringResource(R.string.project_settings_save_failed)
     val copied = stringResource(R.string.project_create_token_copied)
@@ -57,7 +57,7 @@ fun ProjectSettingsRoute(
                 ProjectSettingsEvent.Saved -> toast.show(saved)
                 ProjectSettingsEvent.SaveFailed -> toast.show(saveFailed)
                 is ProjectSettingsEvent.CopyToken -> {
-                    clipboard.setText(AnnotatedString(it.token))
+                    appContext.copyText(it.token, sensitive = true)
                     toast.show(copied)
                 }
                 ProjectSettingsEvent.TokenUnavailable -> toast.show(unavailable)
