@@ -12,12 +12,39 @@ plugins {
 
 // Release signing comes from local.properties (never committed):
 //   RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD
-// Without them the release build is signed with the debug key so it still installs locally.
+// Without any of them the release build is signed with the debug key so it still installs locally
+// (with a warning, only when a release package/assemble/bundle task runs). A partial or dangling
+// setup (some keys set, keystore file missing) fails such a build instead of silently debug-signing.
 val releaseProps = Properties()
 rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use { releaseProps.load(it) }
+val releaseKeys = listOf("RELEASE_STORE_FILE", "RELEASE_STORE_PASSWORD", "RELEASE_KEY_ALIAS", "RELEASE_KEY_PASSWORD")
 val releaseKeystore = releaseProps.getProperty("RELEASE_STORE_FILE")?.let { rootProject.file(it) }
 val hasReleaseKeystore = releaseKeystore != null && releaseKeystore.isFile &&
-    listOf("RELEASE_STORE_PASSWORD", "RELEASE_KEY_ALIAS", "RELEASE_KEY_PASSWORD").all { releaseProps.getProperty(it) != null }
+    releaseKeys.all { releaseProps.getProperty(it) != null }
+val releaseKeysSet = releaseKeys.filter { releaseProps.getProperty(it) != null }
+
+// Release signing is judged when the task graph is known, so debug builds, lint and tests stay quiet.
+gradle.taskGraph.whenReady {
+    val signsRelease = allTasks.any {
+        it.project == project && it.name.matches(Regex("^(assemble|bundle|package|sign|validateSigning)[A-Za-z]*Release.*"))
+    }
+    if (signsRelease && !hasReleaseKeystore) {
+        if (releaseKeysSet.isNotEmpty()) {
+            val problem = releaseKeys.filter { it !in releaseKeysSet }.takeIf { it.isNotEmpty() }
+                ?.let { "missing ${it.joinToString()}" }
+                ?: "the keystore file RELEASE_STORE_FILE=${releaseProps.getProperty("RELEASE_STORE_FILE")} does not exist"
+            throw GradleException(
+                "Release signing is only partly configured in local.properties ($problem). " +
+                    "Fix it, or remove all RELEASE_* keys to build a debug-signed release.",
+            )
+        }
+        logger.warn(
+            "WARNING: no release keystore in local.properties (RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, " +
+                "RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD): the release build is signed with the DEBUG key " +
+                "and must not be distributed.",
+        )
+    }
+}
 
 kapt {
     correctErrorTypes = true
@@ -53,11 +80,6 @@ android {
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")
             } else {
-                logger.warn(
-                    "WARNING: no release keystore in local.properties (RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, " +
-                        "RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD): the release build is signed with the DEBUG key " +
-                        "and must not be distributed.",
-                )
                 signingConfigs.getByName("debug")
             }
             proguardFiles(
