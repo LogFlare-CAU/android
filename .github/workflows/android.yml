@@ -37,7 +37,10 @@ jobs:
         run: ./gradlew :app:assembleDebug --stacktrace
 
       - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest :visual-qa:tools:test --stacktrace
+        run: ./gradlew :core:network:testDebugUnitTest :core:designsystem:testDebugUnitTest :app:testDebugUnitTest :visual-qa:tools:test --stacktrace
+
+      - name: Lint
+        run: ./gradlew :app:lintDebug --stacktrace
 
       # Baselines under app/src/test/snapshots/images are recorded locally on Windows while this
       # job runs on Linux. Robolectric's native graphics mode is meant to be platform independent,
