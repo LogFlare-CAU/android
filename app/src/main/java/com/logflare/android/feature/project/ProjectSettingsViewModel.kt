@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.logflare.core.designsystem.v2.LfLevel
 import com.logflare.android.data.session.SessionRepository
 import com.logflare.android.data.session.SessionState
+import com.logflare.android.data.store.LogStore
 import com.logflare.android.data.store.MemberStore
 import com.logflare.android.data.store.ProjectStore
 import com.logflare.android.data.store.model.Member
@@ -102,6 +103,7 @@ class ProjectSettingsViewModel internal constructor(
     private val projectStore: ProjectStore,
     private val memberStore: MemberStore,
     private val alerts: AlertSettingsRepository,
+    private val logStore: LogStore,
     sessions: StateFlow<SessionState>,
 ) : ViewModel() {
 
@@ -111,8 +113,9 @@ class ProjectSettingsViewModel internal constructor(
         projectStore: ProjectStore,
         memberStore: MemberStore,
         alerts: AlertSettingsRepository,
+        logStore: LogStore,
         sessionRepository: SessionRepository,
-    ) : this(savedState, projectStore, memberStore, alerts, sessionRepository.state)
+    ) : this(savedState, projectStore, memberStore, alerts, logStore, sessionRepository.state)
 
     private val projectId: Int = checkNotNull(savedState[Destinations.ProjectIdArg]) { "project id missing" }
 
@@ -262,6 +265,7 @@ class ProjectSettingsViewModel internal constructor(
             // The store refreshes the project list once the delete went through.
             projectStore.delete(projectId)
                 .onSuccess {
+                    logStore.forgetProject(projectId)
                     local.value = local.value.copy(sheet = null)
                     _events.send(ProjectSettingsEvent.Deleted)
                 }

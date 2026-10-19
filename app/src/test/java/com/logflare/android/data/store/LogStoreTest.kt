@@ -75,6 +75,27 @@ class LogStoreTest {
     }
 
     @Test
+    fun forgetProject_dropsItsGroupsFromCachedPages() = runTest {
+        api.events = {
+            LogEventPageResponse(
+                true, "ok",
+                data = LogEventPageDTO(listOf(event(1), event(2).copy(projectId = 2), event(3)), null),
+            )
+        }
+        val store = newStore()
+        val recent = store.recent().first { it.data != null }.data!!
+        assertEquals(listOf(1, 2, 3), recent.map { it.id })
+        val scoped = LogQuery(projectId = 1)
+        store.events(scoped).first { it.data != null }
+
+        store.forgetProject(1)
+
+        // Served from the cache (still fresh): the deleted project's groups are gone.
+        assertEquals(listOf(2), store.recent().first { it.data != null }.data!!.map { it.id })
+        assertEquals(listOf(2), store.events(scoped).first { it.data != null }.data!!.items.map { it.id })
+    }
+
+    @Test
     fun hashKey_coversEveryField() {
         val base = LogQuery()
         val variants = listOf(

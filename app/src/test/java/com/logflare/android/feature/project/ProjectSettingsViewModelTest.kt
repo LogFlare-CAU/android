@@ -12,6 +12,7 @@ import com.logflare.android.data.session.SessionState
 import com.logflare.android.data.store.AccountStore
 import com.logflare.android.data.store.FakeLogflareApi
 import com.logflare.android.data.store.FileCacheStore
+import com.logflare.android.data.store.LogStore
 import com.logflare.android.data.store.MemberStore
 import com.logflare.android.data.store.ProjectStore
 import com.logflare.android.data.store.model.Member
@@ -84,6 +85,7 @@ class ProjectSettingsViewModelTest {
             ProjectStore(api, sessions, cache, backgroundScope) { NOW },
             MemberStore(api, sessions, cache, backgroundScope, account) { NOW },
             alerts,
+            LogStore(api, sessions, cache, backgroundScope, { NOW }),
             sessions,
         )
         val events = mutableListOf<ProjectSettingsEvent>()

@@ -102,6 +102,23 @@ class LogStore internal constructor(
     suspend fun refreshEvent(id: Int): Result<Unit> =
         sessions.refreshSignedIn { session -> detailResource(id).refresh(session) }
 
+    /**
+     * Drops [projectId]'s groups from the cached first pages (including [recent]'s), so lists and
+     * Home stop showing a deleted project's errors. Open [events] streams update; pages not
+     * loaded in this process are replaced by their next refetch.
+     */
+    suspend fun forgetProject(projectId: Int) {
+        val session = sessions.value as? SessionState.SignedIn ?: return
+        pageResource(RECENT_QUERY) // Make sure the Home entry is among those scanned.
+        for ((key, resource) in pages.entries.toList()) {
+            val generation = store.generation(session.key)
+            val cached = store.read(session.key, key, LogEventPageDTO.serializer()) ?: continue
+            val kept = cached.value.items.filter { it.projectId != projectId }
+            if (kept.size == cached.value.items.size) continue
+            resource.put(session.key, cached.value.copy(items = kept), expected = cached, generation = generation)
+        }
+    }
+
     private fun pageResource(query: LogQuery): CachedResource<LogEventPageDTO> {
         val key = eventsKey(query)
         return pages.getOrPut(key) {
