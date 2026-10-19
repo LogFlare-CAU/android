@@ -1,6 +1,7 @@
 package com.logflare.android.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.logflare.core.model.ProjectData
@@ -27,4 +28,9 @@ class LegacyProjectSettingsReader @Inject constructor(
         context.legacyProjectsDataStore.data.first()[projectListKey]?.let { raw ->
             runCatching { Json.decodeFromString<List<ProjectData>>(raw) }.getOrDefault(emptyList())
         } ?: emptyList()
+
+    /** Deletes the legacy list once it has been migrated. */
+    suspend fun clear() {
+        context.legacyProjectsDataStore.edit { it.remove(projectListKey) }
+    }
 }

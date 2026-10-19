@@ -38,6 +38,7 @@ class AlertSettingsRepositoryTest {
         store = FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)),
         legacy = { legacyReads++; legacy },
         scope = backgroundScope,
+        clearLegacy = { legacy = LegacyAlerts(globalLevel = null, projects = emptyList()) },
     )
 
     @Test
@@ -73,6 +74,34 @@ class AlertSettingsRepositoryTest {
         runCurrent()
         assertEquals(expected, again.settings.value)
         assertEquals(reads, legacyReads)
+    }
+
+    @Test
+    fun legacyMigratesOncePerInstall_laterSessionStartsWithDefaults() = runTest {
+        legacy = LegacyAlerts(globalLevel = "Error", projects = emptyList())
+        val repo = newRepo()
+        runCurrent()
+        assertEquals(GlobalAlert.ErrorAndAbove, repo.settings.value.global)
+
+        // A different user/server signs in later: the legacy values were consumed by the first.
+        sessions.value = signedIn(B)
+        runCurrent()
+        assertEquals(AlertSettings(), repo.settings.value)
+    }
+
+    @Test
+    fun unreadableLegacy_isNotCleared() = runTest {
+        var cleared = false
+        val repo = AlertSettingsRepository(
+            sessions = sessions,
+            store = FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)),
+            legacy = { error("boom") },
+            scope = backgroundScope,
+            clearLegacy = { cleared = true },
+        )
+        runCurrent()
+        assertEquals(AlertSettings(), repo.settings.value)
+        assertFalse(cleared)
     }
 
     @Test

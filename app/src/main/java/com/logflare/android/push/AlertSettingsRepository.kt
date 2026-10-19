@@ -67,6 +67,8 @@ class AlertSettingsRepository internal constructor(
     private val legacy: suspend () -> LegacyAlerts,
     scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Deletes the legacy stores after their values were copied, so they migrate only once per install. */
+    private val clearLegacy: suspend () -> Unit = {},
 ) {
     @Inject
     constructor(
@@ -80,6 +82,10 @@ class AlertSettingsRepository internal constructor(
         store = store,
         legacy = { LegacyAlerts(deviceRepository.getAlertLevel(), legacyProjects.readAll()) },
         scope = scope,
+        clearLegacy = {
+            deviceRepository.clearLegacyAlertLevel()
+            legacyProjects.clear()
+        },
     )
 
     private val _snapshot = MutableStateFlow(AlertSnapshot(null, AlertSettings()))
@@ -168,6 +174,8 @@ class AlertSettingsRepository internal constructor(
         // A legacy store that can't be read yields defaults, unsaved, so the next load retries.
         val migrated = attempt { legacy().toSettings() }.getOrElse { return AlertSettings() }
         store.write(key, KEY, migrated, AlertSettings.serializer(), clock(), generation)
+        // Only once the copy is saved; a failed clear just retries (and re-copies) next load.
+        if (store.generation(key) == generation) attempt { clearLegacy() }
         return migrated
     }
 

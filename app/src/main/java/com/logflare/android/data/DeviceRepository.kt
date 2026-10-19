@@ -220,4 +220,9 @@ class DeviceRepository internal constructor(
             .firstOrNull()
     }
 
+    /** Drops the pre-rework alert level once it has been migrated. */
+    suspend fun clearLegacyAlertLevel() {
+        context.fcmDataStore.edit { it.remove(KEY_ALERT_LEVEL) }
+    }
+
 }
