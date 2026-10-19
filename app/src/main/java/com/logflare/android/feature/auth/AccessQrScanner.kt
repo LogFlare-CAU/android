@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -57,6 +58,7 @@ import java.util.concurrent.Executors
  * again, or to open app settings when Android will no longer show the prompt.
  * Camera failures stay on this screen as text-free logs; they do not throw.
  */
+@androidx.annotation.OptIn(markerClass = [ExperimentalGetImage::class])
 @Composable
 fun AccessQrScanner(
     onCode: (String) -> Unit,
