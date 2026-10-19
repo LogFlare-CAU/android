@@ -28,6 +28,10 @@ interface CacheStore {
      * Stores [value]. When [generation] is given and [session] was [clear]ed since that
      * [generation] was taken, the write is dropped, so a fetch that was started before a
      * sign-out can't put that session's data back.
+     *
+     * Returns true only when the entry was also saved to disk: false when the write was dropped
+     * (see [generation]) or the disk refused it (the entry then lives in memory for this process
+     * only). Callers that delete another copy of the data afterwards must check it.
      */
     suspend fun <T> write(
         session: SessionKey,
@@ -36,7 +40,7 @@ interface CacheStore {
         serializer: KSerializer<T>,
         fetchedAt: Long,
         generation: Long? = null,
-    )
+    ): Boolean
 
     /** Changes every time [session] is [clear]ed. Take it before a fetch and pass it to [write]. */
     fun generation(session: SessionKey): Long
@@ -84,19 +88,21 @@ class FileCacheStore(
         serializer: KSerializer<T>,
         fetchedAt: Long,
         generation: Long?,
-    ) {
+    ): Boolean {
         val text = buildJsonObject {
             put(FIELD_FETCHED_AT, fetchedAt)
             put(FIELD_VALUE, json.encodeToJsonElement(serializer, value))
         }.toString()
-        withContext(io) {
+        return withContext(io) {
             lock.withLock {
-                if (generation != null && generation != generation(session)) return@withLock
+                if (generation != null && generation != generation(session)) return@withLock false
                 memory[memoryId(session, key)] = Cached(value, fetchedAt)
                 try {
                     writeAtomically(file(session, key), text)
+                    true
                 } catch (_: IOException) {
                     // Best-effort: the in-memory entry still serves this process.
+                    false
                 }
             }
         }

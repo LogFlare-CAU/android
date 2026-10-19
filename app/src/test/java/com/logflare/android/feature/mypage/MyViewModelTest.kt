@@ -92,9 +92,9 @@ class MyViewModelTest {
             serializer: KSerializer<T>,
             fetchedAt: Long,
             generation: Long?,
-        ) {
+        ): Boolean {
             if (failWrites) throw IOException("disk full")
-            inner.write(session, key, value, serializer, fetchedAt, generation)
+            return inner.write(session, key, value, serializer, fetchedAt, generation)
         }
     }
 

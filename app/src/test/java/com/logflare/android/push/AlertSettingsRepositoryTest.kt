@@ -105,6 +105,26 @@ class AlertSettingsRepositoryTest {
     }
 
     @Test
+    fun legacyIsKept_whenTheMigratedCopyCouldNotBeWrittenToDisk() = runTest {
+        legacy = LegacyAlerts(globalLevel = "Error", projects = emptyList())
+        // A plain file where the session's directory must go: the write fails (best-effort in the store).
+        tmp.newFile(A.value)
+        var cleared = false
+        val repo = AlertSettingsRepository(
+            sessions = sessions,
+            store = FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)),
+            legacy = { legacy },
+            scope = backgroundScope,
+            clearLegacy = { cleared = true },
+        )
+        runCurrent()
+
+        // Settings still apply for this run, but the legacy values stay for the next load to retry.
+        assertEquals(GlobalAlert.ErrorAndAbove, repo.settings.value.global)
+        assertFalse(cleared)
+    }
+
+    @Test
     fun migratesUnsetLegacyGlobal_asWarningAndAbove() = runTest {
         legacy = LegacyAlerts(
             globalLevel = null,

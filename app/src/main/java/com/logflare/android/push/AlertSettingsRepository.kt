@@ -173,9 +173,10 @@ class AlertSettingsRepository internal constructor(
         val generation = store.generation(key)
         // A legacy store that can't be read yields defaults, unsaved, so the next load retries.
         val migrated = attempt { legacy().toSettings() }.getOrElse { return AlertSettings() }
-        store.write(key, KEY, migrated, AlertSettings.serializer(), clock(), generation)
-        // Only once the copy is saved; a failed clear just retries (and re-copies) next load.
-        if (store.generation(key) == generation) attempt { clearLegacy() }
+        val persisted = store.write(key, KEY, migrated, AlertSettings.serializer(), clock(), generation)
+        // Only once the copy is on disk (a dropped or failed write keeps the legacy values for the
+        // next load to retry); a failed clear just retries (and re-copies) next load.
+        if (persisted) attempt { clearLegacy() }
         return migrated
     }
 

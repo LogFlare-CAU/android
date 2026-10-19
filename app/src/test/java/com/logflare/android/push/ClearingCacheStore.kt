@@ -15,11 +15,11 @@ class ClearingCacheStore(private val delegate: CacheStore) : CacheStore by deleg
         serializer: KSerializer<T>,
         fetchedAt: Long,
         generation: Long?,
-    ) {
+    ): Boolean {
         if (clearBeforeNextWrite) {
             clearBeforeNextWrite = false
             delegate.clear(session)
         }
-        delegate.write(session, key, value, serializer, fetchedAt, generation)
+        return delegate.write(session, key, value, serializer, fetchedAt, generation)
     }
 }
