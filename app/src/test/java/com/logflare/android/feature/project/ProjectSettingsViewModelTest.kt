@@ -253,6 +253,26 @@ class ProjectSettingsViewModelTest {
     }
 
     @Test
+    fun members_sheetReloadsAccessEveryTimeItOpens() = runTest {
+        val vm = newEnv().vm
+        settle()
+        assertEquals(listOf(true, false, true, false), vm.state.value.members.map { it.hasAccess })
+
+        // Another admin grants user 7 access while this screen is already loaded.
+        api.projectPerms = { id ->
+            ProjectPermsSequenceResponse(
+                true, "ok",
+                data = listOf(ProjectPermsDTO(1, id, 8, view = true), ProjectPermsDTO(2, id, 7, view = true)),
+            )
+        }
+        vm.openSheet(SettingsSheet.Members)
+        settle()
+
+        assertEquals(SettingsSheet.Members, vm.state.value.sheet)
+        assertEquals(listOf(true, true, true, false), vm.state.value.members.map { it.hasAccess })
+    }
+
+    @Test
     fun members_accessFails_noResetAndToast() = runTest {
         api.projectPerms = { throw IOException("offline") }
         val env = newEnv()

@@ -176,7 +176,7 @@ class ProjectSettingsViewModel internal constructor(
         val adminOnly = sheet != SettingsSheet.AlertLevel && sheet != SettingsSheet.Keywords
         if (adminOnly && !isAdmin.value) return
         val name = state.value.project?.name.orEmpty()
-        if (sheet == SettingsSheet.Members && !membersKnown()) {
+        if (sheet == SettingsSheet.Members) {
             openMembersWhenLoaded()
             return
         }
@@ -285,14 +285,16 @@ class ProjectSettingsViewModel internal constructor(
     private suspend fun loadAccess(): Boolean =
         projectStore.members(projectId).onSuccess { local.value = local.value.copy(access = it) }.isSuccess
 
-    private fun membersKnown() = users.value != null && local.value.access != null
-
-    /** Loads what's missing, then opens the Members sheet; reports when it can't. */
+    /**
+     * Reloads who has access on every open (a list loaded earlier may predate another admin's
+     * change, and saving replaces the whole list), loads the users if missing, then opens the
+     * Members sheet; reports when it can't.
+     */
     private fun openMembersWhenLoaded() {
         if (local.value.busy) return
         local.value = local.value.copy(busy = true)
         viewModelScope.launch {
-            val accessKnown = local.value.access != null || loadAccess()
+            val accessKnown = loadAccess()
             val usersKnown = accessKnown && (users.value != null || awaitUsers())
             local.value = local.value.copy(busy = false)
             if (usersKnown) {
