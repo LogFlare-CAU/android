@@ -39,17 +39,4 @@ class ThemeRepository @Inject constructor(
             prefs[KEY_THEME] = preference.name
         }
     }
-
-    fun resolveDarkTheme(preference: ThemePreference, systemDark: Boolean): Boolean =
-        when (preference) {
-            ThemePreference.SYSTEM -> systemDark
-            ThemePreference.LIGHT -> false
-            ThemePreference.DARK -> true
-        }
-
-    /** Login toggle: Light ↔ Dark. If currently SYSTEM, pick the opposite of resolved theme. */
-    fun toggleLightDark(current: ThemePreference, systemDark: Boolean): ThemePreference {
-        val resolvedDark = resolveDarkTheme(current, systemDark)
-        return if (resolvedDark) ThemePreference.LIGHT else ThemePreference.DARK
-    }
 }

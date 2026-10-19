@@ -31,7 +31,7 @@ import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalTime
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -62,7 +62,6 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
     @ApplicationScope
     lateinit var appScope: CoroutineScope
 
-    private val serviceScope = CoroutineScope(Dispatchers.IO)
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)

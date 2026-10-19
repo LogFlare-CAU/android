@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -51,6 +52,8 @@ class AuthRepository internal constructor(
         private val KEY_SESSION_KEY: Preferences.Key<String> = stringPreferencesKey("session_key")
     }
 
+    /** Only tests read the bare token; production code goes through [stored]. */
+    @VisibleForTesting
     val token: Flow<String?> = dataStore.data.map { it[KEY_TOKEN] }
 
     val stored: Flow<StoredAuth> = dataStore.data.map {
@@ -67,6 +70,7 @@ class AuthRepository internal constructor(
      * Stores a token without a profile. A different token drops the stored session key; it is
      * derived (once) from whatever identity is stored when the session is first loaded.
      */
+    @VisibleForTesting
     suspend fun setToken(jwt: String) {
         dataStore.edit { prefs ->
             if (prefs[KEY_TOKEN] != jwt) prefs.remove(KEY_SESSION_KEY)

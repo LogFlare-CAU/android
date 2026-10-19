@@ -47,8 +47,8 @@ sealed interface SessionState {
  * [state] starts as [SessionState.Loading] and leaves it only after both the base URL cache
  * ([DataStoreBaseUrlProvider.awaitLoaded]) and the auth store have been read. It is derived from
  * disk only — no network call is involved, so an unreachable server can never hold the gate or
- * sign the user out. Old screens keep reading/writing [AuthRepository] directly; their changes
- * flow into [state] as well.
+ * sign the user out. Every sign-in, profile update and sign-out goes through this class, which
+ * is the only writer of [AuthRepository].
  */
 @Singleton
 class SessionRepository @Inject constructor(
