@@ -3,6 +3,9 @@ package com.logflare.android.fcm
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
@@ -118,17 +121,8 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
             at = timestamp?.let { getString(R.string.push_body_at, it) },
         )
         val title = getString(R.string.push_title, type)
-        val intent = android.content.Intent(this, MainActivity::class.java).apply {
-            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("projectid", projectid)
-            putExtra("errorid", errorid)
-        }
-        val pendingIntent = android.app.PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-        )
+        val notificationId = if (errorid > 0) errorid else System.currentTimeMillis().toInt()
+        val pendingIntent = notificationContentIntent(this, notificationId, projectid, errorid)
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_action_error)
             .setContentTitle(title)
@@ -138,7 +132,7 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
             .setAutoCancel(true)
             .build()
         val manager = NotificationManagerCompat.from(this)
-        manager.notify(System.currentTimeMillis().toInt(), notification)
+        manager.notify(notificationId, notification)
     }
 
     override fun onCreate() {
@@ -160,3 +154,18 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
         private const val READY_TIMEOUT_MS = 5_000L
     }
 }
+
+/**
+ * Tap target of one notification. The request code is unique per notification so each keeps its own
+ * extras (a shared code + UPDATE_CURRENT made every tap open the latest push), and the flags reuse the
+ * running task so a warm tap reaches MainActivity.onNewIntent instead of restarting the app.
+ */
+internal fun notificationContentIntent(context: Context, requestCode: Int, projectId: Int?, errorId: Int): PendingIntent {
+    val intent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        putExtra("projectid", projectId)
+        putExtra("errorid", errorId)
+    }
+    return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+}
+
