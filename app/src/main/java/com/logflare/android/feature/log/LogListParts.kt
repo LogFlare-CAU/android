@@ -44,6 +44,7 @@ import com.logflare.android.data.store.model.LogEvent
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.format.appLocale
 import com.logflare.android.ui.format.levelLabel
+import com.logflare.android.ui.format.logTitle
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
@@ -198,7 +199,7 @@ private fun LogRow(
             LevelIcon(log.level)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    log.message,
+                    logTitle(log.message),
                     style = Lf.type.bodyStrong,
                     color = Lf.colors.textPrimary,
                     maxLines = 1,

@@ -31,6 +31,7 @@ import com.example.logflare.core.designsystem.v2.components.LfSheet
 import com.example.logflare.core.designsystem.v2.components.RoleChip
 import com.example.logflare.core.designsystem.v2.components.SearchField
 import com.logflare.android.R
+import com.logflare.android.ui.format.logTitle
 import com.logflare.android.ui.format.relativeTime
 import java.time.Instant
 
@@ -68,7 +69,7 @@ internal fun HomeSearchSheet(
             val ago = relativeTime(log.lastSeen, now)
             ResultRow(
                 tag = { LevelBadge(log.level) },
-                title = log.message,
+                title = logTitle(log.message),
                 subtitle = projectNames[log.projectId]?.let { stringResource(R.string.home_dot_join, ago, it) } ?: ago,
                 onClick = {
                     afterDismiss = { onOpenLog(log.id) }

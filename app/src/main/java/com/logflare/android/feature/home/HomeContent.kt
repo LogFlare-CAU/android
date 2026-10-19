@@ -49,6 +49,7 @@ import com.logflare.android.data.store.model.LogEvent
 import com.logflare.android.data.store.model.LogQuery
 import com.logflare.android.data.store.model.ProjectItem
 import com.logflare.android.ui.VisualQaTags
+import com.logflare.android.ui.format.logTitle
 import com.logflare.android.ui.format.relativeTime
 import java.time.Instant
 
@@ -204,7 +205,7 @@ private fun RecentErrors(
 private fun RecentRow(log: LogEvent, projectName: String?, now: Instant, onClick: () -> Unit) {
     val ago = relativeTime(log.lastSeen, now)
     ListRow(
-        title = log.message,
+        title = logTitle(log.message),
         // Time first: a long project name ellipsizes instead of hiding it.
         subtitle = if (projectName != null) stringResource(R.string.home_dot_join, ago, projectName) else ago,
         leading = { LevelIcon(log.level) },

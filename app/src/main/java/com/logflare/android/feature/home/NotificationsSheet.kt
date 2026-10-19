@@ -32,6 +32,7 @@ import com.example.logflare.core.designsystem.v2.components.LfSheet
 import com.logflare.android.R
 import com.logflare.android.push.HistoryEntry
 import com.logflare.android.ui.format.levelLabel
+import com.logflare.android.ui.format.logTitle
 import com.logflare.android.ui.format.shortAge
 import java.time.Instant
 
@@ -133,7 +134,7 @@ private fun AlertRow(entry: HistoryEntry, projectName: String?, now: Instant, on
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                stringResource(R.string.home_dot_join, entry.message, shortAge(Instant.ofEpochMilli(entry.receivedAt), now)),
+                stringResource(R.string.home_dot_join, logTitle(entry.message), shortAge(Instant.ofEpochMilli(entry.receivedAt), now)),
                 style = Lf.type.secondary,
                 color = Lf.colors.textMuted,
                 maxLines = 2,

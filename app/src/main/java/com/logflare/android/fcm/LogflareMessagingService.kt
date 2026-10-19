@@ -26,6 +26,7 @@ import com.logflare.android.push.composePushBody
 import com.logflare.android.push.decideIncoming
 import com.logflare.android.push.from
 import com.logflare.android.push.toHistoryEntry
+import com.logflare.android.ui.format.logTitle
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -116,7 +117,7 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
         // A Context string: on Android 13+ it follows the app language chosen in My.
         val contentMessage = composePushBody(
             head = level?.let { getString(R.string.push_body_head, it, type) } ?: type,
-            message = messageText,
+            message = messageText?.let(::logTitle),
             at = timestamp?.let { getString(R.string.push_body_at, it) },
         )
         val title = getString(R.string.push_title, type)
