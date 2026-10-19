@@ -109,7 +109,7 @@ class SignInOutUseCaseTest {
         val history = NotificationHistory(session.state, cache)
         val tokens = FakeTokens()
         val registrar = PushRegistrar(session.state, api, tokens, InMemoryPushRegistrationStore(), backgroundScope)
-        val localSignOut = LocalSignOut(session, history, cache)
+        val localSignOut = LocalSignOut(session, history, cache, ApplicationProvider.getApplicationContext<android.content.Context>())
         val signOut = SignOutUseCase(session, registrar, localSignOut)
         val signIn = SignInUseCase(api, session, baseUrl, recent, signOut)
         val unauthorized = UnauthorizedSignOut(session, { localSignOut }, backgroundScope)
@@ -423,13 +423,29 @@ class SignInOutUseCaseTest {
     }
 
     @Test
+    fun localSignOut_cancelsPostedNotifications() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val manager = context.getSystemService(android.app.NotificationManager::class.java)
+        manager.createNotificationChannel(android.app.NotificationChannel("c", "c", android.app.NotificationManager.IMPORTANCE_HIGH))
+        manager.notify(41, android.app.Notification.Builder(context, "c").setSmallIcon(android.R.drawable.ic_dialog_info).build())
+        val env = env()
+        env.signIn("logs.example.com", "alice", "pw")
+        env.signedIn()
+        assertEquals(1, manager.activeNotifications.size)
+
+        env.signOut()
+
+        assertEquals(0, manager.activeNotifications.size)
+    }
+
+    @Test
     fun localSignOut_onlyIfToken_keepsNewerSession() = runTest {
         val env = env()
         env.signIn("logs.example.com", "alice", "pw")
         val alice = env.signedIn()
         env.cache.write(alice.key, "projects", "cached", String.serializer(), fetchedAt = 1L)
 
-        assertFalse(LocalSignOut(env.session, env.history, env.cache)(onlyIfToken = "Bearer jwt-previous"))
+        assertFalse(LocalSignOut(env.session, env.history, env.cache, {})(onlyIfToken = "Bearer jwt-previous"))
 
         assertEquals("Bearer jwt-alice", env.session.currentToken())
         assertEquals("cached", env.cache.read(alice.key, "projects", String.serializer())?.value)
