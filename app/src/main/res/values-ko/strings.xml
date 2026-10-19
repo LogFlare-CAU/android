@@ -22,6 +22,7 @@
     <string name="login_error_enter_username">아이디를 입력해 주세요.</string>
     <string name="login_error_enter_password">비밀번호를 입력해 주세요.</string>
     <string name="login_error_url_scheme">http:// 또는 https://로 시작해야 해요.</string>
+    <string name="login_error_needs_https">이 서버는 https가 필요해요.</string>
     <string name="login_error_invalid_credentials">아이디 또는 비밀번호가 맞지 않아요.</string>
     <string name="login_error_rate_limited">시도 횟수가 너무 많아요. 1분 뒤에 다시 시도해 주세요.</string>
     <string name="login_error_unreachable">서버에 연결할 수 없어요.</string>

@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Error texts are keys the screen resolves from strings.xml, so the VM stays free of Android resources. */
-enum class LoginError { EnterUrl, EnterUsername, EnterPassword, UrlScheme, InvalidCredentials, RateLimited, Unreachable }
+enum class LoginError { EnterUrl, EnterUsername, EnterPassword, UrlScheme, NeedsHttps, InvalidCredentials, RateLimited, Unreachable }
 
 data class LoginUiState(
     val url: String = "",
@@ -88,6 +88,8 @@ class LoginViewModel internal constructor(
         val urlError = when {
             url.isEmpty() || url.trimEnd('/').let { it.equals("http:", true) || it.equals("https:", true) } -> LoginError.EnterUrl
             !url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true) -> LoginError.UrlScheme
+            // The app blocks cleartext traffic (manifest + network security config), so http:// can never connect.
+            url.startsWith("http://", ignoreCase = true) -> LoginError.NeedsHttps
             else -> null
         }
         val usernameError = if (username.isEmpty()) LoginError.EnterUsername else null

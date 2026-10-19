@@ -71,6 +71,16 @@ class LoginViewModelTest {
         assertTrue(calls.isEmpty())
     }
 
+    @Test fun submit_httpUrl_needsHttps_noCall() = runTest {
+        val vm = vm()
+        vm.fill(url = "http://logs.example.com")
+        vm.submit()
+        advanceUntilIdle()
+
+        assertEquals(LoginError.NeedsHttps, vm.state.value.urlError)
+        assertTrue(calls.isEmpty())
+    }
+
     @Test fun submit_success_emitsSignedIn() = runTest {
         val vm = vm()
         vm.fill()

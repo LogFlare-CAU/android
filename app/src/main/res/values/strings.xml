@@ -17,6 +17,7 @@
     <string name="login_error_enter_username">Enter your username.</string>
     <string name="login_error_enter_password">Enter your password.</string>
     <string name="login_error_url_scheme">Start with http:// or https://</string>
+    <string name="login_error_needs_https">This server needs https.</string>
     <string name="login_error_invalid_credentials">Wrong username or password.</string>
     <string name="login_error_rate_limited">Too many attempts. Try again in a minute.</string>
     <string name="login_error_unreachable">Can\'t reach this server.</string>

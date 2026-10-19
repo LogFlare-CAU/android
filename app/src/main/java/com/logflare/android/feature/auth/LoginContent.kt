@@ -54,6 +54,7 @@ private fun LoginError?.text(): String? = when (this) {
     LoginError.EnterUsername -> stringResource(R.string.login_error_enter_username)
     LoginError.EnterPassword -> stringResource(R.string.login_error_enter_password)
     LoginError.UrlScheme -> stringResource(R.string.login_error_url_scheme)
+    LoginError.NeedsHttps -> stringResource(R.string.login_error_needs_https)
     LoginError.InvalidCredentials -> stringResource(R.string.login_error_invalid_credentials)
     LoginError.RateLimited -> stringResource(R.string.login_error_rate_limited)
     LoginError.Unreachable -> stringResource(R.string.login_error_unreachable)
