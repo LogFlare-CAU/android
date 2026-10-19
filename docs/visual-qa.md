@@ -342,6 +342,21 @@ whole band (`y = 0..146`), light moved only the title glyphs (`y = 58..97`) from
 The wordmark itself appears only in `MainScaffold`, which the JVM tier does not render, so that part of the
 change is covered by the device tier alone.
 
+## Performance checks
+
+Automated: `HomeCallBudgetTest` (`./gradlew :app:testDebugUnitTest --tests "*HomeCallBudgetTest*"`) runs the real
+Retrofit/OkHttp stack and stores against a MockWebServer and asserts that opening Home makes exactly one
+`/project/`, one `/log/summary` and one `/log/events` request (no `/fcm/*`, no `/user/me`), and that re-creating
+Home within the 30 s cache age makes none.
+
+Manual, on a real device with a release build and a stored login (record device, build and pass/fail per item):
+
+1. Cold start 10 times (swipe the app away between runs): the Login screen is never visible.
+2. Open each tab, switch away and back: content is visible on the first frame. Record the screen at 60 fps and
+   check frame 1 after each switch.
+3. Airplane mode, cold start: Main opens with cached content and a non-blocking error (toast or inline), never a
+   blocking spinner or the Login screen.
+
 ## Known issues
 
 ### Port 18000, not 8000
