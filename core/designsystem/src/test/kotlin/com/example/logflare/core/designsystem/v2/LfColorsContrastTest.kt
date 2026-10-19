@@ -2,6 +2,7 @@ package com.example.logflare.core.designsystem.v2
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.example.logflare.core.designsystem.v2.components.levelTileColors
 import com.example.logflare.core.designsystem.v2.components.uncheckedCheckBoxBorder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -48,6 +49,29 @@ class LfColorsContrastTest {
     @Test fun uncheckedCheckBoxBorderOnSurface() =
         check("uncheckedCheckBoxBorder/surface", { uncheckedCheckBoxBorder(it) }, { it.surface }, 3.0)
 
+    /** Glyph on its tile; LevelBadge draws its label with the same pair, so text contrast applies. */
+    @Test
+    fun levelGlyphOnTile() = LfLevel.entries.forEach { level ->
+        check("$level glyph/tile", { levelTileColors(it, level).second }, { levelTileColors(it, level).first }, 4.5)
+    }
+
+    /** Critical must be a loud tile that stands off the card on its own (WCAG 1.4.11 3:1). */
+    @Test fun criticalTileOnSurface() = check("critical/surface", { it.critical }, { it.surface }, 3.0)
+
+    /** Error's dark tile is quiet, so its glyph colour must also read against the card itself. */
+    @Test fun errorOnSurface() = check("error/surface", { it.error }, { it.surface }, 4.5)
+
+    @Test fun textSecondaryOnBackground() = check("textSecondary/background", { it.textSecondary }, { it.background }, 4.5)
+    @Test fun textSecondaryOnFill() = check("textSecondary/fill", { it.textSecondary }, { it.fill }, 4.5)
+
+    /** Dark cards must visibly lift off the page (was 1.14:1). */
+    @Test
+    fun darkSurfaceSeparatesFromBackground() {
+        val c = lfDarkColors()
+        val r = contrast(c.surface, c.background)
+        assertTrue("dark surface/background $r < 1.2", r >= 1.2)
+    }
+
     @Test
     fun lightValuesMatchSpec() {
         val c = lfLightColors()
@@ -75,11 +99,17 @@ class LfColorsContrastTest {
     fun darkValuesMatchSpec() {
         val c = lfDarkColors()
         fun hex(color: Color) = color.toArgb() and 0xFFFFFF
-        assertEquals(0x0E1013, hex(c.background))
-        assertEquals(0x1B1E23, hex(c.surface))
+        assertEquals(0x0A0B0E, hex(c.background))
+        assertEquals(0x1E2228, hex(c.surface))
         assertEquals(0xF2F4F6, hex(c.textPrimary))
-        assertEquals(0x9AA3AE, hex(c.textMuted))
-        assertEquals(0x2A2E35, hex(c.divider))
-        assertEquals(0x2A2E35, hex(c.fill))
+        assertEquals(0xC2C9D1, hex(c.textSecondary))
+        assertEquals(0xA7B0BB, hex(c.textMuted))
+        assertEquals(0x9AA4B0, hex(c.icon))
+        assertEquals(0x363C44, hex(c.divider))
+        assertEquals(0x2E333B, hex(c.fill))
+        assertEquals(0xFF8590, hex(c.error))
+        assertEquals(0x4D1B22, hex(c.errorContainer))
+        assertEquals(0xD8363D, hex(c.critical))
+        assertEquals(0xFFFFFF, hex(c.onCritical))
     }
 }

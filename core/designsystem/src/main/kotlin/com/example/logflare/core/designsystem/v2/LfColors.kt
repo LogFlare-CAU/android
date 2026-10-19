@@ -51,25 +51,29 @@ fun lfLightColors() = LfColors(
     scrim = Color(0x66000000),
 )
 
+/**
+ * Dark: cards lift off a near-black page, greys are brighter for readability, and Critical is a
+ * solid saturated red tile (white glyph/text, >= 4.5:1) so it is louder than Error's dark tile.
+ */
 fun lfDarkColors() = LfColors(
-    background = Color(0xFF0E1013),
-    surface = Color(0xFF1B1E23),
+    background = Color(0xFF0A0B0E),
+    surface = Color(0xFF1E2228),
     textPrimary = Color(0xFFF2F4F6),
-    textSecondary = Color(0xFFB0B8C1),
-    textMuted = Color(0xFF9AA3AE),
-    icon = Color(0xFF8B95A1),
-    divider = Color(0xFF2A2E35),
-    fill = Color(0xFF2A2E35),
-    error = Color(0xFFFF6B78),
-    errorContainer = Color(0xFF3A1519),
+    textSecondary = Color(0xFFC2C9D1),
+    textMuted = Color(0xFFA7B0BB),
+    icon = Color(0xFF9AA4B0),
+    divider = Color(0xFF363C44),
+    fill = Color(0xFF2E333B),
+    error = Color(0xFFFF8590),
+    errorContainer = Color(0xFF4D1B22),
     warning = Color(0xFFFFB454),
     warningContainer = Color(0xFF3A2610),
-    critical = Color(0xFF7A1521),
+    critical = Color(0xFFD8363D),
     onCritical = Color(0xFFFFFFFF),
     primaryAction = Color(0xFFF2F4F6),
     onPrimaryAction = Color(0xFF191F28),
-    secondaryAction = Color(0xFF2A2E35),
-    disabled = Color(0xFF2A2E35),
-    onDisabled = Color(0xFF8B95A1),
+    secondaryAction = Color(0xFF2E333B),
+    disabled = Color(0xFF2E333B),
+    onDisabled = Color(0xFF9AA4B0),
     scrim = Color(0x99000000),
 )
