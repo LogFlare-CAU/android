@@ -22,6 +22,7 @@ class LocalSignOut internal constructor(
     private val notificationHistory: NotificationHistory,
     private val cacheStore: CacheStore,
     private val cancelNotifications: () -> Unit,
+    private val clearAccessCredentials: () -> Unit = {},
 ) {
     @Inject
     constructor(
@@ -29,10 +30,11 @@ class LocalSignOut internal constructor(
         notificationHistory: NotificationHistory,
         cacheStore: CacheStore,
         @ApplicationContext context: Context,
+        accessCredentials: AccessCredentialStore,
     ) : this(sessionRepository, notificationHistory, cacheStore, {
         // Posted notifications carry the previous session's errors; their taps must not outlive it.
         NotificationManagerCompat.from(context).cancelAll()
-    })
+    }, { accessCredentials.clear() })
 
     /**
      * With [onlyIfToken], does nothing unless that is still the signed-in token, so a late 401
@@ -52,6 +54,8 @@ class LocalSignOut internal constructor(
                 .onFailure { Log.w(TAG, "Clearing session cache failed", it) }
             attempt { cancelNotifications() }
                 .onFailure { Log.w(TAG, "Cancelling notifications failed", it) }
+            attempt { clearAccessCredentials() }
+                .onFailure { Log.w(TAG, "Clearing Access credentials failed", it) }
         }
         signedOut
     }

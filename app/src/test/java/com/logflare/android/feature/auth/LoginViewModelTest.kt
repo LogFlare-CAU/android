@@ -1,15 +1,22 @@
 package com.logflare.android.feature.auth
 
+import com.logflare.android.data.session.AuthModesResult
 import com.logflare.android.data.session.SignInResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,6 +29,10 @@ import org.junit.Test
 class LoginViewModelTest {
     private val calls = mutableListOf<Triple<String, String, String>>()
     private var result: SignInResult = SignInResult.Success
+    private val modeCalls = mutableListOf<String>()
+    private var modesAnswer: suspend (String) -> AuthModesResult = { AuthModesResult.Ready(listOf("password")) }
+    private val accessCalls = mutableListOf<List<Any>>()
+    private var accessResult: SignInResult = SignInResult.Success
 
     @Before fun setUp() = Dispatchers.setMain(StandardTestDispatcher())
 
@@ -30,6 +41,8 @@ class LoginViewModelTest {
     private fun vm(saved: String? = null, recent: List<String> = emptyList()) =
         LoginViewModel(
             signIn = { url, user, pw -> calls += Triple(url, user, pw); result },
+            loadModes = { url -> modeCalls += url; modesAnswer(url) },
+            signInAccess = { url, id, secret, keep -> accessCalls += listOf(url, id, secret, keep); accessResult },
             savedServerUrl = flowOf(saved),
             recentServers = flowOf(recent),
         )
@@ -163,5 +176,363 @@ class LoginViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, calls.size)
+    }
+
+    // ---- sign-in methods -------------------------------------------------------------------
+
+    private val both = AuthModesResult.Ready(listOf("password", "access"))
+    private val qr = """{"v":1,"server":"https://logs.example.com","id":"abcdefghijklmnop","secret":"s3cret"}"""
+
+    /** A form with Access selected and the modes loaded. */
+    private fun TestScope.accessVm(): LoginViewModel {
+        modesAnswer = { both }
+        val vm = vm()
+        vm.onUrl("https://logs.example.com")
+        advanceUntilIdle()
+        vm.selectMode(LoginMode.Access)
+        return vm
+    }
+
+    @Test fun modes_loadForTheSavedUrl_withoutAnyKeyboardAction() = runTest {
+        modesAnswer = { both }
+        val vm = vm(saved = "https://logs.example.com/")
+        advanceUntilIdle()
+
+        assertEquals(listOf("https://logs.example.com/"), modeCalls)
+        assertEquals(listOf(LoginMode.Password, LoginMode.Access), vm.state.value.modes)
+        assertFalse(vm.state.value.modesLoading)
+    }
+
+    @Test fun modes_loadAfterTheDebounce_andRestartOnEveryKeystroke() = runTest {
+        val vm = vm()
+        vm.onUrl("https://a.example.com")
+        advanceTimeBy(MODES_DEBOUNCE_MS - 1)
+        runCurrent()
+        assertTrue("still waiting for a pause in typing", modeCalls.isEmpty())
+
+        vm.onUrl("https://b.example.com")
+        advanceTimeBy(MODES_DEBOUNCE_MS - 1)
+        runCurrent()
+        assertTrue("the second keystroke restarted the wait", modeCalls.isEmpty())
+
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(listOf("https://b.example.com"), modeCalls)
+    }
+
+    @Test fun modes_notLoadedForUrlsThatCannotWorkYet() = runTest {
+        val vm = vm()
+        listOf("", "https://", "logs.example.com", "http://logs.example.com").forEach {
+            vm.onUrl(it)
+            advanceUntilIdle()
+        }
+
+        assertTrue(modeCalls.isEmpty())
+        assertNull("typing never shows an error by itself", vm.state.value.urlError)
+    }
+
+    @Test fun modes_staleAnswerForAnEarlierUrl_isIgnored() = runTest {
+        val first = CompletableDeferred<AuthModesResult>()
+        val second = CompletableDeferred<AuthModesResult>()
+        // NonCancellable: the answer for the first URL arrives even though that lookup was cancelled.
+        modesAnswer = { url -> withContext(NonCancellable) { if (url.contains("first")) first.await() else second.await() } }
+        val vm = vm()
+
+        vm.onUrl("https://first.example.com")
+        advanceTimeBy(MODES_DEBOUNCE_MS)
+        runCurrent()
+        assertTrue(vm.state.value.modesLoading)
+
+        vm.onUrl("https://second.example.com")
+        assertFalse("changing the URL ends the old lookup's spinner", vm.state.value.modesLoading)
+        advanceTimeBy(MODES_DEBOUNCE_MS)
+        runCurrent()
+        first.complete(both)
+        runCurrent()
+        assertNull("the first URL's modes are not the second's", vm.state.value.modes)
+        assertTrue("the second lookup is still the one loading", vm.state.value.modesLoading)
+
+        second.complete(AuthModesResult.Ready(listOf("password")))
+        advanceUntilIdle()
+        assertEquals(listOf(LoginMode.Password), vm.state.value.modes)
+        assertFalse(vm.state.value.modesLoading)
+    }
+
+    @Test fun modes_changingToAnUnusableUrlWhileLoading_doesNotLeaveSpinnerStuck() = runTest {
+        val gate = CompletableDeferred<AuthModesResult>()
+        modesAnswer = { gate.await() }
+        val vm = vm()
+        vm.onUrl("https://a.example.com")
+        advanceTimeBy(MODES_DEBOUNCE_MS)
+        runCurrent()
+        assertTrue(vm.state.value.modesLoading)
+
+        vm.onUrl("https://")
+        advanceUntilIdle()
+
+        assertFalse(vm.state.value.modesLoading)
+        assertNull(vm.state.value.modes)
+    }
+
+    @Test fun modes_unreachable_staysQuiet_untilSignInIsTried() = runTest {
+        modesAnswer = { AuthModesResult.Unreachable }
+        val vm = vm()
+        vm.fill()
+        advanceUntilIdle()
+
+        // Both tabs, so a host whose Access policy blocks the lookup can still reach the QR scan.
+        assertEquals(listOf(LoginMode.Password, LoginMode.Access), vm.state.value.modes)
+        vm.selectMode(LoginMode.Access)
+        vm.scan()
+        assertEquals(LoginStep.Scan, vm.state.value.step)
+        vm.back()
+        vm.selectMode(LoginMode.Password)
+        assertNull(vm.state.value.formError)
+        assertFalse(vm.state.value.modesLoading)
+
+        vm.submit()
+        advanceUntilIdle()
+        assertEquals(LoginError.Unreachable, vm.state.value.formError)
+        assertFalse(vm.state.value.submitting)
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test fun modes_pickRecent_loadsAtOnce() = runTest {
+        val vm = vm(recent = listOf("https://a.example.com/"))
+        advanceUntilIdle()
+        vm.pickRecent("https://a.example.com/")
+        runCurrent()
+
+        assertEquals(listOf("https://a.example.com/"), modeCalls)
+    }
+
+    @Test fun modes_oneMethod_isSelectedWithoutTabs() = runTest {
+        modesAnswer = { AuthModesResult.Ready(listOf("access")) }
+        val vm = vm()
+        vm.onUrl("https://logs.example.com")
+        advanceUntilIdle()
+
+        assertEquals(listOf(LoginMode.Access), vm.state.value.modes)
+        assertEquals(LoginMode.Access, vm.state.value.selectedMode)
+    }
+
+    @Test fun noModes_isAStateOfItsOwn_andSignInDoesNothing() = runTest {
+        modesAnswer = { AuthModesResult.Ready(emptyList()) }
+        val vm = vm()
+        vm.fill()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<LoginMode>(), vm.state.value.modes)
+        assertNull(vm.state.value.formError)
+
+        vm.submit()
+        advanceUntilIdle()
+        assertTrue(calls.isEmpty())
+        assertFalse(vm.state.value.submitting)
+    }
+
+    @Test fun password_stillSignsIn_whenBothMethodsAreOffered() = runTest {
+        modesAnswer = { both }
+        val vm = vm()
+        vm.fill()
+        advanceUntilIdle()
+        vm.submit()
+        advanceUntilIdle()
+
+        assertEquals(1, calls.size)
+        assertEquals(LoginEvent.SignedIn, vm.events.first())
+    }
+
+    @Test fun passwordSignIn_isNotSentInAccessMode() = runTest {
+        val vm = accessVm()
+        vm.onUsername("admin")
+        vm.onPassword("pw")
+        vm.submit()
+        advanceUntilIdle()
+
+        assertTrue(calls.isEmpty())
+    }
+
+    // ---- Access: scan, confirm ---------------------------------------------------------------
+
+    @Test fun access_scanThenConfirm_signsIn_withTheQrServer_keepLoggedInByDefault() = runTest {
+        val vm = accessVm()
+        vm.scan()
+        assertEquals(LoginStep.Scan, vm.state.value.step)
+
+        vm.onQr(qr)
+        val s = vm.state.value
+        assertEquals(LoginStep.Confirm, s.step)
+        assertEquals("logs.example.com", s.accessServer)
+        assertEquals("abcd…mnop", s.accessClientMasked)
+        assertTrue(s.keepLoggedIn)
+        assertFalse(s.toString().contains("s3cret"))
+
+        vm.confirmAccess()
+        advanceUntilIdle()
+        assertEquals(listOf(listOf("https://logs.example.com", "abcdefghijklmnop", "s3cret", true)), accessCalls)
+        assertEquals(LoginEvent.SignedIn, vm.events.first())
+    }
+
+    @Test fun access_keepLoggedInOff_isSentToTheServer() = runTest {
+        val vm = accessVm()
+        vm.scan()
+        vm.onQr(qr)
+        vm.setKeepLoggedIn(false)
+        vm.confirmAccess()
+        advanceUntilIdle()
+
+        assertEquals(false, accessCalls.single()[3])
+    }
+
+    @Test fun access_wrongQr_thenValidQr_works() = runTest {
+        val vm = accessVm()
+        vm.scan()
+
+        vm.onQr("not-a-qr")
+        assertEquals(LoginError.QrInvalid, vm.state.value.scanError)
+        assertEquals(LoginStep.Scan, vm.state.value.step)
+
+        vm.onQr(qr)
+        assertEquals(LoginStep.Confirm, vm.state.value.step)
+        assertNull(vm.state.value.scanError)
+    }
+
+    @Test fun access_rejected_staysOnConfirm_withTheAlert() = runTest {
+        accessResult = SignInResult.InvalidCredentials
+        val vm = accessVm()
+        vm.scan()
+        vm.onQr(qr)
+        vm.confirmAccess()
+        advanceUntilIdle()
+
+        assertEquals(LoginError.AccessRejected, vm.state.value.formError)
+        assertEquals(LoginStep.Confirm, vm.state.value.step)
+        assertFalse(vm.state.value.submitting)
+    }
+
+    @Test fun access_otherFailures_mapToTheirTexts() = runTest {
+        val vm = accessVm()
+        vm.scan()
+        vm.onQr(qr)
+        listOf(
+            SignInResult.AccessUnavailable to LoginError.AccessUnavailable,
+            SignInResult.RateLimited to LoginError.RateLimited,
+            SignInResult.ServerUnreachable(RuntimeException()) to LoginError.Unreachable,
+        ).forEach { (answer, error) ->
+            accessResult = answer
+            vm.confirmAccess()
+            advanceUntilIdle()
+            assertEquals(error, vm.state.value.formError)
+        }
+    }
+
+    @Test fun access_scanAndManual_needAnAccessModeFirst() = runTest {
+        val vm = vm()
+        vm.fill()
+        advanceUntilIdle()
+        vm.scan()
+        vm.enterManual()
+
+        assertEquals(LoginStep.Form, vm.state.value.step)
+    }
+
+    @Test fun access_qrOutsideTheScanStep_isIgnored() = runTest {
+        val vm = accessVm()
+        vm.onQr(qr)
+
+        assertEquals(LoginStep.Form, vm.state.value.step)
+    }
+
+    // ---- Access: manual entry ----------------------------------------------------------------
+
+    @Test fun manual_needsBothFields() = runTest {
+        val vm = accessVm()
+        vm.enterManual()
+        assertEquals(LoginStep.Manual, vm.state.value.step)
+
+        vm.submitManual("  ", "")
+        assertEquals(LoginError.EnterClientId, vm.state.value.manualIdError)
+        assertEquals(LoginError.EnterClientSecret, vm.state.value.manualSecretError)
+        assertEquals(LoginStep.Manual, vm.state.value.step)
+
+        vm.onManualEdit()
+        assertNull(vm.state.value.manualIdError)
+        assertNull(vm.state.value.manualSecretError)
+    }
+
+    @Test fun manual_continue_confirmsAgainstTheUrlField_andKeepsTheSecretOutOfState() = runTest {
+        val vm = accessVm()
+        vm.enterManual()
+
+        vm.submitManual(" client-id-1234 ", "manual-secret")
+        val s = vm.state.value
+        assertEquals(LoginStep.Confirm, s.step)
+        assertEquals("logs.example.com", s.accessServer)
+        assertEquals("clie…1234", s.accessClientMasked)
+        assertFalse(s.toString().contains("manual-secret"))
+
+        vm.confirmAccess()
+        advanceUntilIdle()
+        assertEquals(listOf(listOf("https://logs.example.com", "client-id-1234", "manual-secret", true)), accessCalls)
+    }
+
+    // ---- navigation ----------------------------------------------------------------------------
+
+    @Test fun back_fromScanAndManual_returnsToTheForm() = runTest {
+        val vm = accessVm()
+        vm.scan()
+        vm.onQr("nope")
+        vm.back()
+        assertEquals(LoginStep.Form, vm.state.value.step)
+        assertNull(vm.state.value.scanError)
+
+        vm.enterManual()
+        vm.back()
+        assertEquals(LoginStep.Form, vm.state.value.step)
+    }
+
+    @Test fun back_fromConfirm_returnsToWhereItCameFrom() = runTest {
+        val vm = accessVm()
+        vm.scan()
+        vm.onQr(qr)
+        vm.back()
+        assertEquals("re-scan", LoginStep.Scan, vm.state.value.step)
+        assertNull(vm.state.value.scanError)
+
+        vm.back()
+        assertEquals(LoginStep.Form, vm.state.value.step)
+
+        vm.enterManual()
+        vm.submitManual("id-1", "secret-1")
+        vm.back()
+        assertEquals(LoginStep.Manual, vm.state.value.step)
+    }
+
+    @Test fun back_afterGoingBack_cannotSignInWithTheOldToken() = runTest {
+        val vm = accessVm()
+        vm.scan()
+        vm.onQr(qr)
+        vm.back()
+        vm.confirmAccess()
+        advanceUntilIdle()
+
+        assertTrue(accessCalls.isEmpty())
+    }
+
+    @Test fun back_onTheForm_changesNothing() = runTest {
+        val vm = accessVm()
+        val before = vm.state.value
+        vm.back()
+        assertEquals(before, vm.state.value)
+    }
+
+    @Test fun editingTheUrl_leavesTheAccessSteps() = runTest {
+        val vm = accessVm()
+        vm.scan()
+        vm.onUrl("https://other.example.com")
+
+        assertEquals(LoginStep.Form, vm.state.value.step)
+        assertNull(vm.state.value.modes)
     }
 }

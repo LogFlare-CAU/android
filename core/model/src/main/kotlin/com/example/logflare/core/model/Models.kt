@@ -11,6 +11,25 @@ data class UserAuthParams(
 )
 
 @Serializable
+data class AccessAuthParams(
+    val keep_logged_in: Boolean = false
+)
+
+/** `GET /user/auth/modes` body. `modes` keeps the server's order (`password`, then `access`). */
+@Serializable
+data class AuthModes(
+    val modes: List<String> = emptyList()
+)
+
+@Serializable
+data class AuthModesResponse(
+    val success: Boolean,
+    val message: String = "",
+    val error_code: Int? = null,
+    val data: AuthModes? = null
+)
+
+@Serializable
 data class UserCreateParams(
     val username: String,
     val permission: Int,

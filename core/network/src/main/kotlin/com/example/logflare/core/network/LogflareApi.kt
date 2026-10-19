@@ -1,5 +1,8 @@
 package com.example.logflare.core.network
 
+import com.example.logflare.core.model.AccessAuthParams
+import com.example.logflare.core.model.AuthModesResponse
+import com.example.logflare.core.network.host.ProbeBaseUrl
 import com.example.logflare.core.model.LogEventDetailResponse
 import com.example.logflare.core.model.LogEventPageResponse
 import com.example.logflare.core.model.LogSummaryResponse
@@ -30,6 +33,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Tag
 
 /**
  * The backend API. `Authorization` is added by [com.example.logflare.core.network.auth.AuthHeaderInterceptor]
@@ -46,6 +50,21 @@ interface LogflareApi {
 
     @POST("/user/auth")
     suspend fun authenticate(@Body body: UserAuthParams): StringResponse
+
+    /**
+     * Public. A server from before this route answers 404; callers treat that as password-only.
+     * [probe] sends this one call to a server that is not saved yet.
+     */
+    @GET("/user/auth/modes")
+    suspend fun authModes(@Tag probe: ProbeBaseUrl): AuthModesResponse
+
+    /**
+     * Cloudflare Access login. The service token is attached by
+     * [com.example.logflare.core.network.auth.AccessHeaderInterceptor], not by this method,
+     * so the secret is not placed on the request before logging.
+     */
+    @POST("/user/auth/access")
+    suspend fun authenticateAccess(@Body body: AccessAuthParams): StringResponse
 
     @GET("/user/me")
     suspend fun getme(): UserResponse

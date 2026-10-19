@@ -353,6 +353,7 @@ class MockServerContractTest {
             Triple("POST", "/__qa/health", emptyMap<String, String>()),
             Triple("GET", "/__qa/reset", emptyMap()),
             Triple("GET", "/user/auth", emptyMap()),
+            Triple("POST", "/user/auth/modes", emptyMap()),
             Triple("POST", "/user/me", authHeaders()),
             Triple("POST", "/log/summary", authHeaders()),
             Triple("POST", "/log/events", authHeaders()),

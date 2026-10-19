@@ -80,6 +80,7 @@ class SignInOutUseCaseTest {
         val history: NotificationHistory,
         val tokens: FakeTokens,
         val registrar: PushRegistrar,
+        val access: MemoryAccessCredentialStore,
         val signOut: SignOutUseCase,
         val signIn: SignInUseCase,
         val unauthorized: UnauthorizedSignOut,
@@ -109,11 +110,12 @@ class SignInOutUseCaseTest {
         val history = NotificationHistory(session.state, cache)
         val tokens = FakeTokens()
         val registrar = PushRegistrar(session.state, api, tokens, InMemoryPushRegistrationStore(), backgroundScope)
-        val localSignOut = LocalSignOut(session, history, cache, ApplicationProvider.getApplicationContext<android.content.Context>())
+        val access = MemoryAccessCredentialStore()
+        val localSignOut = LocalSignOut(session, history, cache, ApplicationProvider.getApplicationContext<android.content.Context>(), access)
         val signOut = SignOutUseCase(session, registrar, localSignOut)
-        val signIn = SignInUseCase(api, session, baseUrl, recent, signOut)
+        val signIn = SignInUseCase(api, session, baseUrl, recent, signOut, access)
         val unauthorized = UnauthorizedSignOut(session, { localSignOut }, backgroundScope)
-        return Env(auth, serverConfig, baseUrl, session, recent, cache, history, tokens, registrar, signOut, signIn, unauthorized)
+        return Env(auth, serverConfig, baseUrl, session, recent, cache, history, tokens, registrar, access, signOut, signIn, unauthorized)
     }
 
     private suspend fun Env.signedIn(): SessionState.SignedIn =
@@ -137,6 +139,49 @@ class SignInOutUseCaseTest {
         assertEquals("/me is called with the new token", listOf("Bearer jwt-alice"), api.tokens)
         runCurrent()
         assertEquals(0, api.count("registerFcmToken"))
+    }
+
+    @Test
+    fun signInWithAccess_storesCredential_andSameSessionToken() = runTest {
+        val env = env()
+
+        val result = env.signIn.signInWithAccess("https://logs.example.com", "client-id-value", "client-secret")
+
+        assertEquals(SignInResult.Success, result)
+        assertEquals(listOf(true), api.accessCalls.map { it.keep_logged_in })
+        assertEquals("https://logs.example.com/", env.access.savedServer)
+        assertEquals("client-id-value", env.access.savedId)
+        assertEquals("client-secret", env.access.savedSecret)
+        assertEquals("Bearer jwt-access", env.signedIn().token)
+    }
+
+    @Test
+    fun signInWithAccess_keepLoggedInFalse_reachesTheServer() = runTest {
+        val env = env()
+
+        env.signIn.signInWithAccess("https://logs.example.com", "client-id-value", "client-secret", keepLoggedIn = false)
+
+        assertEquals(listOf(false), api.accessCalls.map { it.keep_logged_in })
+    }
+
+    @Test
+    fun signInWithAccess_credentialStoreFails_isAFailureNotACrash() = runTest {
+        val env = env()
+        env.access.failSave = true
+
+        val result = env.signIn.signInWithAccess("https://logs.example.com", "id", "secret")
+
+        assertTrue(result is SignInResult.ServerUnreachable)
+        assertEquals(0, api.accessCalls.size)
+    }
+
+    @Test
+    fun signInWithAccess_rejected_clearsCredential() = runTest {
+        val env = env()
+        api.authenticateAccessResult = { throw httpError(401) }
+
+        assertEquals(SignInResult.InvalidCredentials, env.signIn.signInWithAccess("https://logs.example.com", "id", "secret"))
+        assertNull(env.access.savedSecret)
     }
 
     @Test
@@ -449,6 +494,30 @@ class SignInOutUseCaseTest {
 
         assertEquals("Bearer jwt-alice", env.session.currentToken())
         assertEquals("cached", env.cache.read(alice.key, "projects", String.serializer())?.value)
+    }
+
+    private class MemoryAccessCredentialStore : AccessCredentialStore {
+        var savedServer: String? = null
+        var savedId: String? = null
+        var savedSecret: String? = null
+        var failSave = false
+
+        override fun save(serverUrl: String, clientId: String, secret: String) {
+            if (failSave) throw IllegalStateException("keystore")
+            savedServer = serverUrl
+            savedId = clientId
+            savedSecret = secret
+        }
+
+        override fun clear() {
+            savedServer = null
+            savedId = null
+            savedSecret = null
+        }
+
+        override fun current() = savedId?.let { id ->
+            savedSecret?.let { secret -> com.example.logflare.core.network.auth.AccessServiceToken(id, secret) }
+        }
     }
 
     private companion object {

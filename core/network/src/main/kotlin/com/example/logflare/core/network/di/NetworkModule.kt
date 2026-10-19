@@ -4,6 +4,8 @@ import com.example.logflare.core.network.BuildConfig
 import com.example.logflare.core.network.HttpUnauthorizedAction
 import com.example.logflare.core.network.LogflareApi
 import com.example.logflare.core.network.UnauthorizedResponseInterceptor
+import com.example.logflare.core.network.auth.AccessHeaderInterceptor
+import com.example.logflare.core.network.auth.AccessServiceTokenProvider
 import com.example.logflare.core.network.auth.AuthHeaderInterceptor
 import com.example.logflare.core.network.auth.AuthTokenProvider
 import com.example.logflare.core.network.host.BaseUrlProvider
@@ -36,11 +38,15 @@ object NetworkModule {
     fun provideOkHttp(
         baseUrlProvider: BaseUrlProvider,
         authTokenProvider: AuthTokenProvider,
+        accessTokens: AccessServiceTokenProvider,
         httpUnauthorizedAction: HttpUnauthorizedAction,
     ): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
+                    // Defense in case a later change logs the request after the Access headers are added.
+                    redactHeader(AccessHeaderInterceptor.CLIENT_ID)
+                    redactHeader(AccessHeaderInterceptor.CLIENT_SECRET)
                     level = if (BuildConfig.DEBUG) {
                         HttpLoggingInterceptor.Level.BODY
                     } else {
@@ -50,6 +56,8 @@ object NetworkModule {
             )
             .addInterceptor(AuthHeaderInterceptor(authTokenProvider))
             .addInterceptor(HostSelectionInterceptor(baseUrlProvider))
+            // After logging, so the service-token secret is not written to logcat.
+            .addInterceptor(AccessHeaderInterceptor(accessTokens))
             .addInterceptor(UnauthorizedResponseInterceptor(httpUnauthorizedAction))
             .build()
 

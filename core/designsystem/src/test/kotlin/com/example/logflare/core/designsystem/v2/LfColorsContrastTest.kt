@@ -40,6 +40,7 @@ class LfColorsContrastTest {
     @Test fun textMutedOnBackground() = check("textMuted/background", { it.textMuted }, { it.background }, 4.5)
     @Test fun onPrimaryOnPrimary() = check("onPrimaryAction/primaryAction", { it.onPrimaryAction }, { it.primaryAction }, 4.5)
     @Test fun errorOnContainer() = check("error/errorContainer", { it.error }, { it.errorContainer }, 4.5)
+    @Test fun successOnContainer() = check("success/successContainer", { it.success }, { it.successContainer }, 3.0)
     @Test fun warningOnContainer() = check("warning/warningContainer", { it.warning }, { it.warningContainer }, 4.5)
     @Test fun iconOnSurface() = check("icon/surface", { it.icon }, { it.surface }, 3.0)
     @Test fun onCriticalOnCritical() = check("onCritical/critical", { it.onCritical }, { it.critical }, 4.5)

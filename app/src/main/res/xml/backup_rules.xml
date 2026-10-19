@@ -11,4 +11,6 @@
     <exclude domain="file" path="datastore/projects.preferences_pb" />
     <exclude domain="file" path="datastore/push_registration.preferences_pb" />
     <exclude domain="file" path="cache-v2" />
+    <exclude domain="sharedpref" path="logflare_access_credentials.xml" />
+    <exclude domain="sharedpref" path="logflare_access_flag.xml" />
 </full-backup-content>

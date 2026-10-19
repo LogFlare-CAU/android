@@ -1,5 +1,8 @@
 package com.logflare.android.data.store
 
+import com.example.logflare.core.model.AccessAuthParams
+import com.example.logflare.core.model.AuthModes
+import com.example.logflare.core.model.AuthModesResponse
 import com.example.logflare.core.model.FcmConfigResponse
 import com.example.logflare.core.model.FcmTokenParams
 import com.example.logflare.core.model.FcmTokenResponse
@@ -30,6 +33,7 @@ import com.example.logflare.core.model.UserResponse
 import com.example.logflare.core.model.UserSequenceResponse
 import com.example.logflare.core.model.UserUpdateParams
 import com.example.logflare.core.network.LogflareApi
+import com.example.logflare.core.network.host.ProbeBaseUrl
 
 /** Arguments of one [LogflareApi.getLogEvents] call. */
 data class EventsCall(
@@ -155,6 +159,25 @@ class FakeLogflareApi : LogflareApi {
         record("authenticate")
         authCalls += body
         return authenticateResult(body)
+    }
+
+    var authModesResult: suspend () -> AuthModesResponse = { AuthModesResponse(true, "ok", data = AuthModes(listOf("password"))) }
+    val accessCalls = mutableListOf<AccessAuthParams>()
+    var authenticateAccessResult: suspend (AccessAuthParams) -> StringResponse = { StringResponse(true, "ok", data = "jwt-access") }
+
+    /** Servers [authModes] was probed for, in order. */
+    val probedUrls = mutableListOf<String>()
+
+    override suspend fun authModes(probe: ProbeBaseUrl): AuthModesResponse {
+        record("authModes")
+        probedUrls += probe.url
+        return authModesResult()
+    }
+
+    override suspend fun authenticateAccess(body: AccessAuthParams): StringResponse {
+        record("authenticateAccess")
+        accessCalls += body
+        return authenticateAccessResult(body)
     }
 
     /** When set, every mutation endpoint throws it (e.g. no network). */

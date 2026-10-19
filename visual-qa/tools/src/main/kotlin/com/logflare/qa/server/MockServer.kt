@@ -113,6 +113,25 @@ class MockServer(
                     methodNotAllowed(exchange)
                 }
             }
+            path == "/user/auth/modes" -> {
+                if (method == "GET") {
+                    writeJson(
+                        exchange,
+                        200,
+                        envelope(
+                            success = true,
+                            message = "ok",
+                            data = buildJsonObject {
+                                put("modes", buildJsonArray {
+                                    add(JsonPrimitive("password"))
+                                })
+                            },
+                        ),
+                    )
+                } else {
+                    methodNotAllowed(exchange)
+                }
+            }
             path == "/user/" || path == "/user" -> handleUsersCollection(exchange, method)
             path == "/user/me" -> {
                 if (method != "GET") {

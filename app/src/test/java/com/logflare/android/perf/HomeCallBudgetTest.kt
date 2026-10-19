@@ -1,6 +1,7 @@
 package com.logflare.android.perf
 
 import com.example.logflare.core.network.HttpUnauthorizedAction
+import com.example.logflare.core.network.auth.AccessServiceTokenProvider
 import com.example.logflare.core.network.auth.AuthTokenProvider
 import com.example.logflare.core.network.di.NetworkModule
 import com.example.logflare.core.network.host.BaseUrlProvider
@@ -100,6 +101,7 @@ class HomeCallBudgetTest {
         val client = NetworkModule.provideOkHttp(
             baseUrlProvider = object : BaseUrlProvider { override fun getBaseUrl() = baseUrl },
             authTokenProvider = AuthTokenProvider { "Bearer jwt" },
+            accessTokens = AccessServiceTokenProvider { null },
             httpUnauthorizedAction = HttpUnauthorizedAction { },
         )
         val api = NetworkModule.provideLogflareApi(NetworkModule.provideRetrofit(client, json))

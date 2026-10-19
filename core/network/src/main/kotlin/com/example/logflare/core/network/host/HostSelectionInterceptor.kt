@@ -1,6 +1,8 @@
 package com.example.logflare.core.network.host
 
+import okhttp3.HttpUrl
 import okhttp3.Interceptor
+import okhttp3.Request
 import okhttp3.Response
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
@@ -19,6 +21,7 @@ class HostSelectionInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
+        original.tag(ProbeBaseUrl::class.java)?.let { return chain.proceed(rewrite(original, it.httpsBase())) }
         val override = baseUrlProvider.getBaseUrl()?.trim()?.takeIf { it.isNotEmpty() }
         if (override.isNullOrBlank()) throw ServerNotConfiguredException()
 
@@ -27,15 +30,16 @@ class HostSelectionInterceptor(
         if (newBase == null || (newBase.scheme != "http" && newBase.scheme != "https")) {
             throw ServerNotConfiguredException()
         }
+        return chain.proceed(rewrite(original, newBase))
+    }
 
-        val oldUrl = original.url
-        val rebuilt = oldUrl.newBuilder()
-            .scheme(newBase.scheme)
-            .host(newBase.host)
-            .port(newBase.port)
+    private fun rewrite(original: Request, base: HttpUrl?): Request {
+        if (base == null) throw ServerNotConfiguredException()
+        val rebuilt = original.url.newBuilder()
+            .scheme(base.scheme)
+            .host(base.host)
+            .port(base.port)
             .build()
-
-        val newRequest = original.newBuilder().url(rebuilt).build()
-        return chain.proceed(newRequest)
+        return original.newBuilder().url(rebuilt).build()
     }
 }
