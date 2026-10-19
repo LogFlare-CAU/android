@@ -2,15 +2,28 @@ appId: com.logflare.android
 ---
 - launchApp:
     clearState: true
-- tapOn: "Server URL"
-- inputText: ${QA_BASE_URL}
-- hideKeyboard
-- tapOn: "Username"
-- inputText: ${QA_USERNAME}
-- hideKeyboard
-- tapOn: "Password"
+# clearState re-arms the notification permission prompt the app shows at launch; it would cover
+# the form. Decline it when it is there (the runner's pm revoke cannot pre-empt it).
+- tapOn:
+    text: "Don.t allow"
+    optional: true
+- assertVisible:
+    id: "login_screen"
+# Fields are tapped by id: their labels are not clickable. No hideKeyboard: on Android it presses
+# Back, which closes Login when the keyboard is already down. Password goes first: typed after the
+# other fields, Maestro's inputText landed in Username even though Password had focus.
+- tapOn:
+    id: "login_password"
+- waitForAnimationToEnd
 - inputText: ${QA_PASSWORD}
-- hideKeyboard
-- tapOn: "Sign In"
+- tapOn:
+    id: "login_server_url"
+- waitForAnimationToEnd
+- inputText: ${QA_BASE_URL}
+- tapOn:
+    id: "login_username"
+- waitForAnimationToEnd
+- inputText: ${QA_USERNAME}
+- tapOn: "Sign in"
 - assertVisible:
     id: "home_screen"

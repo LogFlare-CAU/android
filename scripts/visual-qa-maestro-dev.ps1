@@ -10,7 +10,7 @@
 
     Only the login-to-Home smoke flow runs by default, because it is the one journey that depends
     on nothing but a reachable server and valid credentials. The other flows assert fixture values
-    served by the mock (user 'qa-admin', project 'Payments', ...) and will fail against real data;
+    served by the mock (user 'qa-admin', member 'minsu', project id 101, ...) and will fail against real data;
     pass them explicitly with -Flows when you know the server carries matching content.
 
     Captures land in visual-qa/dev-captures/ (gitignored) and are tagged with the device's current

@@ -100,6 +100,7 @@ fun LoginContent(
                     onValueChange = onUrl,
                     label = stringResource(R.string.login_server_url),
                     placeholder = stringResource(R.string.login_server_url_placeholder),
+                    modifier = Modifier.testTag(VisualQaTags.LoginServerUrl),
                     error = state.urlError.text(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Uri,
@@ -115,6 +116,7 @@ fun LoginContent(
                     onValueChange = onUsername,
                     label = stringResource(R.string.login_username),
                     placeholder = stringResource(R.string.login_username),
+                    modifier = Modifier.testTag(VisualQaTags.LoginUsername),
                     error = state.usernameError.text(),
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.None,
@@ -127,6 +129,7 @@ fun LoginContent(
                     onValueChange = onPassword,
                     label = stringResource(R.string.login_password),
                     placeholder = stringResource(R.string.login_password),
+                    modifier = Modifier.testTag(VisualQaTags.LoginPassword),
                     error = state.passwordError.text(),
                     imeAction = ImeAction.Done,
                     keyboardActions = KeyboardActions(onDone = { submit() }),

@@ -57,14 +57,6 @@ data class StringResponse(
 )
 
 @Serializable
-data class StringSequenceResponse(
-    val success: Boolean,
-    val message: String,
-    val error_code: Int? = null,
-    val data: List<String>? = null
-)
-
-@Serializable
 data class ProjectCreateParams(
     val name: String
 )
@@ -125,24 +117,6 @@ data class ProjectResponse(
     val message: String,
     val error_code: Int? = null,
     val data: ProjectDTO? = null
-)
-
-@Serializable
-data class ErrorlogDTO(
-    val id: Int,
-    val project_id: Int,
-    val errortype: String? = null,
-    val message: String,
-    val level: String,
-    val timestamp: String
-)
-
-@Serializable
-data class ErrorSequenceResponse(
-    val success: Boolean,
-    val message: String,
-    val error_code: Int? = null,
-    val data: List<ErrorlogDTO>? = null
 )
 
 @Serializable

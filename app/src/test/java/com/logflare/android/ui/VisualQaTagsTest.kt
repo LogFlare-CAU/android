@@ -10,6 +10,9 @@ class VisualQaTagsTest {
     fun requiredStaticTagsMatchMaestroContract() {
         assertEquals("app_root", VisualQaTags.AppRoot)
         assertEquals("login_screen", VisualQaTags.Login)
+        assertEquals("login_server_url", VisualQaTags.LoginServerUrl)
+        assertEquals("login_username", VisualQaTags.LoginUsername)
+        assertEquals("login_password", VisualQaTags.LoginPassword)
         assertEquals("home_screen", VisualQaTags.Home)
         assertEquals("logs_list", VisualQaTags.Logs)
         assertEquals("log_detail", VisualQaTags.LogDetail)
@@ -20,7 +23,6 @@ class VisualQaTagsTest {
         assertEquals("my_page", VisualQaTags.MyPage)
         assertEquals("add_member", VisualQaTags.AddMember)
         assertEquals("edit_member", VisualQaTags.EditMember)
-        assertEquals("logout_confirmation", VisualQaTags.Logout)
         assertEquals("nav_home", VisualQaTags.NavHome)
         assertEquals("nav_logs", VisualQaTags.NavLogs)
         assertEquals("nav_projects", VisualQaTags.NavProjects)
@@ -28,14 +30,10 @@ class VisualQaTagsTest {
         assertEquals("open_project_settings", VisualQaTags.OpenProjectSettings)
         assertEquals("create_project", VisualQaTags.CreateProject)
         assertEquals("logout", VisualQaTags.LogoutAction)
-        assertEquals("confirm_logout", VisualQaTags.ConfirmLogout)
-        assertEquals("navigate_back", VisualQaTags.NavigateBack)
         assertEquals("filter_log_level", VisualQaTags.FilterLogLevel)
         assertEquals("filter_projects", VisualQaTags.FilterProjects)
         assertEquals("filter_sort", VisualQaTags.FilterSort)
-        assertEquals("state_loading", VisualQaTags.Loading)
         assertEquals("state_empty", VisualQaTags.Empty)
-        assertEquals("state_error", VisualQaTags.Error)
     }
 
     @Test

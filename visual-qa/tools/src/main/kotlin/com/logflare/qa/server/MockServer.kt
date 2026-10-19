@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -18,6 +19,11 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Base64
 import java.util.concurrent.Executors
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadFactory
@@ -26,8 +32,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MockServer(
     private val host: String = "127.0.0.1",
     private val port: Int = 8000,
+    clock: Clock = Clock.systemUTC(),
 ) {
-    private val state = FixtureState()
+    private val state = FixtureState(clock)
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var executor: ExecutorService? = null
     private var server: HttpServer? = null
@@ -117,25 +124,6 @@ class MockServer(
                     }
                 }
             }
-            path == "/user/name" -> {
-                if (method != "GET") {
-                    methodNotAllowed(exchange)
-                } else {
-                    requireAuth(exchange) {
-                        val username = query["username"]
-                        if (username.isNullOrBlank()) {
-                            writeJson(exchange, 400, envelope(false, "username required"))
-                            return@requireAuth
-                        }
-                        val user = state.getUserByName(username)
-                        if (user == null) {
-                            writeJson(exchange, 404, envelope(false, "user not found"))
-                        } else {
-                            writeJson(exchange, 200, userEnvelope(user))
-                        }
-                    }
-                }
-            }
             USER_ID_PATH.matches(path) -> handleUserById(exchange, method, path)
             path == "/project/" || path == "/project" -> handleProjectsCollection(exchange, method)
             path == "/project/perm/batch/reset" -> requireAuth(exchange) {
@@ -162,26 +150,49 @@ class MockServer(
                     ),
                 )
             }
-            PROJECT_ID_PATH.matches(path) -> handleProjectById(exchange, method, path)
-            path == "/log/error" -> handleLogError(exchange, method, query)
-            LOG_FILE_PATH.matches(path) -> requireAuth(exchange) {
+            PROJECT_TOKEN_PATH.matches(path) -> requireAuth(exchange) {
                 if (method != "GET") {
                     writeJson(exchange, 405, envelope(false, "method not allowed"))
                     return@requireAuth
                 }
-                val match = LOG_FILE_PATH.matchEntire(path)!!
-                val projectId = match.groupValues[1].toInt()
-                val logFileId = match.groupValues[2].toInt()
-                val lines = state.getLogLines(projectId, logFileId)
-                writeJson(
-                    exchange,
-                    200,
-                    envelope(
-                        success = true,
-                        message = "ok",
-                        data = JsonArray(lines.map { JsonPrimitive(it) }),
-                    ),
-                )
+                val id = PROJECT_TOKEN_PATH.matchEntire(path)!!.groupValues[1].toInt()
+                writeProjectWithToken(exchange, id, state.getProjectToken(id))
+            }
+            PROJECT_ROTATE_PATH.matches(path) -> requireAuth(exchange) {
+                if (method != "POST") {
+                    writeJson(exchange, 405, envelope(false, "method not allowed"))
+                    return@requireAuth
+                }
+                val id = PROJECT_ROTATE_PATH.matchEntire(path)!!.groupValues[1].toInt()
+                writeProjectWithToken(exchange, id, state.rotateProjectToken(id))
+            }
+            PROJECT_ID_PATH.matches(path) -> handleProjectById(exchange, method, path)
+            path == "/log/summary" -> requireAuth(exchange) {
+                if (method != "GET") {
+                    writeJson(exchange, 405, envelope(false, "method not allowed"))
+                    return@requireAuth
+                }
+                handleSummary(exchange, query)
+            }
+            path == "/log/events" -> requireAuth(exchange) {
+                if (method != "GET") {
+                    writeJson(exchange, 405, envelope(false, "method not allowed"))
+                    return@requireAuth
+                }
+                handleEvents(exchange, query)
+            }
+            LOG_EVENT_PATH.matches(path) -> requireAuth(exchange) {
+                if (method != "GET") {
+                    writeJson(exchange, 405, envelope(false, "method not allowed"))
+                    return@requireAuth
+                }
+                val id = LOG_EVENT_PATH.matchEntire(path)!!.groupValues[1].toInt()
+                val detail = state.eventDetail(id)
+                if (detail == null) {
+                    writeJson(exchange, 404, envelope(false, "Error not found"))
+                } else {
+                    writeJson(exchange, 200, envelope(success = true, message = "ok", data = eventDetailToJson(detail)))
+                }
             }
             path == "/fcm/data" -> requireAuth(exchange) {
                 if (method != "GET") {
@@ -195,24 +206,27 @@ class MockServer(
                 )
             }
             path == "/fcm/token" -> requireAuth(exchange) {
-                if (method != "POST") {
+                if (method != "POST" && method != "DELETE") {
                     writeJson(exchange, 405, envelope(false, "method not allowed"))
                     return@requireAuth
                 }
-                val idx = state.nextFcmTokenIdx()
-                writeJson(
-                    exchange,
-                    200,
-                    envelope(
-                        success = true,
-                        message = "ok",
-                        data = buildJsonObject {
-                            put("idx", JsonPrimitive(idx))
-                            put("user_idx", JsonPrimitive(1))
-                            put("last_delivery", JsonNull)
-                        },
-                    ),
-                )
+                val token = runCatching {
+                    json.parseToJsonElement(readBody(exchange)).jsonObject["fcm_token"]?.jsonPrimitive?.contentOrNull
+                }.getOrNull()
+                if (token.isNullOrBlank()) {
+                    writeJson(exchange, 400, envelope(false, "fcm_token required"))
+                    return@requireAuth
+                }
+                val data = if (method == "POST") {
+                    buildJsonObject {
+                        put("idx", JsonPrimitive(state.registerFcmToken(token)))
+                        put("user_idx", JsonPrimitive(1))
+                        put("last_delivery", JsonNull)
+                    }
+                } else {
+                    buildJsonObject { put("removed", JsonPrimitive(state.unregisterFcmToken(token))) }
+                }
+                writeJson(exchange, 200, envelope(success = true, message = "ok", data = data))
             }
             else -> writeJson(exchange, 404, envelope(false, "not found"))
         }
@@ -400,48 +414,75 @@ class MockServer(
         )
     }
 
-    private fun handleLogError(exchange: HttpExchange, method: String, query: Map<String, String>) {
-        when (method) {
-            "GET" -> requireAuth(exchange) {
-                val projectId = query["project_id"]?.toIntOrNull()
-                val errors = state.listErrors(projectId)
-                writeJson(
-                    exchange,
-                    200,
-                    envelope(
-                        success = true,
-                        message = "ok",
-                        data = JsonArray(errors.map { errorToJson(it) }),
-                    ),
-                )
-            }
-            "POST" -> {
-                // Authenticated via ProjectKey/Project headers for ingestion path.
-                val projectKey = exchange.requestHeaders.getFirst("ProjectKey")
-                val project = exchange.requestHeaders.getFirst("Project")
-                if (projectKey.isNullOrBlank() || project.isNullOrBlank()) {
-                    writeJson(exchange, 400, envelope(false, "ProjectKey and Project headers required"))
-                    return
-                }
-                val body = readBody(exchange)
-                val obj = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
-                if (obj == null) {
-                    writeJson(exchange, 400, envelope(false, "invalid json"))
-                    return
-                }
-                val message = obj["message"]?.jsonPrimitive?.contentOrNull
-                val level = obj["level"]?.jsonPrimitive?.contentOrNull
-                if (message.isNullOrBlank() || level.isNullOrBlank()) {
-                    writeJson(exchange, 400, envelope(false, "invalid body"))
-                    return
-                }
-                val errortype = obj["errortype"]?.let {
-                    if (it is JsonNull) null else it.jsonPrimitive.contentOrNull
-                }
-                state.addError(projectId = 101, errortype = errortype, level = level, message = message)
-                writeEmpty(exchange, 200)
-            }
-            else -> writeJson(exchange, 405, envelope(false, "method not allowed"))
+    private fun handleSummary(exchange: HttpExchange, query: Map<String, String>) {
+        val projectId = query["project_id"]?.toIntOrNull()
+        if (projectId != null && state.getProject(projectId) == null) {
+            writeJson(exchange, 403, envelope(false, "You do not have access to this project"))
+            return
+        }
+        val summary = state.summary(projectId, query["hours"]?.toIntOrNull() ?: 24)
+        val data = buildJsonObject {
+            put("window_hours", JsonPrimitive(summary.windowHours))
+            put("since", time(summary.since))
+            put("counts", buildJsonObject { summary.counts.forEach { (level, n) -> put(level, JsonPrimitive(n)) } })
+            put(
+                "projects",
+                buildJsonArray {
+                    summary.projects.forEach { p ->
+                        add(
+                            buildJsonObject {
+                                put("project_id", JsonPrimitive(p.projectId))
+                                put("error_count", JsonPrimitive(p.errorCount))
+                                put("warning_count", JsonPrimitive(p.warningCount))
+                                put("last_error_at", p.lastErrorAt?.let(::time) ?: JsonNull)
+                            },
+                        )
+                    }
+                },
+            )
+        }
+        writeJson(exchange, 200, envelope(success = true, message = "ok", data = data))
+    }
+
+    /** Offset-cursor pages, like the backend's (minus its time ceiling: the fixture never grows mid-run). */
+    private fun handleEvents(exchange: HttpExchange, query: Map<String, String>) {
+        val projectId = query["project_id"]?.toIntOrNull()
+        if (projectId != null && state.getProject(projectId) == null) {
+            writeJson(exchange, 403, envelope(false, "You do not have access to this project"))
+            return
+        }
+        val cursor = query["cursor"]
+        val offset = if (cursor == null) 0 else decodeCursor(cursor)
+        if (offset == null) {
+            writeJson(exchange, 400, envelope(false, "Invalid cursor"))
+            return
+        }
+        val limit = (query["limit"]?.toIntOrNull() ?: 50).coerceIn(1, 200)
+        val events = state.listEvents(
+            QaEventFilter(
+                projectId = projectId,
+                minLevel = query["min_level"],
+                logfileId = query["logfile_id"]?.toIntOrNull(),
+                query = query["q"],
+                sort = query["sort"] ?: "newest",
+                grouped = query["grouped"]?.toBooleanStrictOrNull() ?: true,
+            ),
+        )
+        val page = events.drop(offset).take(limit)
+        val next = if (offset + limit < events.size) encodeCursor(offset + limit) else null
+        val data = buildJsonObject {
+            put("items", JsonArray(page.map { eventToJson(it) }))
+            put("next_cursor", next?.let(::JsonPrimitive) ?: JsonNull)
+        }
+        writeJson(exchange, 200, envelope(success = true, message = "ok", data = data))
+    }
+
+    private fun writeProjectWithToken(exchange: HttpExchange, id: Int, token: String?) {
+        val project = state.getProject(id)
+        if (project == null || token == null) {
+            writeJson(exchange, 404, envelope(false, "project not found"))
+        } else {
+            writeJson(exchange, 200, envelope(success = true, message = "ok", data = projectToJsonWithToken(project, token)))
         }
     }
 
@@ -552,20 +593,50 @@ class MockServer(
         put("project", JsonNull)
     }
 
-    private fun errorToJson(error: QaErrorLog): JsonObject = buildJsonObject {
-        put("id", JsonPrimitive(error.id))
-        put("project_id", JsonPrimitive(error.project_id))
-        put("errortype", error.errortype?.let { JsonPrimitive(it) } ?: JsonNull)
-        put("message", JsonPrimitive(error.message))
-        put("level", JsonPrimitive(error.level))
-        put("timestamp", JsonPrimitive(error.timestamp))
+    private fun eventToJson(event: QaEvent): JsonObject = buildJsonObject { putEvent(event) }
+
+    private fun eventDetailToJson(detail: QaEventDetail): JsonObject = buildJsonObject {
+        putEvent(detail.event)
+        put("occurred_at", time(detail.occurredAt))
+        put("row_level", JsonPrimitive(detail.rowLevel))
+        put("raw", detail.raw?.let(::JsonPrimitive) ?: JsonNull)
+        put("recent_ids", JsonArray(detail.recentIds.map(::JsonPrimitive)))
     }
+
+    private fun JsonObjectBuilder.putEvent(event: QaEvent) {
+        put("id", JsonPrimitive(event.id))
+        put("project_id", JsonPrimitive(event.projectId))
+        put("logfile_id", event.logfileId?.let(::JsonPrimitive) ?: JsonNull)
+        put("logfile_name", event.logfileName?.let(::JsonPrimitive) ?: JsonNull)
+        put("errortype", event.errortype?.let(::JsonPrimitive) ?: JsonNull)
+        put("message", JsonPrimitive(event.message))
+        put("level", JsonPrimitive(event.level))
+        put("timestamp", time(event.lastSeen))
+        put("occurrences", JsonPrimitive(event.occurrences))
+        put("first_seen", time(event.firstSeen))
+        put("last_seen", time(event.lastSeen))
+    }
+
+    /** The backend's naive-UTC form, e.g. `2026-10-19T11:59:00`. */
+    private fun time(at: Instant): JsonPrimitive = JsonPrimitive(SERVER_TIME.format(at.atOffset(ZoneOffset.UTC)))
 
     companion object {
         private val USER_ID_PATH = Regex("""^/user/(\d+)$""")
         private val PROJECT_ID_PATH = Regex("""^/project/(\d+)$""")
         private val PROJECT_PERM_PATH = Regex("""^/project/(\d+)/perm$""")
-        private val LOG_FILE_PATH = Regex("""^/log/(\d+)/(\d+)$""")
+        private val PROJECT_TOKEN_PATH = Regex("""^/project/(\d+)/token$""")
+        private val PROJECT_ROTATE_PATH = Regex("""^/project/(\d+)/rotate-token$""")
+        private val LOG_EVENT_PATH = Regex("""^/log/events/(\d+)$""")
+        private val SERVER_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+
+        private fun encodeCursor(offset: Int): String =
+            Base64.getUrlEncoder().encodeToString("""{"o":$offset}""".toByteArray(StandardCharsets.UTF_8))
+
+        /** The offset in [cursor], or null when it is not one this server issued. */
+        private fun decodeCursor(cursor: String): Int? = runCatching {
+            val decoded = String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8)
+            Json.parseToJsonElement(decoded).jsonObject["o"]?.jsonPrimitive?.intOrNull
+        }.getOrNull()?.takeIf { it >= 0 }
 
         private fun normalizePath(path: String): String {
             if (path.length > 1 && path.endsWith('/')) {

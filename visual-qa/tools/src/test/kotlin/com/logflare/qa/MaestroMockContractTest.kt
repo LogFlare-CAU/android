@@ -1,5 +1,6 @@
 package com.logflare.qa
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,10 +26,18 @@ class MaestroMockContractTest {
 
         val expected = mapOf(
             "login-home.yaml" to listOf("home"),
-            "logs-detail.yaml" to listOf("logs_detail"),
+            "logs-detail.yaml" to listOf("logs", "log_detail"),
             "projects.yaml" to listOf("projects_list", "project_detail", "project_settings"),
             "mypage-members.yaml" to listOf("my_page", "add_member", "edit_member"),
-            "logout.yaml" to listOf("logout_confirmation"),
+            "logout.yaml" to listOf("logout_sheet", "login"),
+        )
+        val mockText = File(repoRoot, "scripts/visual-qa-maestro-mock.ps1").readText()
+        val declared = Regex("""\${'$'}ExpectedCheckpoints = @\(([^)]*)\)""").find(mockText)!!.groupValues[1]
+            .split(',').map { it.trim().trim('\'') }.filter { it.isNotEmpty() }
+        assertEquals(
+            "runner checkpoints must match the flows' screenshots",
+            expected.values.flatten().sorted(),
+            declared.sorted(),
         )
         expected.forEach { (name, checkpoints) ->
             val flow = File(repoRoot, ".maestro/flows/$name")

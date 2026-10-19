@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -27,7 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.logflare.core.designsystem.v2.Lf
 
-data class NavItem(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
+/** [testTag], when set, tags the tab so UI automation can tap it whatever its label. */
+data class NavItem(
+    val route: String,
+    val label: String,
+    val icon: ImageVector,
+    val selectedIcon: ImageVector,
+    val testTag: String? = null,
+)
 
 @Composable
 fun BottomNavBar(
@@ -51,6 +59,7 @@ fun BottomNavBar(
             Column(
                 Modifier
                     .weight(1f)
+                    .then(item.testTag?.let { Modifier.testTag(it) } ?: Modifier)
                     .heightIn(min = 48.dp)
                     .semantics(mergeDescendants = true) { this.selected = isSelected }
                     .clickable(role = Role.Tab) { onSelect(item.route) }

@@ -35,10 +35,28 @@ They cannot be verified on an emulator, another phone, or CI. Only the JVM tier 
 
 **The navigation mode is part of the reference configuration.** The status bar is cropped off, but the bottom
 of the frame still holds the app's own bottom bar and, below it, the system gesture pill. Switching the phone
-between gesture and 3-button navigation changes that region and invalidates all 18 baselines. `Assert-DeviceProfile`
+between gesture and 3-button navigation changes that region and invalidates every baseline. `Assert-DeviceProfile`
 does not check this, so it fails as a comparison mismatch rather than a clear message.
 
-Nothing else in frame varies with time: two `Verify` runs an hour apart both matched 18/18.
+Before the rework, nothing else in frame varied with time: two `Verify` runs an hour apart both matched 18/18.
+The reworked screens show log times, which do vary -- see [Log times](#log-times-are-relative-to-the-run) below.
+
+### Baselines are pending re-recording (rework, 2026-10-19)
+
+The rework replaced every screen, so the old 18 baselines no longer matched any flow and were deleted.
+`visual-qa/device-baselines/` holds only `.gitkeep` until someone records on the reference device; until then
+`Verify` stops at `Assert-BaselineManifest` (missing baselines), which is expected.
+
+The flows were proven on an emulator (Pixel-class AVD, API 36, 1080x2400 @ 420): all 5 flows passed in both
+themes and the captures were reviewed against the prototype. Emulator captures are **not** baselines (wrong
+geometry, fonts and cutout), so none were promoted. To record the set on the reference device:
+
+1. Connect the S26 Ultra as in [Prerequisites](#prerequisites), unlocked, gesture navigation, native resolution.
+2. `.\scripts\visual-qa-maestro-mock.ps1 -Mode Record -Serial $serial` -- stages all 22 captures and promotes
+   them with `BaselineSetPromoter` only after all 10 flow runs pass.
+3. Open every PNG in `visual-qa/device-baselines/` and compare it with the prototype
+   (`docs/superpowers/specs/2026-10-18-app-rework-prototype/*.dc.html`) before committing.
+4. Run `-Mode Verify` once right after, to confirm the set reproduces.
 
 ---
 
@@ -159,7 +177,7 @@ Drives the debug app against a real server and writes captures to `visual-qa/dev
 and never records: a development server's data changes, so its captures are evidence for a human, not a pass/fail.
 
 Only `login-home.yaml` runs by default, because it depends on nothing but a reachable server and valid
-credentials. The other flows assert mock fixture values (user `qa-admin`, project `Payments`, ...) and will fail
+credentials. The other flows assert mock fixture values (member `minsu`, project id `101`, ...) and will fail
 against real data -- pass them with `-Flows` only when the server carries matching content. Captures are tagged
 with the device's current light/dark state; this runner does not force a theme.
 
@@ -197,15 +215,55 @@ enabled. There is no release `signingConfig`, so the artifact is `app-release-un
 | Path | Tracked | Contents |
 |---|---|---|
 | `app/src/test/snapshots/images/` | yes | JVM snapshot baselines |
-| `visual-qa/device-baselines/` | yes | Device baselines, 9 checkpoints x 2 themes = 18 PNGs |
+| `visual-qa/device-baselines/` | yes | Device baselines, 11 checkpoints x 2 themes = 22 PNGs (pending, see above) |
 | `visual-qa/device-captures/` | no | This run's captures, plus `_maestro/` scratch |
 | `visual-qa/device-diffs/` | no | Magenta diffs from a failed `Verify` |
 | `visual-qa/device-baselines-staging/` | no | `Record` staging area before promotion |
 | `visual-qa/dev-captures/` | no | Development-server captures, plus `_maestro/` scratch |
 | `app/build/outputs/roborazzi/` | no | JVM `*_actual.png` / `*_compare.png` from a failed Verify |
 
-Checkpoints: `home`, `logs_detail`, `projects_list`, `project_detail`, `project_settings`, `my_page`,
-`add_member`, `edit_member`, `logout_confirmation`.
+Checkpoints, by flow:
+
+| Flow | Journey | Checkpoints |
+|---|---|---|
+| `login-home.yaml` | Sign in -> Home (summary strip, recent errors, projects) | `home` |
+| `logs-detail.yaml` | Logs -> level sheet "Error and above" -> first row -> Log detail | `logs`, `log_detail` |
+| `projects.yaml` | Projects -> api-server -> Settings | `projects_list`, `project_detail`, `project_settings` |
+| `mypage-members.yaml` | My -> Add member -> back; My -> minsu -> Edit member | `my_page`, `add_member`, `edit_member` |
+| `logout.yaml` | My -> Log out sheet -> Log out -> Login | `logout_sheet`, `login` |
+
+`MaestroMockContractTest` fails if the runner's `$ExpectedCheckpoints` and the flows' screenshots drift apart.
+
+---
+
+## Mock server fixture
+
+`visual-qa/tools/.../server/FixtureState.kt` mirrors the rework prototype. `POST /__qa/reset` restores it before
+every flow.
+
+- **Users:** `qa-admin` (Super Admin, the signed-in user, password `qa-password`), `jihyun` (Admin), `devops-bot`,
+  `minsu`, `yuna` (Members).
+- **Projects:** 101 `api-server` (`app.log`, `payment.log`, `db.log`), 102 `worker`, 103 `web-frontend`,
+  104 `batch-jobs`.
+- **Logs:** the prototype's eleven groups across all five levels, 23 rows with repeats (e.g. the
+  NullPointerException in PaymentService x3 with a raw stack trace). Grouped by (project, errortype, message) as
+  the backend does.
+
+Routes the app calls: `/user/auth`, `/user/me`, `/user/` (+ `PATCH`/`DELETE /user/{id}`), `/project/`
+(+ `PATCH`/`DELETE /project/{id}`, `/project/{id}/perm`, `/project/{id}/token`, `/project/{id}/rotate-token`,
+`/project/perm/batch/reset`), `/log/summary`, `/log/events`, `/log/events/{id}`, `/fcm/data` (always "disabled"),
+`POST`/`DELETE /fcm/token`. `MockServerRoutesTest` and `ModelCompatibilityTest` decode them with the app's own
+`core:model` serializers. The pre-rework routes (`/log/error`, `/log/{project}/{file}`, `/user/name`) are gone.
+
+### Log times are relative to the run
+
+Each row is stored as an age ("1 minute ago"), not a date, and stamped against the server clock on every request.
+That keeps the 24h summary counts and the relative labels ("15 min ago", "Last error 22 h ago") the same on every
+run. It cannot freeze **absolute** times: the Logs list (`HH:mm`, Today/Yesterday sections) and Log detail
+(first/last seen) show wall-clock times, so the `logs` and `log_detail` checkpoints differ between runs at different
+times of day. The app has no debug clock override and a non-rooted phone's clock cannot be set, so those two
+checkpoints will need masking (or an app-side clock seam) before `Verify` can pass on them across runs. Relative
+labels also assume the phone's clock agrees with the host's to within a few seconds.
 
 ---
 
@@ -290,6 +348,17 @@ is `http://localhost:18000`, typed into the login form by `_login.yaml`. It must
 
 ### Maestro quirks this suite works around
 
+- **`hideKeyboard` presses Back on Android.** On Login with the keyboard already down that closes the app, so
+  `_login.yaml` never calls it. It taps fields by test tag (`login_server_url`, ...; the labels are not clickable),
+  waits for the scroll-into-view to settle, and types the **password first**: typed last, Maestro's `inputText`
+  landed in Username although Password had focus.
+- **`pm clear` and `clearState` re-arm the notification prompt.** The app asks at launch, so the runner's
+  `pm revoke` cannot pre-empt it and `launchApp permissions:` did not either; `_login.yaml` taps "Don't allow"
+  when it is there.
+- **Sheets are separate windows.** `app_root` is not in the hierarchy while the Log out sheet is open, so
+  `logout_sheet` is captured uncropped. `app_root` is edge to edge, so the geometry is the same and `crop-top`
+  still applies.
+
 - **Ambient environment variables are ignored.** Maestro resolves `${...}` only from `--env`/`-e` pairs. Values
   passed via `$env:` silently become the literal string `undefined` — which surfaces as a confusing downstream
   failure (a field "not found") rather than an obvious substitution error.
@@ -297,8 +366,6 @@ is `http://localhost:18000`, typed into the login form by `_login.yaml`. It must
   `<output dir>/<timestamp>/<flow>/takeScreenshot/<given path>.png`, and an absolute path throws
   `InvalidPathException: Illegal char <:>`. The runner therefore captures into a scratch tree and collects the
   PNGs back out by file name, and fails if a flow reports success but produced no screenshots.
-- **The soft keyboard hides fields.** `_login.yaml` calls `hideKeyboard` after each `inputText`; without it the
-  Password field sits under the keyboard and is not found.
 
 ### `MaestroMockContractTest` used to report a false pass — fixed
 

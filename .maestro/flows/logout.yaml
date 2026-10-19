@@ -1,15 +1,27 @@
 appId: com.logflare.android
 ---
+# My -> Log out sheet -> Login.
 - runFlow: _login.yaml
 - tapOn:
     id: "nav_my_page"
 - assertVisible:
     id: "my_page"
+- scrollUntilVisible:
+    element:
+      id: "logout"
 - tapOn:
     id: "logout"
-- assertVisible:
-    id: "logout_confirmation"
+- assertVisible: "Log out."
+# The sheet is its own window, so app_root is not in the hierarchy and cropOn would fail. app_root
+# is edge to edge, so the uncropped screen has the same geometry as every other checkpoint.
 - takeScreenshot:
-    path: ${QA_OUTPUT_DIR}/logout_confirmation_${QA_THEME}
+    path: ${QA_OUTPUT_DIR}/logout_sheet_${QA_THEME}
+- tapOn:
+    text: "Log out"
+    rightOf: "Cancel"
+- assertVisible:
+    id: "login_screen"
+- takeScreenshot:
+    path: ${QA_OUTPUT_DIR}/login_${QA_THEME}
     cropOn:
       id: "app_root"

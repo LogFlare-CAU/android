@@ -1,14 +1,16 @@
 package com.logflare.qa.server
 
-import com.example.logflare.core.model.ErrorSequenceResponse
 import com.example.logflare.core.model.FcmConfigResponse
 import com.example.logflare.core.model.FcmTokenResponse
+import com.example.logflare.core.model.LogEventDetailResponse
+import com.example.logflare.core.model.LogEventPageResponse
+import com.example.logflare.core.model.LogSummaryResponse
 import com.example.logflare.core.model.ProjectPermsSequenceResponse
 import com.example.logflare.core.model.ProjectResponse
 import com.example.logflare.core.model.ProjectResponseWithToken
 import com.example.logflare.core.model.ProjectSequenceResponse
+import com.example.logflare.core.model.RemovedResponse
 import com.example.logflare.core.model.StringResponse
-import com.example.logflare.core.model.StringSequenceResponse
 import com.example.logflare.core.model.UserResponse
 import com.example.logflare.core.model.UserSequenceResponse
 import kotlinx.serialization.decodeFromString
@@ -72,34 +74,36 @@ class ModelCompatibilityTest {
         assertEquals("qa-token-fixed", auth.data)
 
         val initialUsers = json.decodeFromString<UserSequenceResponse>(request("GET", "/user/"))
-        assertEquals(listOf("qa-admin", "qa-member"), initialUsers.data!!.map { it.username })
+        val seededUsers = listOf("qa-admin", "jihyun", "devops-bot", "minsu", "yuna")
+        assertEquals(seededUsers, initialUsers.data!!.map { it.username })
 
         val createdUser = json.decodeFromString<UserResponse>(
             request("POST", "/user/", """{"username":"compat-user","permission":2,"password":"pw"}"""),
         )
-        assertEquals(3, createdUser.data!!.idx)
+        assertEquals(6, createdUser.data!!.idx)
 
         val updatedUser = json.decodeFromString<UserResponse>(
-            request("PATCH", "/user/3", """{"username":"compat-renamed","permission":1}"""),
+            request("PATCH", "/user/6", """{"username":"compat-renamed","permission":1}"""),
         )
         assertEquals("compat-renamed", updatedUser.data!!.username)
         json.decodeFromString<UserResponse>(request("GET", "/user/me"))
-        json.decodeFromString<UserResponse>(request("GET", "/user/name?username=compat-renamed"))
-        json.decodeFromString<UserResponse>(request("DELETE", "/user/3"))
+        json.decodeFromString<UserResponse>(request("DELETE", "/user/6"))
         val usersAfterMutation = json.decodeFromString<UserSequenceResponse>(request("GET", "/user/"))
-        assertEquals(listOf("qa-admin", "qa-member"), usersAfterMutation.data!!.map { it.username })
+        assertEquals(seededUsers, usersAfterMutation.data!!.map { it.username })
 
         val initialProjects = json.decodeFromString<ProjectSequenceResponse>(request("GET", "/project/"))
-        assertEquals(listOf(101, 202), initialProjects.data!!.map { it.id })
+        assertEquals(listOf(101, 102, 103, 104), initialProjects.data!!.map { it.id })
 
         val createdProject = json.decodeFromString<ProjectResponseWithToken>(
             request("POST", "/project/", """{"name":"Compatibility"}"""),
         )
-        assertEquals(303, createdProject.data!!.id)
+        assertEquals(105, createdProject.data!!.id)
         assertNotNull(createdProject.data!!.token)
+        json.decodeFromString<ProjectResponseWithToken>(request("GET", "/project/105/token"))
+        json.decodeFromString<ProjectResponseWithToken>(request("POST", "/project/105/rotate-token"))
 
         val updatedProject = json.decodeFromString<ProjectResponse>(
-            request("PATCH", "/project/303", """{"name":"Compatibility-Renamed"}"""),
+            request("PATCH", "/project/105", """{"name":"Compatibility-Renamed"}"""),
         )
         assertEquals("Compatibility-Renamed", updatedProject.data!!.name)
 
@@ -107,17 +111,21 @@ class ModelCompatibilityTest {
             request(
                 "POST",
                 "/project/perm/batch/reset",
-                """{"projectid":303,"usernames":["qa-admin","qa-member"]}""",
+                """{"projectid":105,"usernames":["jihyun","minsu"]}""",
             ),
         )
         assertEquals(2, perms.data!!.size)
-        json.decodeFromString<ProjectPermsSequenceResponse>(request("GET", "/project/303/perm"))
+        json.decodeFromString<ProjectPermsSequenceResponse>(request("GET", "/project/105/perm"))
 
-        val errors = json.decodeFromString<ErrorSequenceResponse>(request("GET", "/log/error?project_id=101"))
-        assertTrue(errors.data!!.isNotEmpty())
+        val summary = json.decodeFromString<LogSummaryResponse>(request("GET", "/log/summary?hours=24"))
+        assertEquals(5, summary.data!!.projects.size)
 
-        val lines = json.decodeFromString<StringSequenceResponse>(request("GET", "/log/101/1001"))
-        assertTrue(lines.data!!.isNotEmpty())
+        val events = json.decodeFromString<LogEventPageResponse>(
+            request("GET", "/log/events?min_level=ERROR&sort=newest&grouped=true&limit=50"),
+        )
+        val first = events.data!!.items.first()
+        val detail = json.decodeFromString<LogEventDetailResponse>(request("GET", "/log/events/${first.id}"))
+        assertEquals(first.message, detail.data!!.message)
 
         val fcm = json.decodeFromString<FcmConfigResponse>(request("GET", "/fcm/data"))
         assertFalse(fcm.success)
@@ -127,10 +135,14 @@ class ModelCompatibilityTest {
             request("POST", "/fcm/token", """{"fcm_token":"compat-token"}"""),
         )
         assertEquals(1, token.data!!.userIdx)
+        val removed = json.decodeFromString<RemovedResponse>(
+            request("DELETE", "/fcm/token", """{"fcm_token":"compat-token"}"""),
+        )
+        assertTrue(removed.data!!.removed)
 
-        val deletedProject = json.decodeFromString<StringResponse>(request("DELETE", "/project/303"))
+        val deletedProject = json.decodeFromString<StringResponse>(request("DELETE", "/project/105"))
         assertTrue(deletedProject.success)
         val projectsAfterMutation = json.decodeFromString<ProjectSequenceResponse>(request("GET", "/project/"))
-        assertEquals(listOf(101, 202), projectsAfterMutation.data!!.map { it.id })
+        assertEquals(listOf(101, 102, 103, 104), projectsAfterMutation.data!!.map { it.id })
     }
 }

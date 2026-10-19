@@ -16,14 +16,16 @@ $RepoRoot = (Resolve-Path (Join-Path $ScriptDir '..')).Path
 
 $ExpectedCheckpoints = @(
     'home',
-    'logs_detail',
+    'logs',
+    'log_detail',
     'projects_list',
     'project_detail',
     'project_settings',
     'my_page',
     'add_member',
     'edit_member',
-    'logout_confirmation'
+    'logout_sheet',
+    'login'
 )
 
 $Flows = @(

@@ -37,8 +37,10 @@ class FixturePermissionCodesTest {
         val data = json.parseToJsonElement(body).jsonObject["data"]!!.jsonArray
         assertEquals(100, data[0].jsonObject["permission"]!!.jsonPrimitive.int) // SUPER_USER
         assertEquals("qa-admin", data[0].jsonObject["username"]!!.jsonPrimitive.content)
-        assertEquals(0, data[1].jsonObject["permission"]!!.jsonPrimitive.int) // USER
-        assertEquals("qa-member", data[1].jsonObject["username"]!!.jsonPrimitive.content)
+        assertEquals(80, data[1].jsonObject["permission"]!!.jsonPrimitive.int) // ADMIN
+        assertEquals("jihyun", data[1].jsonObject["username"]!!.jsonPrimitive.content)
+        assertEquals(0, data[3].jsonObject["permission"]!!.jsonPrimitive.int) // USER
+        assertEquals("minsu", data[3].jsonObject["username"]!!.jsonPrimitive.content)
     }
 
     private fun request(method: String, path: String): String {

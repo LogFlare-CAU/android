@@ -3,7 +3,6 @@ package com.logflare.qa.server
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
@@ -112,22 +111,21 @@ class MockServerContractTest {
 
         val beforeReset = request("GET", "/user/", headers = authHeaders())
         val usersBefore = parseObject(beforeReset.body)["data"]!!.jsonArray
-        assertTrue(usersBefore.size >= 3)
+        assertEquals(6, usersBefore.size)
 
         val reset = request("POST", "/__qa/reset")
         assertEquals(200, reset.code)
 
         val afterReset = request("GET", "/user/", headers = authHeaders())
         val usersAfter = parseObject(afterReset.body)["data"]!!.jsonArray
-        assertEquals(2, usersAfter.size)
-        assertEquals("qa-admin", usersAfter[0].jsonObject["username"]!!.jsonPrimitive.content)
-        assertEquals("qa-member", usersAfter[1].jsonObject["username"]!!.jsonPrimitive.content)
+        assertEquals(
+            listOf("qa-admin", "jihyun", "devops-bot", "minsu", "yuna"),
+            usersAfter.map { it.jsonObject["username"]!!.jsonPrimitive.content },
+        )
 
         val projects = request("GET", "/project/", headers = authHeaders())
         val projectData = parseObject(projects.body)["data"]!!.jsonArray
-        assertEquals(2, projectData.size)
-        assertEquals(101, projectData[0].jsonObject["id"]!!.jsonPrimitive.int)
-        assertEquals(202, projectData[1].jsonObject["id"]!!.jsonPrimitive.int)
+        assertEquals(listOf(101, 102, 103, 104), projectData.map { it.jsonObject["id"]!!.jsonPrimitive.int })
     }
 
     @Test
@@ -175,13 +173,13 @@ class MockServerContractTest {
         val obj = parseObject(result.body)
         assertEnvelope(obj)
         val data = obj["data"]!!.jsonArray
-        assertEquals(2, data.size)
+        assertEquals(5, data.size)
         assertEquals(1, data[0].jsonObject["idx"]!!.jsonPrimitive.int)
         assertEquals("qa-admin", data[0].jsonObject["username"]!!.jsonPrimitive.content)
         assertEquals(100, data[0].jsonObject["permission"]!!.jsonPrimitive.int)
-        assertEquals(2, data[1].jsonObject["idx"]!!.jsonPrimitive.int)
-        assertEquals("qa-member", data[1].jsonObject["username"]!!.jsonPrimitive.content)
-        assertEquals(0, data[1].jsonObject["permission"]!!.jsonPrimitive.int)
+        assertEquals(4, data[3].jsonObject["idx"]!!.jsonPrimitive.int)
+        assertEquals("minsu", data[3].jsonObject["username"]!!.jsonPrimitive.content)
+        assertEquals(0, data[3].jsonObject["permission"]!!.jsonPrimitive.int)
     }
 
     @Test
@@ -196,50 +194,42 @@ class MockServerContractTest {
         val obj = parseObject(result.body)
         assertEnvelope(obj)
         val data = obj["data"]!!.jsonObject
-        assertEquals(3, data["idx"]!!.jsonPrimitive.int)
+        assertEquals(6, data["idx"]!!.jsonPrimitive.int)
         assertEquals("new-user", data["username"]!!.jsonPrimitive.content)
         assertEquals(2, data["permission"]!!.jsonPrimitive.int)
     }
 
     @Test
-    fun getMeAndGetUserByName() {
+    fun getMeReturnsTheSignedInSuperAdmin() {
         val me = request("GET", "/user/me", headers = authHeaders())
         assertEquals(200, me.code)
         val meObj = parseObject(me.body)
         assertEnvelope(meObj)
         assertEquals("qa-admin", meObj["data"]!!.jsonObject["username"]!!.jsonPrimitive.content)
         assertEquals(100, meObj["data"]!!.jsonObject["permission"]!!.jsonPrimitive.int)
-
-        val byName = request("GET", "/user/name?username=qa-member", headers = authHeaders())
-        assertEquals(200, byName.code)
-        val nameObj = parseObject(byName.body)
-        assertEnvelope(nameObj)
-        assertEquals(2, nameObj["data"]!!.jsonObject["idx"]!!.jsonPrimitive.int)
-        assertEquals("qa-member", nameObj["data"]!!.jsonObject["username"]!!.jsonPrimitive.content)
-        assertEquals(0, nameObj["data"]!!.jsonObject["permission"]!!.jsonPrimitive.int)
     }
 
     @Test
     fun patchAndDeleteUserMutateState() {
         val patched = request(
             "PATCH",
-            "/user/2",
-            body = """{"username":"qa-member-renamed","permission":1,"password":null}""",
+            "/user/4",
+            body = """{"username":"minsu-renamed","permission":1,"password":null}""",
             headers = authHeaders(),
         )
         assertEquals(200, patched.code)
         val patchedData = parseObject(patched.body)["data"]!!.jsonObject
-        assertEquals("qa-member-renamed", patchedData["username"]!!.jsonPrimitive.content)
+        assertEquals("minsu-renamed", patchedData["username"]!!.jsonPrimitive.content)
         assertEquals(1, patchedData["permission"]!!.jsonPrimitive.int)
 
-        val deleted = request("DELETE", "/user/2", headers = authHeaders())
+        val deleted = request("DELETE", "/user/4", headers = authHeaders())
         assertEquals(200, deleted.code)
         assertTrue(parseObject(deleted.body)["success"]!!.jsonPrimitive.boolean)
 
         val users = request("GET", "/user/", headers = authHeaders())
         val data = parseObject(users.body)["data"]!!.jsonArray
-        assertEquals(1, data.size)
-        assertEquals("qa-admin", data[0].jsonObject["username"]!!.jsonPrimitive.content)
+        assertEquals(4, data.size)
+        assertTrue(data.none { it.jsonObject["idx"]!!.jsonPrimitive.int == 4 })
     }
 
     @Test
@@ -249,16 +239,18 @@ class MockServerContractTest {
         val listObj = parseObject(list.body)
         assertEnvelope(listObj)
         val projects = listObj["data"]!!.jsonArray
-        assertEquals(2, projects.size)
+        assertEquals(
+            listOf("api-server", "worker", "web-frontend", "batch-jobs"),
+            projects.map { it.jsonObject["name"]!!.jsonPrimitive.content },
+        )
         val first = projects[0].jsonObject
         assertEquals(101, first["id"]!!.jsonPrimitive.int)
-        assertEquals("Payments", first["name"]!!.jsonPrimitive.content)
         val logfiles = first["logfiles"]!!.jsonArray
-        assertEquals(1, logfiles.size)
+        assertEquals(3, logfiles.size)
         assertEquals(1001, logfiles[0].jsonObject["id"]!!.jsonPrimitive.int)
         assertEquals(101, logfiles[0].jsonObject["project_id"]!!.jsonPrimitive.int)
-        assertEquals("/var/log/payments.log", logfiles[0].jsonObject["file_path"]!!.jsonPrimitive.content)
-        assertEquals("payments.log", logfiles[0].jsonObject["file_name"]!!.jsonPrimitive.content)
+        assertEquals("/var/log/api-server/app.log", logfiles[0].jsonObject["file_path"]!!.jsonPrimitive.content)
+        assertEquals("app.log", logfiles[0].jsonObject["file_name"]!!.jsonPrimitive.content)
 
         val created = request(
             "POST",
@@ -270,19 +262,19 @@ class MockServerContractTest {
         val createdObj = parseObject(created.body)
         assertEnvelope(createdObj)
         val createdData = createdObj["data"]!!.jsonObject
-        assertEquals(303, createdData["id"]!!.jsonPrimitive.int)
+        assertEquals(105, createdData["id"]!!.jsonPrimitive.int)
         assertEquals("Billing", createdData["name"]!!.jsonPrimitive.content)
         assertNotNull(createdData["token"]!!.jsonPrimitive.contentOrNull)
 
         val renamed = request(
             "PATCH",
             "/project/101",
-            body = """{"name":"Payments-Updated"}""",
+            body = """{"name":"api-server-v2"}""",
             headers = authHeaders(),
         )
         assertEquals(200, renamed.code)
         assertEquals(
-            "Payments-Updated",
+            "api-server-v2",
             parseObject(renamed.body)["data"]!!.jsonObject["name"]!!.jsonPrimitive.content,
         )
 
@@ -301,7 +293,7 @@ class MockServerContractTest {
         val batch = request(
             "POST",
             "/project/perm/batch/reset",
-            body = """{"projectid":101,"usernames":["qa-admin","qa-member"]}""",
+            body = """{"projectid":101,"usernames":["jihyun","minsu"]}""",
             headers = authHeaders(),
         )
         assertEquals(200, batch.code)
@@ -309,48 +301,19 @@ class MockServerContractTest {
         assertEnvelope(batchObj)
         assertEquals(2, batchObj["data"]!!.jsonArray.size)
 
-        val deleted = request("DELETE", "/project/202", headers = authHeaders())
+        val deleted = request("DELETE", "/project/104", headers = authHeaders())
         assertEquals(200, deleted.code)
         assertEnvelope(parseObject(deleted.body))
         val afterDelete = request("GET", "/project/", headers = authHeaders())
         val remaining = parseObject(afterDelete.body)["data"]!!.jsonArray
-        assertTrue(remaining.none { it.jsonObject["id"]!!.jsonPrimitive.int == 202 })
+        assertTrue(remaining.none { it.jsonObject["id"]!!.jsonPrimitive.int == 104 })
     }
 
     @Test
-    fun logErrorAndLogFileRoutes() {
-        val errors = request("GET", "/log/error?project_id=101&limit=50&offset=0", headers = authHeaders())
-        assertEquals(200, errors.code)
-        val errorsObj = parseObject(errors.body)
-        assertEnvelope(errorsObj)
-        val errorData = errorsObj["data"]!!.jsonArray
-        assertTrue(errorData.size >= 1)
-        val err = errorData[0].jsonObject
-        assertTrue(err.containsKey("id"))
-        assertTrue(err.containsKey("project_id"))
-        assertTrue(err.containsKey("message"))
-        assertTrue(err.containsKey("level"))
-        assertTrue(err.containsKey("timestamp"))
-
-        val postError = request(
-            "POST",
-            "/log/error",
-            body = """{"errortype":"NPE","level":"ERROR","message":"boom"}""",
-            headers = mapOf("ProjectKey" to "tok", "Project" to "Payments"),
-        )
-        assertEquals(200, postError.code)
-
-        val logs = request(
-            "GET",
-            "/log/101/1001?limit=50&offset=0",
-            headers = authHeaders(),
-        )
-        assertEquals(200, logs.code)
-        val logsObj = parseObject(logs.body)
-        assertEnvelope(logsObj)
-        val lines = logsObj["data"]!!.jsonArray
-        assertTrue(lines.size >= 1)
-        assertTrue(lines[0] is JsonPrimitive)
+    fun legacyLogRoutesAreGone() {
+        assertEquals(404, request("GET", "/log/error?project_id=101", headers = authHeaders()).code)
+        assertEquals(404, request("GET", "/log/101/1001", headers = authHeaders()).code)
+        assertEquals(404, request("GET", "/user/name?username=minsu", headers = authHeaders()).code)
     }
 
     @Test
@@ -391,7 +354,10 @@ class MockServerContractTest {
             Triple("GET", "/__qa/reset", emptyMap()),
             Triple("GET", "/user/auth", emptyMap()),
             Triple("POST", "/user/me", authHeaders()),
-            Triple("POST", "/user/name?username=qa-admin", authHeaders()),
+            Triple("POST", "/log/summary", authHeaders()),
+            Triple("POST", "/log/events", authHeaders()),
+            Triple("POST", "/project/101/token", authHeaders()),
+            Triple("GET", "/project/101/rotate-token", authHeaders()),
             Triple("GET", "/project/perm/batch/reset", authHeaders()),
             Triple("POST", "/fcm/data", authHeaders()),
             Triple("GET", "/fcm/token", authHeaders()),
@@ -400,30 +366,6 @@ class MockServerContractTest {
         cases.forEach { (method, path, headers) ->
             assertEquals("$method $path", 405, request(method, path, headers = headers).code)
         }
-    }
-
-    @Test
-    fun postLogErrorRequiresNonblankProjectHeaders() {
-        val body = """{"errortype":"NPE","level":"ERROR","message":"boom"}"""
-        assertEquals(400, request("POST", "/log/error", body = body).code)
-        assertEquals(
-            400,
-            request(
-                "POST",
-                "/log/error",
-                body = body,
-                headers = mapOf("ProjectKey" to " ", "Project" to "Payments"),
-            ).code,
-        )
-        assertEquals(
-            400,
-            request(
-                "POST",
-                "/log/error",
-                body = body,
-                headers = mapOf("ProjectKey" to "token", "Project" to " "),
-            ).code,
-        )
     }
 
     @Test
@@ -449,18 +391,13 @@ class MockServerContractTest {
     }
 
     @Test
-    fun urlDecodingForQueryAndPath() {
-        request(
-            "POST",
-            "/user/",
-            body = """{"username":"spaced user","permission":2,"password":"x"}""",
-            headers = authHeaders(),
-        )
-        val result = request("GET", "/user/name?username=spaced%20user", headers = authHeaders())
+    fun urlDecodingForQuery() {
+        val result = request("GET", "/log/events?q=upstream%20auth", headers = authHeaders())
         assertEquals(200, result.code)
+        val items = parseObject(result.body)["data"]!!.jsonObject["items"]!!.jsonArray
         assertEquals(
-            "spaced user",
-            parseObject(result.body)["data"]!!.jsonObject["username"]!!.jsonPrimitive.content,
+            listOf("TimeoutError: upstream auth-service"),
+            items.map { it.jsonObject["message"]!!.jsonPrimitive.content },
         )
     }
 

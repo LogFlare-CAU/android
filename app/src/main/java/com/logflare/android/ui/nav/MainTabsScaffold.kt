@@ -22,6 +22,7 @@ import com.example.logflare.core.designsystem.v2.components.BottomNavBar
 import com.example.logflare.core.designsystem.v2.components.LfScaffold
 import com.example.logflare.core.designsystem.v2.components.NavItem
 import com.logflare.android.R
+import com.logflare.android.ui.VisualQaTags
 
 /**
  * App frame: the [BottomNavBar] while a tab is on top, nothing on sub-screens (they have their
@@ -89,8 +90,20 @@ private fun NavController.hasEntry(route: String): Boolean =
 
 @Composable
 private fun tabItems() = listOf(
-    NavItem(Destinations.Home, stringResource(R.string.tab_home), Icons.Outlined.Home, Icons.Filled.Home),
-    NavItem(Destinations.Logs, stringResource(R.string.tab_logs), Icons.AutoMirrored.Outlined.List, Icons.AutoMirrored.Filled.List),
-    NavItem(Destinations.Projects, stringResource(R.string.tab_projects), LfIcons.FolderOutlined, LfIcons.Folder),
-    NavItem(Destinations.My, stringResource(R.string.tab_my), Icons.Outlined.Person, Icons.Filled.Person),
+    NavItem(Destinations.Home, stringResource(R.string.tab_home), Icons.Outlined.Home, Icons.Filled.Home, VisualQaTags.NavHome),
+    NavItem(
+        Destinations.Logs,
+        stringResource(R.string.tab_logs),
+        Icons.AutoMirrored.Outlined.List,
+        Icons.AutoMirrored.Filled.List,
+        VisualQaTags.NavLogs,
+    ),
+    NavItem(
+        Destinations.Projects,
+        stringResource(R.string.tab_projects),
+        LfIcons.FolderOutlined,
+        LfIcons.Folder,
+        VisualQaTags.NavProjects,
+    ),
+    NavItem(Destinations.My, stringResource(R.string.tab_my), Icons.Outlined.Person, Icons.Filled.Person, VisualQaTags.NavMyPage),
 )
