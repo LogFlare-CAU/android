@@ -1,7 +1,5 @@
 package com.logflare.android.data.store
 
-import com.example.logflare.core.model.ErrorParams
-import com.example.logflare.core.model.ErrorSequenceResponse
 import com.example.logflare.core.model.FcmConfigResponse
 import com.example.logflare.core.model.FcmTokenParams
 import com.example.logflare.core.model.FcmTokenResponse
@@ -22,7 +20,6 @@ import com.example.logflare.core.model.ProjectResponseWithToken
 import com.example.logflare.core.model.ProjectSequenceResponse
 import com.example.logflare.core.model.RemovedResponse
 import com.example.logflare.core.model.StringResponse
-import com.example.logflare.core.model.StringSequenceResponse
 import com.example.logflare.core.model.UserAuthParams
 import com.example.logflare.core.model.UserCreateParams
 import com.example.logflare.core.model.UserDTO
@@ -30,7 +27,6 @@ import com.example.logflare.core.model.UserResponse
 import com.example.logflare.core.model.UserSequenceResponse
 import com.example.logflare.core.model.UserUpdateParams
 import com.example.logflare.core.network.LogflareApi
-import retrofit2.Response
 
 /** Arguments of one [LogflareApi.getLogEvents] call. */
 data class EventsCall(
@@ -122,11 +118,6 @@ class FakeLogflareApi : LogflareApi {
         return FcmConfigResponse(true, "ok")
     }
 
-    override suspend fun getFcmConfig(): FcmConfigResponse {
-        record("getFcmConfig")
-        return FcmConfigResponse(true, "ok")
-    }
-
     /** FCM tokens sent to [registerFcmToken] / [unregisterFcmToken], in call order. */
     val fcmTokens = mutableListOf<String>()
     var registerFcm: suspend (FcmTokenParams) -> FcmTokenResponse = { FcmTokenResponse(true, "ok") }
@@ -204,7 +195,6 @@ class FakeLogflareApi : LogflareApi {
     override suspend fun deleteUser(userId: Int): UserResponse =
         mutation("deleteUser", { UserResponse(true, "ok") }) { UserResponse(false, REJECTED, 404) }
 
-    override suspend fun getUserByUsername(username: String): UserResponse = TODO()
     var projectPerms: suspend (Int) -> ProjectPermsSequenceResponse = { ProjectPermsSequenceResponse(true, "ok", data = emptyList()) }
 
     override suspend fun getProjectPermissions(projectId: Int): ProjectPermsSequenceResponse {
@@ -212,9 +202,6 @@ class FakeLogflareApi : LogflareApi {
         return projectPerms(projectId)
     }
 
-    override suspend fun getErrors(projectId: Int?, limit: Int, offset: Int, sortby: String?): ErrorSequenceResponse = TODO()
-    override suspend fun postError(projectKey: String, projectName: String, body: ErrorParams): Response<Unit> = TODO()
-    override suspend fun getProjectLogFile(projectId: Int, logfileid: Int, limit: Int, offset: Int, sortBy: String?): StringSequenceResponse = TODO()
     var eventDetail: suspend (Int) -> LogEventDetailResponse = { LogEventDetailResponse(true, "ok", data = detail(it)) }
 
     override suspend fun getLogEvent(id: Int): LogEventDetailResponse {

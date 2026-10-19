@@ -12,7 +12,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,12 +90,15 @@ class MainActivity : Hilt_MainActivity() {
                 }
             }
             LogFlareTheme(darkTheme = darkTheme) {
-                VisualQaAppRoot(Modifier.background(Lf.colors.background)) {
-                    App(
-                        vm = appViewModel,
-                        deepLinkErrorId = deepLinkErrorId,
-                        onDeepLinkConsumed = { deepLinkErrorId = null },
-                    )
+                // Root background and default text colour, as the old theme's root Surface gave.
+                CompositionLocalProvider(LocalContentColor provides Lf.colors.textPrimary) {
+                    VisualQaAppRoot(Modifier.background(Lf.colors.background)) {
+                        App(
+                            vm = appViewModel,
+                            deepLinkErrorId = deepLinkErrorId,
+                            onDeepLinkConsumed = { deepLinkErrorId = null },
+                        )
+                    }
                 }
             }
         }

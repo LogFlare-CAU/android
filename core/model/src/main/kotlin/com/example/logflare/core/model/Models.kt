@@ -146,13 +146,6 @@ data class ErrorSequenceResponse(
 )
 
 @Serializable
-data class ErrorParams(
-    val errortype: String? = null,
-    val level: String,
-    val message: String
-)
-
-@Serializable
 data class FcmConfigResponse(
     val success: Boolean,
     val message: String,

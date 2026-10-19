@@ -13,6 +13,8 @@ import com.example.logflare.core.network.LogflareApi
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.messaging.FirebaseMessaging
+import com.logflare.android.data.session.SessionRepository
+import com.logflare.android.data.session.SessionState
 import com.logflare.android.push.PushTokenSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +22,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
@@ -33,12 +37,20 @@ private fun Throwable.isFcmAlreadyRegistered(): Boolean =
     this is HttpException && code() == 409
 
 @Singleton
-class DeviceRepository @Inject constructor(
+class DeviceRepository internal constructor(
     private val api: LogflareApi,
-    private val auth: AuthRepository,
-    @ApplicationContext private val context: Context,
-    private val json: Json
+    private val sessions: StateFlow<SessionState>,
+    private val context: Context,
+    private val json: Json,
 ) : PushTokenSource {
+
+    @Inject
+    constructor(
+        api: LogflareApi,
+        sessionRepository: SessionRepository,
+        @ApplicationContext context: Context,
+        json: Json,
+    ) : this(api, sessionRepository.state, context, json)
 
     companion object {
         private val KEY_FCM_CONFIG: Preferences.Key<String> = stringPreferencesKey("config")
@@ -51,7 +63,7 @@ class DeviceRepository @Inject constructor(
      * and initializes Firebase if needed. Returns whether Firebase is ready.
      */
     override suspend fun ensureFirebase(): Boolean {
-        val remoteConfig = auth.token.firstOrNull()?.let { fetchRemoteConfig() }
+        val remoteConfig = if (isSignedIn()) fetchRemoteConfig() else null
         val config = remoteConfig ?: loadPersistedConfig()
         if (config == null) {
             Log.w(TAG, "No FCM config available from backend or cache")
@@ -75,10 +87,11 @@ class DeviceRepository @Inject constructor(
     }
 
     /**
-     * Called by [LogflareMessagingService] when Firebase issues a refreshed token.
+     * Called by [LogflareMessagingService] when Firebase issues a refreshed token. Signed out
+     * there is no token for the interceptor to send, so nothing is registered.
      */
     suspend fun registerDevice(fcmToken: String) {
-        auth.token.firstOrNull() ?: return
+        if (!isSignedIn()) return
         runCatching {
             api.registerFcmToken(FcmTokenParams(fcmToken))
         }.onFailure { error ->
@@ -89,6 +102,13 @@ class DeviceRepository @Inject constructor(
             }
         }
     }
+
+    /**
+     * Whether a session is signed in, from the same state the auth interceptor reads; waits while
+     * it is still being loaded (a cold start from a push).
+     */
+    private suspend fun isSignedIn(): Boolean =
+        sessions.first { it !is SessionState.Loading } is SessionState.SignedIn
 
     override suspend fun getFcmTokenOrNull(): String? {
         return runCatching {

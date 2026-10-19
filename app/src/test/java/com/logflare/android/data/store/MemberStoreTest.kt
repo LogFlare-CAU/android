@@ -162,7 +162,6 @@ class MemberStoreTest {
 
         assertEquals(Member(7, "me", 100), me)
         assertEquals(1, api.count("getme"))
-        assertEquals(0, api.count("getFcmConfig"))
         assertEquals(0, api.count("registerFcmToken"))
         assertEquals(0, api.count("getFirebaseConfig"))
         assertEquals(0, api.count("unregisterFcmToken"))

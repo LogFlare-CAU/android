@@ -1,6 +1,5 @@
 package com.example.logflare.core.network
 
-import com.example.logflare.core.model.ErrorSequenceResponse
 import com.example.logflare.core.model.LogEventDetailResponse
 import com.example.logflare.core.model.LogEventPageResponse
 import com.example.logflare.core.model.LogSummaryResponse
@@ -12,17 +11,14 @@ import com.example.logflare.core.model.ProjectCreateParams
 import com.example.logflare.core.model.ProjectSequenceResponse
 import com.example.logflare.core.model.StringResponse
 import com.example.logflare.core.model.UserAuthParams
-import com.example.logflare.core.model.ErrorParams
 import com.example.logflare.core.model.ProjectPermsBatchParams
 import com.example.logflare.core.model.ProjectPermsSequenceResponse
 import com.example.logflare.core.model.ProjectResponse
 import com.example.logflare.core.model.ProjectResponseWithToken
-import com.example.logflare.core.model.StringSequenceResponse
 import com.example.logflare.core.model.UserCreateParams
 import com.example.logflare.core.model.UserResponse
 import com.example.logflare.core.model.UserSequenceResponse
 import com.example.logflare.core.model.UserUpdateParams
-import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -58,11 +54,6 @@ interface LogflareApi {
      */
     @GET("/user/me")
     suspend fun getMeAs(@Header("Authorization") bearer: String): UserResponse
-
-    @GET("/user/name")
-    suspend fun getUserByUsername(
-        @Query("username") username: String
-    ): UserResponse
 
     @PATCH("/user/{userid}")
     suspend fun updateUser(
@@ -107,37 +98,10 @@ interface LogflareApi {
         @Path("projectid") projectId: Int
     ): ProjectPermsSequenceResponse
 
-    @GET("/log/error")
-    suspend fun getErrors(
-        @Query("project_id") projectId: Int? = null,
-        @Query("limit") limit: Int = 50,
-        @Query("offset") offset: Int = 0,
-        @Query("sortby") sortby: String? = null
-    ): ErrorSequenceResponse
-
-    @POST("/log/error")
-    suspend fun postError(
-        @Header("ProjectKey") projectKey: String,
-        @Header("Project") projectName: String,
-        @Body body: ErrorParams
-    ): Response<Unit>
-
-    @GET("/log/{projectid}/{logfileid}")
-    suspend fun getProjectLogFile(
-        @Path("projectid") projectId: Int,
-        @Path("logfileid") logfileid: Int,
-        @Query("limit") limit: Int = 50,
-        @Query("offset") offset: Int = 0,
-        @Query("sortby") sortBy: String? = null
-    ): StringSequenceResponse
-
     @POST("/project/perm/batch/reset")
     suspend fun resetProjectPerms(
         @Body body: ProjectPermsBatchParams
     ): ProjectPermsSequenceResponse
-
-    @GET("/fcm/data")
-    suspend fun getFcmConfig(): FcmConfigResponse
 
     @POST("/fcm/token")
     suspend fun registerFcmToken(
