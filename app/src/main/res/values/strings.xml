@@ -131,7 +131,7 @@
     <string name="projects_empty_body">Create a project to start collecting logs</string>
     <string name="projects_empty_action">New project</string>
     <string name="projects_no_match_title">No matching projects</string>
-    <string name="projects_no_match_body">Nothing matches \"%1$s\". Check the spelling or try another name.</string>
+    <string name="projects_no_match_body">Nothing matches “%1$s”. Check the spelling or try another name.</string>
     <string name="projects_clear_search">Clear search</string>
     <string name="projects_load_failed_title">Couldn\'t load projects</string>
     <string name="projects_load_failed_body">Check your connection, then try again.</string>
@@ -346,5 +346,7 @@
     <!-- Push notifications -->
     <string name="push_channel_name">LogFlare alerts</string>
     <string name="push_title">Error: %1$s</string>
-    <string name="push_body">%1$s: %2$s\n%3$s\n at %4$s</string>
+    <string name="push_body_head">%1$s: %2$s</string>
+    <string name="push_body_at">at %1$s</string>
+    <string name="push_unknown_type">Unknown</string>
 </resources>

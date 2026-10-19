@@ -19,6 +19,7 @@ import com.logflare.android.push.NotificationHistory
 import com.logflare.android.push.PushDecision
 import com.logflare.android.push.PushMessage
 import com.logflare.android.push.PushRegistrar
+import com.logflare.android.push.composePushBody
 import com.logflare.android.push.decideIncoming
 import com.logflare.android.push.from
 import com.logflare.android.push.toHistoryEntry
@@ -105,13 +106,17 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
             return
         }
         val errorid = data["errorid"]?.toIntOrNull() ?: 0
-        val type = data["type"] ?: "Unknown"
+        val type = data["type"] ?: getString(R.string.push_unknown_type)
         val level = data["level"]
         val timestamp = data["timestamp"]
         val messageText = data["message"]
         val projectid = data["projectid"]?.toIntOrNull()
         // A Context string: on Android 13+ it follows the app language chosen in My.
-        val contentMessage = getString(R.string.push_body, level, type, messageText, timestamp)
+        val contentMessage = composePushBody(
+            head = level?.let { getString(R.string.push_body_head, it, type) } ?: type,
+            message = messageText,
+            at = timestamp?.let { getString(R.string.push_body_at, it) },
+        )
         val title = getString(R.string.push_title, type)
         val intent = android.content.Intent(this, MainActivity::class.java).apply {
             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
