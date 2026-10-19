@@ -2,7 +2,10 @@
 <resources>
 
     <!-- AppCompat (MainActivity is an AppCompatActivity for per-app languages); Compose draws the UI. -->
-    <style name="Theme.Logflareandroid" parent="Theme.AppCompat.Light.NoActionBar" />
+    <style name="Theme.Logflareandroid" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Matches the Compose background so recreation and the keyboard never flash a different colour. -->
+        <item name="android:windowBackground">#F2F4F6</item>
+    </style>
 
     <!-- Launch theme: shown until the stored session is read, then swaps to Theme.Logflareandroid. -->
     <style name="Theme.Logflareandroid.Starting" parent="Theme.SplashScreen">
