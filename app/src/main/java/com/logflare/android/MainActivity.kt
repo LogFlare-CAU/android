@@ -34,6 +34,7 @@ import com.logflare.android.ui.VisualQaAppRoot
 import com.logflare.android.ui.locale.LanguageController
 import com.logflare.android.ui.nav.AppNavHost
 import com.logflare.android.ui.theme.ThemeController
+import com.logflare.android.ui.theme.setAppBackground
 import com.logflare.android.viewmodel.AppViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -97,6 +98,9 @@ class MainActivity : Hilt_MainActivity() {
                 }
             }
             LogFlareTheme(darkTheme = darkTheme) {
+                // The XML window background follows the system mode only; match the app theme.
+                val windowColor = Lf.colors.background.toArgb()
+                SideEffect { window.setAppBackground(windowColor) }
                 // Root background and default text colour, as the old theme's root Surface gave.
                 CompositionLocalProvider(LocalContentColor provides Lf.colors.textPrimary) {
                     VisualQaAppRoot(Modifier.background(Lf.colors.background)) {
