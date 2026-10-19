@@ -63,6 +63,7 @@ import com.logflare.android.data.ThemePreference
 import com.logflare.android.data.store.model.Member
 import com.logflare.android.push.GlobalAlert
 import com.logflare.android.ui.VisualQaTags
+import com.logflare.android.ui.locale.AppLanguage
 import com.logflare.android.ui.nav.Destinations
 
 /** The My tab. [onSignedOut] leaves for Login once the sign-out finished. */
@@ -118,6 +119,7 @@ fun MyRoute(
             onOpenSheet = viewModel::openSheet,
             onDismissSheet = viewModel::dismissSheet,
             onSelectTheme = viewModel::setTheme,
+            onSelectLanguage = viewModel::setLanguage,
             onSelectGlobalAlert = viewModel::setGlobalAlert,
             onQuietHours = viewModel::setQuietHours,
             onToggleShowAll = viewModel::toggleShowAll,
@@ -137,6 +139,7 @@ class MyActions(
     val onOpenSheet: (MySheet) -> Unit = {},
     val onDismissSheet: () -> Unit = {},
     val onSelectTheme: (ThemePreference) -> Unit = {},
+    val onSelectLanguage: (AppLanguage) -> Unit = {},
     val onSelectGlobalAlert: (GlobalAlert) -> Unit = {},
     val onQuietHours: (Boolean) -> Unit = {},
     val onToggleShowAll: () -> Unit = {},
@@ -244,6 +247,11 @@ private fun SettingsCard(state: MyUiState, actions: MyActions) {
             stringResource(R.string.my_appearance),
             themeLabel(state.theme),
             { actions.onOpenSheet(MySheet.Appearance) },
+        )
+        SettingRow(
+            stringResource(R.string.my_language),
+            languageLabel(state.language),
+            { actions.onOpenSheet(MySheet.Language) },
         )
         SettingRow(
             stringResource(R.string.my_push_alerts),

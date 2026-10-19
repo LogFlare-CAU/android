@@ -14,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.logflare.core.designsystem.R
 import com.example.logflare.core.designsystem.v2.Lf
 
 @Composable
@@ -58,7 +60,7 @@ fun PasswordField(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    if (shown) "Hide" else "Show",
+                    stringResource(if (shown) R.string.lf_hide else R.string.lf_show),
                     style = Lf.type.secondary.copy(fontWeight = FontWeight.Bold),
                     color = Lf.colors.textSecondary,
                 )

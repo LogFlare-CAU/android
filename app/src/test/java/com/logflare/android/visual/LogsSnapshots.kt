@@ -16,6 +16,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 class LogsSnapshots : DsSnapshotTest() {
 
@@ -38,6 +39,9 @@ class LogsSnapshots : DsSnapshotTest() {
 
     @Test fun logs_populated_light() = capture("logs_populated", false) { Logs(LogsFixtures.populated) }
     @Test fun logs_populated_dark() = capture("logs_populated", true) { Logs(LogsFixtures.populated) }
+    // Korean (app language 한국어): long labels must not truncate or overflow.
+    @Config(qualifiers = "+ko") @Test fun logs_populated_ko_light() = capture("logs_populated_ko", false) { Logs(LogsFixtures.populated) }
+    @Config(qualifiers = "+ko") @Test fun logs_populated_ko_dark() = capture("logs_populated_ko", true) { Logs(LogsFixtures.populated) }
     @Test fun logs_filtered_active_chips_light() = capture("logs_filtered_active_chips", false) { Logs(LogsFixtures.filtered) }
     @Test fun logs_filtered_active_chips_dark() = capture("logs_filtered_active_chips", true) { Logs(LogsFixtures.filtered) }
     @Test fun logs_search_open_light() = capture("logs_search_open", false) { Logs(LogsFixtures.searchOpen) }

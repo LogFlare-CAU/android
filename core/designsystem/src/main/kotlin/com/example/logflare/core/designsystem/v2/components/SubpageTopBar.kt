@@ -20,8 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.logflare.core.designsystem.R
 import com.example.logflare.core.designsystem.v2.Lf
 
 enum class NavIcon { Back, Close }
@@ -52,7 +54,7 @@ fun SubpageTopBar(
             IconButton(onClick = onNav) {
                 Icon(
                     imageVector = if (navIcon == NavIcon.Back) Icons.AutoMirrored.Filled.ArrowBack else Icons.Filled.Close,
-                    contentDescription = if (navIcon == NavIcon.Back) "Back" else "Close",
+                    contentDescription = stringResource(if (navIcon == NavIcon.Back) R.string.lf_back else R.string.lf_close),
                     tint = Lf.colors.textPrimary,
                 )
             }

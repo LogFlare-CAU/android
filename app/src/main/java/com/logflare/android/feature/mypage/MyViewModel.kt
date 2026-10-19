@@ -14,6 +14,8 @@ import com.logflare.android.data.store.model.Member
 import com.logflare.android.push.AlertSettings
 import com.logflare.android.push.AlertSettingsRepository
 import com.logflare.android.push.GlobalAlert
+import com.logflare.android.ui.locale.AppLanguage
+import com.logflare.android.ui.locale.LanguageController
 import com.logflare.android.ui.theme.ThemeController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.net.URI
@@ -35,7 +37,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class MySheet { Appearance, PushAlerts, Logout }
+enum class MySheet { Appearance, Language, PushAlerts, Logout }
 
 data class MyUiState(
     /** The signed-in user: the fetched profile, else what the session knows. */
@@ -43,6 +45,7 @@ data class MyUiState(
     /** The server's host (and port), e.g. `logs.example.com`. */
     val serverHost: String = "",
     val theme: ThemePreference = ThemePreference.SYSTEM,
+    val language: AppLanguage = AppLanguage.SYSTEM,
     val globalAlert: GlobalAlert = AlertSettings().global,
     val quietHours: Boolean = false,
     /** Other users of the server, admins first; empty for members (they can't list users). */
@@ -95,6 +98,7 @@ class MyViewModel internal constructor(
     private val memberStore: MemberStore,
     private val alerts: AlertSettingsRepository,
     private val theme: ThemeController,
+    private val language: LanguageController,
     private val signOut: suspend () -> Unit,
     sessions: StateFlow<SessionState>,
     version: String,
@@ -106,6 +110,7 @@ class MyViewModel internal constructor(
         memberStore: MemberStore,
         alerts: AlertSettingsRepository,
         theme: ThemeController,
+        language: LanguageController,
         signOutUseCase: SignOutUseCase,
         sessionRepository: SessionRepository,
     ) : this(
@@ -113,6 +118,7 @@ class MyViewModel internal constructor(
         memberStore,
         alerts,
         theme,
+        language,
         { signOutUseCase() },
         sessionRepository.state,
         BuildConfig.VERSION_NAME,
@@ -139,9 +145,9 @@ class MyViewModel internal constructor(
 
     private val profile = combine(signedIn, account, users) { session, fetched, res -> Profile(session, fetched, res) }
 
-    private val settings = combine(alerts.settings, theme.preference) { s, t -> s to t }
+    private val settings = combine(alerts.settings, theme.preference, language.language, ::DeviceSettings)
 
-    val state: StateFlow<MyUiState> = combine(profile, settings, local) { p, (alert, themePref), l ->
+    val state: StateFlow<MyUiState> = combine(profile, settings, local) { p, (alert, themePref, lang), l ->
         val session = p.session
         val me = p.me ?: session?.let { Member(it.userIdx ?: 0, it.username, it.permission ?: 0) }
         val admin = (session?.permission ?: 0) >= ADMIN_PERMISSION
@@ -150,6 +156,7 @@ class MyViewModel internal constructor(
             me = me,
             serverHost = session?.serverUrl?.let(::serverHost).orEmpty(),
             theme = themePref,
+            language = lang,
             globalAlert = alert.global,
             quietHours = alert.quietHours,
             members = res?.data.orEmpty().otherMembers(me),
@@ -165,7 +172,7 @@ class MyViewModel internal constructor(
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
-        MyUiState(version = version, theme = theme.preference.value),
+        MyUiState(version = version, theme = theme.preference.value, language = language.language.value),
     )
 
     fun openSheet(sheet: MySheet) = local.update { it.copy(sheet = sheet) }
@@ -174,6 +181,15 @@ class MyViewModel internal constructor(
 
     /** Applies at once; saving happens in the background. */
     fun setTheme(preference: ThemePreference) = theme.set(preference)
+
+    /**
+     * Applies at once: Android recreates the screen in the new language and keeps the choice. The
+     * sheet closes first, so the recreated screen doesn't open it again.
+     */
+    fun setLanguage(value: AppLanguage) {
+        local.update { it.copy(sheet = null) }
+        language.set(value)
+    }
 
     fun setGlobalAlert(value: GlobalAlert) = saveAlerts(MyEvent.PushAlertsChanged(value)) { alerts.setGlobal(value) }
 
@@ -236,6 +252,8 @@ class MyViewModel internal constructor(
             }
         }
     }
+
+    private data class DeviceSettings(val alerts: AlertSettings, val theme: ThemePreference, val language: AppLanguage)
 
     private data class Profile(val session: SessionState.SignedIn?, val me: Member?, val users: Resource<List<Member>>?)
 

@@ -16,6 +16,7 @@ import com.logflare.android.feature.project.NameCheck
 import com.logflare.android.feature.project.NameProblem
 import com.logflare.android.visual.ds.DsSnapshotTest
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 class MemberFormSnapshots : DsSnapshotTest() {
 
@@ -29,6 +30,8 @@ class MemberFormSnapshots : DsSnapshotTest() {
     @Test fun member_add_empty_dark() = add("member_add_empty", MemberFormFixtures.addEmpty, true)
     @Test fun member_add_valid_light() = add("member_add_valid", MemberFormFixtures.addValid, false)
     @Test fun member_add_valid_dark() = add("member_add_valid", MemberFormFixtures.addValid, true)
+    // Korean (app language 한국어): long labels must not truncate or overflow.
+    @Config(qualifiers = "+ko") @Test fun member_add_valid_ko_light() = add("member_add_valid_ko", MemberFormFixtures.addValid, false)
     @Test fun member_add_taken_light() = add("member_add_taken", MemberFormFixtures.addTaken, false)
     @Test fun member_add_taken_dark() = add("member_add_taken", MemberFormFixtures.addTaken, true)
     @Test fun member_add_success_light() = add("member_add_success", MemberFormFixtures.addSuccess, false)

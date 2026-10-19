@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Labels the design system shows itself. Prefixed lf_ so app strings never override them by accident. -->
+<resources>
+    <string name="lf_back">Back</string>
+    <string name="lf_close">Close</string>
+    <string name="lf_clear">Clear</string>
+    <string name="lf_selected">Selected</string>
+    <string name="lf_save">Save</string>
+    <string name="lf_cancel">Cancel</string>
+    <string name="lf_show">Show</string>
+    <string name="lf_hide">Hide</string>
+    <string name="lf_copy">Copy</string>
+    <string name="lf_rotate">Rotate</string>
+    <string name="lf_add">Add</string>
+    <string name="lf_keyword">Keyword</string>
+    <string name="lf_remove_keyword">Remove %1$s</string>
+    <string name="lf_project_token">Project token</string>
+</resources>

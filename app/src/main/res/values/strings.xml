@@ -254,6 +254,11 @@
     <string name="my_theme_system">System</string>
     <string name="my_theme_light">Light</string>
     <string name="my_theme_dark">Dark</string>
+    <string name="my_language">Language</string>
+    <string name="my_language_system">System default</string>
+    <!-- Each language is named in its own language, whatever the app's language. -->
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_korean" translatable="false">한국어</string>
     <string name="my_push_alerts">Push alerts</string>
     <string name="my_push_alerts_body">Which logs send a notification to this phone.</string>
     <string name="my_push_off">Off</string>
@@ -337,4 +342,9 @@
     <string name="member_load_retry">Try again</string>
     <string name="member_missing">This member no longer exists</string>
     <string name="member_missing_body">They may have been deleted on another device.</string>
+
+    <!-- Push notifications -->
+    <string name="push_channel_name">LogFlare alerts</string>
+    <string name="push_title">Error: %1$s</string>
+    <string name="push_body">%1$s: %2$s\n%3$s\n at %4$s</string>
 </resources>

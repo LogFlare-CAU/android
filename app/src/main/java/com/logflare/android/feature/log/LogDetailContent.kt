@@ -62,10 +62,10 @@ import com.example.logflare.core.designsystem.v2.components.rememberLfToastState
 import com.logflare.android.R
 import com.logflare.android.data.store.model.LogEventDetail
 import com.logflare.android.ui.VisualQaTags
+import com.logflare.android.ui.format.appLocale
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun LogDetailRoute(
@@ -385,10 +385,10 @@ private fun ShareOption(icon: ImageVector, label: String, onClick: () -> Unit) {
     }
 }
 
-/** "Oct 18, 15:39:12" in the device's locale and [zone]. */
+/** "Oct 18, 15:39:12" in the app's locale and [zone]. */
 @Composable
 private fun dateTime(at: Instant, zone: ZoneId): String {
-    val locale = Locale.getDefault()
+    val locale = appLocale()
     val pattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "MMMdHHmmss") }
     return at.atZone(zone).format(DateTimeFormatter.ofPattern(pattern, locale))
 }

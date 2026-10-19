@@ -8,6 +8,7 @@ import com.example.logflare.core.designsystem.v2.components.SheetOption
 import com.logflare.android.R
 import com.logflare.android.data.ThemePreference
 import com.logflare.android.push.GlobalAlert
+import com.logflare.android.ui.locale.AppLanguage
 
 /** The open sheet of the My tab, if any. */
 @Composable
@@ -18,6 +19,13 @@ internal fun MySheets(state: MyUiState, actions: MyActions) {
             options = ThemePreference.entries.map { SheetOption(it, themeLabel(it)) },
             selected = state.theme,
             onSelect = actions.onSelectTheme,
+            onDismiss = actions.onDismissSheet,
+        )
+        MySheet.Language -> SelectionSheet(
+            title = stringResource(R.string.my_language),
+            options = AppLanguage.entries.map { SheetOption(it, languageLabel(it)) },
+            selected = state.language,
+            onSelect = actions.onSelectLanguage,
             onDismiss = actions.onDismissSheet,
         )
         MySheet.PushAlerts -> SelectionSheet(
@@ -48,6 +56,16 @@ internal fun themeLabel(theme: ThemePreference): String = stringResource(
         ThemePreference.SYSTEM -> R.string.my_theme_system
         ThemePreference.LIGHT -> R.string.my_theme_light
         ThemePreference.DARK -> R.string.my_theme_dark
+    },
+)
+
+/** Languages are named in their own language ("English", "한국어"), whatever the app's language. */
+@Composable
+internal fun languageLabel(language: AppLanguage): String = stringResource(
+    when (language) {
+        AppLanguage.SYSTEM -> R.string.my_language_system
+        AppLanguage.ENGLISH -> R.string.language_english
+        AppLanguage.KOREAN -> R.string.language_korean
     },
 )
 

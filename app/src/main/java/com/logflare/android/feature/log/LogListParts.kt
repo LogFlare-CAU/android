@@ -42,10 +42,10 @@ import com.example.logflare.core.designsystem.v2.components.StatTone
 import com.logflare.android.R
 import com.logflare.android.data.store.model.LogEvent
 import com.logflare.android.ui.VisualQaTags
+import com.logflare.android.ui.format.appLocale
 import com.logflare.android.ui.format.levelLabel
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.ceil
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -142,7 +142,7 @@ private fun dayLabel(label: DayLabel): String = when (label) {
     DayLabel.Today -> stringResource(R.string.logs_today)
     DayLabel.Yesterday -> stringResource(R.string.logs_yesterday)
     is DayLabel.Date -> {
-        val locale = Locale.getDefault()
+        val locale = appLocale()
         val pattern = DateFormat.getBestDateTimePattern(locale, if (label.showYear) "MMMdyyyy" else "MMMd")
         label.date.format(DateTimeFormatter.ofPattern(pattern, locale))
     }

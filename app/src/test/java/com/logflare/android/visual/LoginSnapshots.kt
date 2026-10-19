@@ -6,6 +6,7 @@ import com.logflare.android.feature.auth.LoginError
 import com.logflare.android.feature.auth.LoginUiState
 import com.logflare.android.visual.ds.DsSnapshotTest
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 class LoginSnapshots : DsSnapshotTest() {
     private val recent = listOf("https://logs.example.com/", "https://staging-logs.example.com/", "http://10.0.2.2:8000/")
@@ -48,6 +49,8 @@ class LoginSnapshots : DsSnapshotTest() {
 
     @Test fun login_empty_light() = capture("login_empty", false) { Login(empty) }
     @Test fun login_empty_dark() = capture("login_empty", true) { Login(empty) }
+    // Korean (app language 한국어): long labels must not truncate or overflow.
+    @Config(qualifiers = "+ko") @Test fun login_empty_ko_light() = capture("login_empty_ko", false) { Login(empty) }
     @Test fun login_errors_light() = capture("login_errors", false) { Login(errors) }
     @Test fun login_errors_dark() = capture("login_errors", true) { Login(errors) }
     @Test fun login_form_error_light() = capture("login_form_error", false) { Login(formError) }

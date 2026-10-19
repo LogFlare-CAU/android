@@ -110,8 +110,9 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
         val timestamp = data["timestamp"]
         val messageText = data["message"]
         val projectid = data["projectid"]?.toIntOrNull()
-        val contentMessage = "$level: $type\n$messageText\n at $timestamp"
-        val title = "Error: $type"
+        // A Context string: on Android 13+ it follows the app language chosen in My.
+        val contentMessage = getString(R.string.push_body, level, type, messageText, timestamp)
+        val title = getString(R.string.push_title, type)
         val intent = android.content.Intent(this, MainActivity::class.java).apply {
             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("projectid", projectid)
@@ -139,7 +140,7 @@ class LogflareMessagingService : Hilt_LogflareMessagingService() {
         super.onCreate()
         val channel = NotificationChannel(
             channelId,
-            "Logflare Notifications",
+            getString(R.string.push_channel_name),
             NotificationManager.IMPORTANCE_HIGH
         )
         val manager = getSystemService(NotificationManager::class.java)

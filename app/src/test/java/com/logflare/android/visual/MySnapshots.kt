@@ -10,8 +10,10 @@ import com.logflare.android.feature.mypage.MyContent
 import com.logflare.android.feature.mypage.MySheet
 import com.logflare.android.feature.mypage.MyUiState
 import com.logflare.android.push.GlobalAlert
+import com.logflare.android.ui.locale.AppLanguage
 import com.logflare.android.visual.ds.DsSnapshotTest
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 class MySnapshots : DsSnapshotTest() {
 
@@ -30,12 +32,17 @@ class MySnapshots : DsSnapshotTest() {
     @Test fun my_member_dark() = capture("my_member", true) { My(MyFixtures.member) }
     @Test fun my_appearance_sheet_light() = capture("my_appearance_sheet", false) { My(MyFixtures.appearanceSheet) }
     @Test fun my_appearance_sheet_dark() = capture("my_appearance_sheet", true) { My(MyFixtures.appearanceSheet) }
+    @Test fun my_language_sheet_light() = capture("my_language_sheet", false) { My(MyFixtures.languageSheet) }
+    @Test fun my_language_sheet_dark() = capture("my_language_sheet", true) { My(MyFixtures.languageSheet) }
     @Test fun my_push_sheet_light() = capture("my_push_sheet", false) { My(MyFixtures.pushSheet) }
     @Test fun my_push_sheet_dark() = capture("my_push_sheet", true) { My(MyFixtures.pushSheet) }
     @Test fun my_logout_sheet_light() = capture("my_logout_sheet", false) { My(MyFixtures.logoutSheet) }
     @Test fun my_logout_sheet_dark() = capture("my_logout_sheet", true) { My(MyFixtures.logoutSheet) }
     @Test fun my_scrolled_bottom_light() = capture("my_scrolled_bottom", false) { My(MyFixtures.allMembers, scrolledToEnd = true) }
     @Test fun my_scrolled_bottom_dark() = capture("my_scrolled_bottom", true) { My(MyFixtures.allMembers, scrolledToEnd = true) }
+    // Korean (app language 한국어): long labels must not truncate or overflow.
+    @Config(qualifiers = "+ko") @Test fun my_admin_ko_light() = capture("my_admin_ko", false) { My(MyFixtures.admin.copy(language = AppLanguage.KOREAN)) }
+    @Config(qualifiers = "+ko") @Test fun my_language_sheet_ko_light() = capture("my_language_sheet_ko", false) { My(MyFixtures.languageSheet.copy(language = AppLanguage.KOREAN)) }
 }
 
 object MyFixtures {
@@ -66,6 +73,8 @@ object MyFixtures {
     val adminAlone = admin.copy(members = emptyList())
 
     val appearanceSheet = admin.copy(theme = ThemePreference.DARK, sheet = MySheet.Appearance)
+
+    val languageSheet = admin.copy(sheet = MySheet.Language)
 
     val pushSheet = admin.copy(sheet = MySheet.PushAlerts)
 

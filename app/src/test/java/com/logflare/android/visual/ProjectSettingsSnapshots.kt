@@ -13,6 +13,7 @@ import com.logflare.android.feature.project.ProjectSettingsUiState
 import com.logflare.android.feature.project.SettingsSheet
 import com.logflare.android.visual.ds.DsSnapshotTest
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 class ProjectSettingsSnapshots : DsSnapshotTest() {
 
@@ -21,6 +22,8 @@ class ProjectSettingsSnapshots : DsSnapshotTest() {
 
     @Test fun project_settings_admin_light() = capture("project_settings_admin", false) { Settings(ProjectSettingsFixtures.admin) }
     @Test fun project_settings_admin_dark() = capture("project_settings_admin", true) { Settings(ProjectSettingsFixtures.admin) }
+    // Korean (app language 한국어): long labels must not truncate or overflow.
+    @Config(qualifiers = "+ko") @Test fun project_settings_admin_ko_light() = capture("project_settings_admin_ko", false) { Settings(ProjectSettingsFixtures.admin) }
     @Test fun project_settings_member_light() = capture("project_settings_member", false) { Settings(ProjectSettingsFixtures.member) }
     @Test fun project_settings_member_dark() = capture("project_settings_member", true) { Settings(ProjectSettingsFixtures.member) }
     @Test fun project_settings_alert_sheet_light() = capture("project_settings_alert_sheet", false) { Settings(ProjectSettingsFixtures.alertSheet) }

@@ -15,10 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.logflare.core.designsystem.R
 import com.example.logflare.core.designsystem.v2.Lf
 
 /** First 6 + 12 bullets + last 4; tokens too short to split are fully masked. */
@@ -40,7 +42,7 @@ fun TokenField(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Project token", style = Lf.type.sectionTitle, color = Lf.colors.textPrimary)
+                Text(stringResource(R.string.lf_project_token), style = Lf.type.sectionTitle, color = Lf.colors.textPrimary)
                 if (description != null) Text(description, style = Lf.type.caption, color = Lf.colors.textMuted)
             }
             Box(
@@ -51,7 +53,7 @@ fun TokenField(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    if (revealed) "Hide" else "Show",
+                    stringResource(if (revealed) R.string.lf_hide else R.string.lf_show),
                     style = Lf.type.secondary.copy(fontWeight = FontWeight.Bold),
                     color = Lf.colors.textSecondary,
                 )
@@ -77,8 +79,8 @@ fun TokenField(
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TokenAction("Copy", true, onCopy, Modifier.weight(1f))
-            if (onRotate != null) TokenAction("Rotate", false, onRotate, Modifier.weight(1f))
+            TokenAction(stringResource(R.string.lf_copy), true, onCopy, Modifier.weight(1f))
+            if (onRotate != null) TokenAction(stringResource(R.string.lf_rotate), false, onRotate, Modifier.weight(1f))
         }
     }
 }

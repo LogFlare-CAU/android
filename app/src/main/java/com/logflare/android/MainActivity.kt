@@ -5,11 +5,11 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalContentColor
@@ -31,13 +31,15 @@ import com.example.logflare.core.designsystem.v2.LogFlareTheme
 import com.logflare.android.data.ThemePreference
 import com.logflare.android.data.session.SessionState
 import com.logflare.android.ui.VisualQaAppRoot
+import com.logflare.android.ui.locale.LanguageController
 import com.logflare.android.ui.nav.AppNavHost
 import com.logflare.android.ui.theme.ThemeController
 import com.logflare.android.viewmodel.AppViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
-@AndroidEntryPoint(ComponentActivity::class)
+/** AppCompat so per-app languages (My › Language) also apply before Android 13. */
+@AndroidEntryPoint(AppCompatActivity::class)
 class MainActivity : Hilt_MainActivity() {
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -49,6 +51,9 @@ class MainActivity : Hilt_MainActivity() {
     /** The theme choice; My › Appearance changes it and it applies at once. */
     @Inject lateinit var themeController: ThemeController
 
+    /** The app language; the activity is recreated when it changes. */
+    @Inject lateinit var languageController: LanguageController
+
     /** Error id of a tapped push notification, until the nav host has handled it. */
     private var deepLinkErrorId by mutableStateOf<Int?>(null)
 
@@ -58,6 +63,8 @@ class MainActivity : Hilt_MainActivity() {
             appViewModel.session.value is SessionState.Loading
         }
         super.onCreate(savedInstanceState)
+        // Picks up a language set outside the app (system app-language settings).
+        languageController.sync()
         deepLinkErrorId = initialDeepLinkErrorId(savedInstanceState, intent)
         enableEdgeToEdge()
 

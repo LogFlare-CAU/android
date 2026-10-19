@@ -10,6 +10,7 @@ import com.logflare.android.visual.ds.DsSnapshotTest
 import java.time.Instant
 import java.time.ZoneOffset
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 class LogDetailSnapshots : DsSnapshotTest() {
 
@@ -30,6 +31,8 @@ class LogDetailSnapshots : DsSnapshotTest() {
     @Test fun log_detail_collapsed_dark() = capture("log_detail_collapsed", true) { Detail(LogDetailFixtures.collapsed) }
     @Test fun log_detail_expanded_light() = capture("log_detail_expanded", false) { Detail(LogDetailFixtures.expanded) }
     @Test fun log_detail_expanded_dark() = capture("log_detail_expanded", true) { Detail(LogDetailFixtures.expanded) }
+    // Korean (app language 한국어): long labels must not truncate or overflow.
+    @Config(qualifiers = "+ko") @Test fun log_detail_expanded_ko_light() = capture("log_detail_expanded_ko", false) { Detail(LogDetailFixtures.expanded) }
     @Test fun log_detail_no_raw_light() = capture("log_detail_no_raw", false) { Detail(LogDetailFixtures.noRaw) }
     @Test fun log_detail_no_raw_dark() = capture("log_detail_no_raw", true) { Detail(LogDetailFixtures.noRaw) }
     @Test fun log_detail_share_sheet_light() = capture("log_detail_share_sheet", false) { Detail(LogDetailFixtures.shareSheet) }

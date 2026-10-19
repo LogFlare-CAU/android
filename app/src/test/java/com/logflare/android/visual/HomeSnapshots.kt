@@ -13,6 +13,7 @@ import com.logflare.android.push.HistoryEntry
 import com.logflare.android.visual.ds.DsSnapshotTest
 import java.time.Instant
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 class HomeSnapshots : DsSnapshotTest() {
 
@@ -34,6 +35,9 @@ class HomeSnapshots : DsSnapshotTest() {
 
     @Test fun home_populated_light() = capture("home_populated", false) { Home(HomeFixtures.populated) }
     @Test fun home_populated_dark() = capture("home_populated", true) { Home(HomeFixtures.populated) }
+    // Korean (app language 한국어): long labels must not truncate or overflow.
+    @Config(qualifiers = "+ko") @Test fun home_populated_ko_light() = capture("home_populated_ko", false) { Home(HomeFixtures.populated) }
+    @Config(qualifiers = "+ko") @Test fun home_populated_ko_dark() = capture("home_populated_ko", true) { Home(HomeFixtures.populated) }
     @Test fun home_initial_load_light() = capture("home_initial_load", false) { Home(HomeUiState()) }
     @Test fun home_initial_load_dark() = capture("home_initial_load", true) { Home(HomeUiState()) }
     @Test fun home_empty_light() = capture("home_empty", false) { Home(HomeFixtures.empty) }

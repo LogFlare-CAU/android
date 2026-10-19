@@ -23,11 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.example.logflare.core.designsystem.R
 import com.example.logflare.core.designsystem.v2.Lf
 
 /**
@@ -46,7 +48,7 @@ fun SearchField(
     onSearch: (() -> Unit)? = null,
     containerColor: Color = Lf.colors.background,
     onClear: (() -> Unit)? = null,
-    clearDescription: String = "Clear",
+    clearDescription: String = stringResource(R.string.lf_clear),
 ) {
     val c = Lf.colors
     BasicTextField(

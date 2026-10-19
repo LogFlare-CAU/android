@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Logflareandroid" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- AppCompat (MainActivity is an AppCompatActivity for per-app languages); Compose draws the UI. -->
+    <style name="Theme.Logflareandroid" parent="Theme.AppCompat.Light.NoActionBar" />
 
     <!-- Launch theme: shown until the stored session is read, then swaps to Theme.Logflareandroid. -->
     <style name="Theme.Logflareandroid.Starting" parent="Theme.SplashScreen">

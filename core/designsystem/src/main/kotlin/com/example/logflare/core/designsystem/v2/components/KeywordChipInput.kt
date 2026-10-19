@@ -27,11 +27,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.logflare.core.designsystem.R
 import com.example.logflare.core.designsystem.v2.Lf
 
 sealed interface KeywordResult {
@@ -70,7 +72,7 @@ fun KeywordChipInput(
             AppTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = "Keyword",
+                label = stringResource(R.string.lf_keyword),
                 placeholder = placeholder,
                 modifier = Modifier.weight(1f),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -87,7 +89,7 @@ fun KeywordChipInput(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "Add",
+                    stringResource(R.string.lf_add),
                     style = Lf.type.bodyStrong,
                     color = if (text.isBlank()) Lf.colors.onDisabled else Lf.colors.onPrimaryAction,
                 )
@@ -103,14 +105,15 @@ fun KeywordChipInput(
                         .padding(start = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    val remove = stringResource(R.string.lf_remove_keyword, kw)
                     Text(kw, style = Lf.type.secondary.copy(fontWeight = FontWeight.SemiBold), color = Lf.colors.textPrimary)
                     Box(
                         Modifier
                             .size(44.dp)
-                            .clickable(onClickLabel = "Remove $kw", role = Role.Button) { onRemove(kw) },
+                            .clickable(onClickLabel = remove, role = Role.Button) { onRemove(kw) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Filled.Close, "Remove $kw", Modifier.size(14.dp), tint = Lf.colors.textMuted)
+                        Icon(Icons.Filled.Close, remove, Modifier.size(14.dp), tint = Lf.colors.textMuted)
                     }
                 }
             }

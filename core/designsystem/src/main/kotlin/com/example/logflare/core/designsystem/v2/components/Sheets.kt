@@ -36,11 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.logflare.core.designsystem.R
 import com.example.logflare.core.designsystem.v2.Lf
 import com.example.logflare.core.designsystem.v2.LfColors
 import kotlinx.coroutines.launch
@@ -98,7 +100,7 @@ fun <T> SelectionSheet(
             if (isSelected) {
                 Icon(
                     Icons.Filled.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.lf_selected),
                     modifier = Modifier.size(20.dp),
                     tint = Lf.colors.textPrimary,
                 )
@@ -121,7 +123,7 @@ fun <T> MultiSelectSheet(
     onConfirm: (Set<T>) -> Unit,
     onDismiss: () -> Unit,
     description: String? = null,
-    confirmLabel: String = "Save",
+    confirmLabel: String = stringResource(R.string.lf_save),
 ) = LfSheetFrame(title, onDismiss) { dismiss ->
     var draft by remember(selected) { mutableStateOf(selected) }
     if (description != null) SheetDescription(description)
@@ -167,7 +169,7 @@ fun ConfirmSheet(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     confirmEnabled: Boolean = true,
-    dismissLabel: String = "Cancel",
+    dismissLabel: String = stringResource(R.string.lf_cancel),
     extra: (@Composable ColumnScope.() -> Unit)? = null,
 ) = LfSheetFrame(title, onDismiss) { dismiss ->
     Text(

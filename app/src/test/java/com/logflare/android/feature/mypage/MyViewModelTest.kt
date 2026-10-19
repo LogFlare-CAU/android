@@ -14,6 +14,8 @@ import com.logflare.android.data.store.MemberStore
 import com.logflare.android.push.AlertSettingsRepository
 import com.logflare.android.push.GlobalAlert
 import com.logflare.android.push.LegacyAlerts
+import com.logflare.android.ui.locale.AppLanguage
+import com.logflare.android.ui.locale.LanguageController
 import com.logflare.android.ui.theme.ThemeController
 import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
@@ -75,6 +77,8 @@ class MyViewModelTest {
         val alerts: AlertSettingsRepository,
         val saved: MutableList<ThemePreference>,
         val events: MutableList<MyEvent>,
+        /** Locale tags handed to the platform, in order ("" = system default). */
+        val appliedLocales: MutableList<String>,
     )
 
     /** Lets a test make cache writes fail (a full disk, say). */
@@ -99,17 +103,21 @@ class MyViewModelTest {
     private fun TestScope.newEnv(
         saveTheme: suspend (ThemePreference) -> Unit = {},
         signOut: suspend () -> Unit = {},
+        storedLocales: String = "",
     ): Env {
         cache = FailingCache(FileCacheStore(tmp.root, Json, StandardTestDispatcher(testScheduler)))
         val alerts = AlertSettingsRepository(sessions, cache, { LegacyAlerts(null, emptyList()) }, backgroundScope)
         val account = AccountStore(api, sessions, cache, backgroundScope, onProfile = { _, _ -> }) { NOW }
         val saved = mutableListOf<ThemePreference>()
         val theme = ThemeController(emptyFlow(), { saved += it; saveTheme(it) }, backgroundScope)
+        val appliedLocales = mutableListOf<String>()
+        val language = LanguageController(read = { storedLocales }, apply = { appliedLocales += it })
         val vm = MyViewModel(
             account,
             MemberStore(api, sessions, cache, backgroundScope, account) { NOW },
             alerts,
             theme,
+            language,
             signOut,
             sessions,
             "2.0.0",
@@ -117,7 +125,7 @@ class MyViewModelTest {
         val events = mutableListOf<MyEvent>()
         backgroundScope.launch { vm.state.collect {} }
         backgroundScope.launch { vm.events.collect { events += it } }
-        return Env(vm, alerts, saved, events)
+        return Env(vm, alerts, saved, events, appliedLocales)
     }
 
     private fun TestScope.settle() = repeat(3) {
@@ -149,6 +157,45 @@ class MyViewModelTest {
 
         assertEquals(ThemePreference.DARK, env.vm.state.value.theme)
         assertEquals(listOf(ThemePreference.DARK), env.saved)
+    }
+
+    @Test
+    fun language_reflectsStoredAppLocale() = runTest {
+        assertEquals(AppLanguage.SYSTEM, newEnv().vm.state.value.language)
+        val korean = newEnv(storedLocales = "ko-KR").vm
+        settle()
+        assertEquals(AppLanguage.KOREAN, korean.state.value.language)
+        val english = newEnv(storedLocales = "en-US").vm
+        settle()
+        assertEquals(AppLanguage.ENGLISH, english.state.value.language)
+    }
+
+    @Test
+    fun language_selectAppliesAtOnce() = runTest {
+        val env = newEnv()
+        settle()
+        env.vm.openSheet(MySheet.Language)
+        env.vm.setLanguage(AppLanguage.KOREAN)
+        runCurrent()
+
+        assertEquals(AppLanguage.KOREAN, env.vm.state.value.language)
+        assertEquals(listOf("ko"), env.appliedLocales)
+        assertNull(env.vm.state.value.sheet)
+
+        env.vm.setLanguage(AppLanguage.SYSTEM)
+        runCurrent()
+        assertEquals(AppLanguage.SYSTEM, env.vm.state.value.language)
+        assertEquals(listOf("ko", ""), env.appliedLocales)
+    }
+
+    @Test
+    fun language_reselectingCurrentDoesNothing() = runTest {
+        // Re-applying the same locales would recreate the screen for nothing.
+        val env = newEnv(storedLocales = "ko")
+        settle()
+        env.vm.setLanguage(AppLanguage.KOREAN)
+        runCurrent()
+        assertEquals(emptyList<String>(), env.appliedLocales)
     }
 
     @Test

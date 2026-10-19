@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lf_back">뒤로</string>
+    <string name="lf_close">닫기</string>
+    <string name="lf_clear">지우기</string>
+    <string name="lf_selected">선택됨</string>
+    <string name="lf_save">저장</string>
+    <string name="lf_cancel">취소</string>
+    <string name="lf_show">보기</string>
+    <string name="lf_hide">숨기기</string>
+    <string name="lf_copy">복사</string>
+    <string name="lf_rotate">재발급</string>
+    <string name="lf_add">추가</string>
+    <string name="lf_keyword">키워드</string>
+    <string name="lf_remove_keyword">%1$s 삭제</string>
+    <string name="lf_project_token">프로젝트 토큰</string>
+</resources>
