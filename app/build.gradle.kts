@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +9,15 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.roborazzi)
 }
+
+// Release signing comes from local.properties (never committed):
+//   RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD
+// Without them the release build is signed with the debug key so it still installs locally.
+val releaseProps = Properties()
+rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use { releaseProps.load(it) }
+val releaseKeystore = releaseProps.getProperty("RELEASE_STORE_FILE")?.let { rootProject.file(it) }
+val hasReleaseKeystore = releaseKeystore != null && releaseKeystore.isFile &&
+    listOf("RELEASE_STORE_PASSWORD", "RELEASE_KEY_ALIAS", "RELEASE_KEY_PASSWORD").all { releaseProps.getProperty(it) != null }
 
 kapt {
     correctErrorTypes = true
@@ -20,15 +31,35 @@ android {
         applicationId = "com.logflare.android"
         minSdk = 26
     targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0.0"
 
         vectorDrawables.useSupportLibrary = true
     }
 
+    if (hasReleaseKeystore) {
+        signingConfigs.create("release") {
+            storeFile = releaseKeystore
+            storePassword = releaseProps.getProperty("RELEASE_STORE_PASSWORD")
+            keyAlias = releaseProps.getProperty("RELEASE_KEY_ALIAS")
+            keyPassword = releaseProps.getProperty("RELEASE_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn(
+                    "WARNING: no release keystore in local.properties (RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, " +
+                        "RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD): the release build is signed with the DEBUG key " +
+                        "and must not be distributed.",
+                )
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
