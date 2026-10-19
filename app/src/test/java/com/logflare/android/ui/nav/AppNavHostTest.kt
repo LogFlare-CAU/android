@@ -128,6 +128,27 @@ class AppNavHostTest {
     }
 
     @Test
+    fun deepLink_sameErrorTappedAgain_doesNotStackDuplicateDetails() {
+        show(SIGNED_IN, deepLinkErrorId = 42, onConsumed = { deepLink = null })
+        assertEquals(listOf(Destinations.Home, Destinations.LogDetailPattern), routes())
+
+        // The same notification tapped again while its detail is open (warm start).
+        compose.runOnIdle { deepLink = 42 }
+        compose.waitForIdle()
+        assertEquals(listOf(Destinations.Home, Destinations.LogDetailPattern), routes())
+
+        // A different notification takes over the open detail instead of stacking; Back reaches Home.
+        compose.runOnIdle { deepLink = 43 }
+        compose.waitForIdle()
+        assertEquals(listOf(Destinations.Home, Destinations.LogDetailPattern), routes())
+        assertEquals(43, nav.currentBackStackEntry?.arguments?.getInt(Destinations.ErrorIdArg))
+
+        compose.runOnIdle { nav.popBackStack() }
+        compose.waitForIdle()
+        assertEquals(listOf(Destinations.Home), routes())
+    }
+
+    @Test
     fun openLogs_presetsMinLevel_keepingTheTabEntry() {
         show(SIGNED_IN)
         compose.onNodeWithText("Logs").performClick()

@@ -63,7 +63,8 @@ fun AppNavHost(
 
     LaunchedEffect(deepLinkErrorId) {
         val errorId = deepLinkErrorId ?: return@LaunchedEffect
-        if (currentSignedIn) navController.navigate(Destinations.logDetail(errorId))
+        // Single top: the same notification tapped again while its detail is open adds nothing.
+        if (currentSignedIn) navController.navigate(Destinations.logDetail(errorId)) { launchSingleTop = true }
         onDeepLinkConsumed()
     }
 
