@@ -273,8 +273,19 @@ data class LogEventDetailDTO(
     @SerialName("last_seen") val lastSeen: String,
     val raw: String? = null,
     @SerialName("recent_ids") val recentIds: List<Int> = emptyList(),
+    /** Same rows as [recentIds] with their times; absent on older servers. */
+    val recent: List<RecentOccurrenceDTO> = emptyList(),
     @SerialName("occurred_at") val occurredAt: String,
     @SerialName("row_level") val rowLevel: String,
+)
+
+@Serializable
+data class RecentOccurrenceDTO(
+    val id: Int,
+    val timestamp: String,
+    val level: String,
+    /** Only when it differs from the group's message. */
+    val message: String? = null,
 )
 
 @Serializable

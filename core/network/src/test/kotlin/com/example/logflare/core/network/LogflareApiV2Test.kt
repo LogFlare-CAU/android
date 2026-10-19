@@ -105,7 +105,9 @@ class LogflareApiV2Test {
             "logfile_name":"app.log","errortype":"E","message":"boom","level":"ERROR",
             "timestamp":"2026-10-18T01:00:00","occurrences":4,"first_seen":"2026-10-17T01:00:00",
             "last_seen":"2026-10-18T01:00:00","occurred_at":"2026-10-17T05:00:00",
-            "row_level":"WARNING","raw":null,"recent_ids":[8,7]}}"""
+            "row_level":"WARNING","raw":null,"recent_ids":[8,7],
+            "recent":[{"id":8,"timestamp":"2026-10-17T04:00:00Z","level":"ERROR","message":null},
+            {"id":7,"timestamp":"2026-10-17T03:00:00Z","level":"WARNING","message":"other"}]}}"""
         )
         val res = api.getLogEvent(9)
         assertEquals("/log/events/9", server.takeRequest().path)
@@ -115,6 +117,9 @@ class LogflareApiV2Test {
         assertEquals("2026-10-17T05:00:00", d.occurredAt)
         assertNull(d.raw)
         assertEquals(listOf(8, 7), d.recentIds)
+        assertEquals(listOf(8, 7), d.recent.map { it.id })
+        assertEquals("other", d.recent[1].message)
+        assertNull(d.recent[0].message)
     }
 
     @Test fun getProjectToken() = runTest {

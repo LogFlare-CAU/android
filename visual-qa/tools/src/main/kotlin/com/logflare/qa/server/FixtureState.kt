@@ -54,7 +54,11 @@ data class QaEventDetail(
     val rowLevel: String,
     val raw: String?,
     val recentIds: List<Int>,
+    val recent: List<QaRecent>,
 )
+
+/** One entry of GET /log/events/{id}'s `recent[]`; [message] only when it differs from the group's. */
+data class QaRecent(val id: Int, val at: Instant, val level: String, val message: String?)
 
 data class QaProjectSummary(
     val projectId: Int,
@@ -364,12 +368,14 @@ class FixtureState(private val clock: Clock = Clock.systemUTC()) {
         val group = logRows.filter {
             it.projectId == row.projectId && it.errortype.orEmpty() == row.errortype.orEmpty() && it.message == row.message
         }
+        val others = group.filter { it.id != row.id }.sortedByDescending { it.id }.take(10)
         return QaEventDetail(
             event = toEvent(group, now).copy(id = row.id, logfileId = row.logfileId, logfileName = fileName(row.logfileId)),
             occurredAt = row.at(now),
             rowLevel = row.level,
             raw = row.raw,
-            recentIds = group.filter { it.id != row.id }.sortedByDescending { it.id }.take(10).map { it.id },
+            recentIds = others.map { it.id },
+            recent = others.map { QaRecent(it.id, it.at(now), it.level, it.message.takeIf { m -> m != row.message }) },
         )
     }
 

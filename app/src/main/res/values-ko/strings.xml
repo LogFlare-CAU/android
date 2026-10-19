@@ -151,6 +151,7 @@
     <string name="log_info_first_seen">처음 발생</string>
     <string name="log_info_last_seen">마지막 발생</string>
     <string name="log_info_occurrences">발생 횟수</string>
+    <string name="log_message">메시지</string>
     <string name="log_raw_data">원본 데이터</string>
     <string name="log_raw_copy">복사</string>
     <string name="log_raw_show_all">전체 보기</string>

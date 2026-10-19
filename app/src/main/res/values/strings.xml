@@ -150,6 +150,7 @@
     <string name="log_info_first_seen">First seen</string>
     <string name="log_info_last_seen">Last seen</string>
     <string name="log_info_occurrences">Occurrences</string>
+    <string name="log_message">Message</string>
     <string name="log_raw_data">Raw data</string>
     <string name="log_raw_copy">Copy</string>
     <string name="log_raw_show_all">Show all</string>

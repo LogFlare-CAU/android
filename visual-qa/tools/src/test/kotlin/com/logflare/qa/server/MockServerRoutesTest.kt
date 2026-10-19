@@ -164,6 +164,9 @@ class MockServerRoutesTest {
         assertTrue(detail.raw!!.startsWith("java.lang.NullPointerException"))
         assertEquals(2, detail.recentIds.size)
         assertFalse(latest.id in detail.recentIds)
+        assertEquals(detail.recentIds, detail.recent.map { it.id })
+        assertEquals(ago(128), detail.recent.last().timestamp)
+        assertTrue(detail.recent.all { it.level.isNotEmpty() && it.message == null })
 
         val older = json.decodeFromString(
             LogEventDetailResponse.serializer(),

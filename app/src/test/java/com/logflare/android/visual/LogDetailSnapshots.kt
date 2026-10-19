@@ -2,6 +2,7 @@ package com.logflare.android.visual
 
 import androidx.compose.runtime.Composable
 import com.example.logflare.core.designsystem.v2.LfLevel
+import com.logflare.android.data.store.model.EarlierOccurrence
 import com.logflare.android.data.store.model.LogEvent
 import com.logflare.android.data.store.model.LogEventDetail
 import com.logflare.android.feature.log.LogDetailContent
@@ -33,6 +34,9 @@ class LogDetailSnapshots : DsSnapshotTest() {
     @Test fun log_detail_expanded_dark() = capture("log_detail_expanded", true) { Detail(LogDetailFixtures.expanded) }
     // Korean (app language 한국어): long labels must not truncate or overflow.
     @Config(qualifiers = "+ko") @Test fun log_detail_expanded_ko_light() = capture("log_detail_expanded_ko", false) { Detail(LogDetailFixtures.expanded) }
+    @Test fun log_detail_titled_light() = capture("log_detail_titled", false) { Detail(LogDetailFixtures.titled) }
+    @Test fun log_detail_titled_dark() = capture("log_detail_titled", true) { Detail(LogDetailFixtures.titled) }
+    @Test fun log_detail_legacy_ids_light() = capture("log_detail_legacy_ids", false) { Detail(LogDetailFixtures.legacyIds) }
     @Test fun log_detail_no_raw_light() = capture("log_detail_no_raw", false) { Detail(LogDetailFixtures.noRaw) }
     @Test fun log_detail_no_raw_dark() = capture("log_detail_no_raw", true) { Detail(LogDetailFixtures.noRaw) }
     @Test fun log_detail_share_sheet_light() = capture("log_detail_share_sheet", false) { Detail(LogDetailFixtures.shareSheet) }
@@ -71,6 +75,10 @@ object LogDetailFixtures {
         event = event,
         raw = RAW,
         recentIds = listOf(11, 7),
+        earlier = listOf(
+            EarlierOccurrence(11, Instant.parse("2026-10-18T15:35:40Z"), LfLevel.Error, null),
+            EarlierOccurrence(7, Instant.parse("2026-10-18T15:31:04Z"), LfLevel.Warning, "NullPointerException in PaymentService (retry)"),
+        ),
         occurredAt = Instant.parse("2026-10-18T15:39:12Z"),
         rowLevel = LfLevel.Error,
     )
@@ -79,7 +87,22 @@ object LogDetailFixtures {
 
     val expanded = collapsed.copy(rawExpanded = true)
 
-    val noRaw = collapsed.copy(detail = detail.copy(raw = null, recentIds = emptyList()))
+    val noRaw = collapsed.copy(detail = detail.copy(raw = null, recentIds = emptyList(), earlier = emptyList()))
+
+    /** A python-logging message: the headline drops the prefix, the full text sits in the Message card. */
+    val titled = collapsed.copy(
+        detail = detail.copy(
+            event = event.copy(
+                message = "2026-10-19 13:15:27 - src.market.candles - WARNING - Toss minute candles failed for WKEY/us",
+            ),
+            raw = null,
+        ),
+    )
+
+    /** An older server: ids only, no times. */
+    val legacyIds = collapsed.copy(
+        detail = detail.copy(earlier = detail.recentIds.map { EarlierOccurrence(it, null, null, null) }),
+    )
 
     val shareSheet = collapsed.copy(shareSheetOpen = true)
 

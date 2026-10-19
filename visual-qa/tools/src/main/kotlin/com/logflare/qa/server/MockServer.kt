@@ -601,6 +601,19 @@ class MockServer(
         put("row_level", JsonPrimitive(detail.rowLevel))
         put("raw", detail.raw?.let(::JsonPrimitive) ?: JsonNull)
         put("recent_ids", JsonArray(detail.recentIds.map(::JsonPrimitive)))
+        put(
+            "recent",
+            JsonArray(
+                detail.recent.map { r ->
+                    buildJsonObject {
+                        put("id", JsonPrimitive(r.id))
+                        put("timestamp", time(r.at))
+                        put("level", JsonPrimitive(r.level))
+                        put("message", r.message?.let(::JsonPrimitive) ?: JsonNull)
+                    }
+                },
+            ),
+        )
     }
 
     private fun JsonObjectBuilder.putEvent(event: QaEvent) {

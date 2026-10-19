@@ -60,9 +60,12 @@ import com.example.logflare.core.designsystem.v2.components.SkeletonCard
 import com.example.logflare.core.designsystem.v2.components.SubpageTopBar
 import com.example.logflare.core.designsystem.v2.components.rememberLfToastState
 import com.logflare.android.R
+import com.logflare.android.data.store.model.EarlierOccurrence
 import com.logflare.android.data.store.model.LogEventDetail
 import com.logflare.android.ui.VisualQaTags
 import com.logflare.android.ui.format.appLocale
+import com.logflare.android.ui.format.levelLabel
+import com.logflare.android.ui.format.logTitle
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -184,8 +187,9 @@ private fun Body(
     ) {
         Hero(detail, state.projectName, zone)
         InfoCard(detail, state.projectName, zone, onOpenProject)
+        MessageCard(detail.event.message)
         if (!detail.raw.isNullOrEmpty()) RawCard(detail.raw, state.rawExpanded, onToggleRaw, copy)
-        if (detail.recentIds.isNotEmpty()) EarlierCard(detail.recentIds, onOpenLog)
+        if (detail.earlier.isNotEmpty()) EarlierCard(detail.earlier, detail.event.message, zone, onOpenLog)
     }
 }
 
@@ -195,7 +199,7 @@ private fun Hero(detail: LogEventDetail, projectName: String?, zone: ZoneId) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             LevelBadge(detail.rowLevel)
             Text(
-                detail.event.message,
+                logTitle(detail.event.message),
                 style = Lf.type.cardTitle.copy(fontWeight = FontWeight.ExtraBold),
                 color = Lf.colors.textPrimary,
             )
@@ -345,19 +349,44 @@ private fun RawCard(raw: String, expanded: Boolean, onToggle: () -> Unit, copy: 
     }
 }
 
+/** The full message, shown only when the headline is a shortened [logTitle] of it. */
 @Composable
-private fun EarlierCard(ids: List<Int>, onOpenLog: (Int) -> Unit) {
+private fun MessageCard(message: String) {
+    if (logTitle(message) == message.trim()) return
+    GroupedCard(contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 20.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionTitle(stringResource(R.string.log_message))
+            Text(
+                message.trim(),
+                style = Lf.type.caption.copy(fontFamily = FontFamily.Monospace, lineHeight = 18.sp),
+                color = Lf.colors.textSecondary,
+                modifier = Modifier.testTag("log_message"),
+            )
+        }
+    }
+}
+
+/**
+ * Other rows of the group: time and level, plus a short title when the row's message differs from
+ * the group's. An older server sends only ids, shown as "Occurrence #id".
+ */
+@Composable
+private fun EarlierCard(items: List<EarlierOccurrence>, groupMessage: String, zone: ZoneId, onOpenLog: (Int) -> Unit) {
     GroupedCard {
         SectionTitle(
             stringResource(R.string.log_earlier),
             Modifier.padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 4.dp),
         )
-        ids.forEach { id ->
+        items.forEach { item ->
+            val at = item.at
+            val shortTitle = item.message?.let(::logTitle)?.takeIf { it != logTitle(groupMessage) }
             ListRow(
-                title = stringResource(R.string.log_occurrence, id),
+                title = if (at != null) dateTime(at, zone) else stringResource(R.string.log_occurrence, item.id),
+                subtitle = listOfNotNull(item.level?.let { levelLabel(it) }, shortTitle)
+                    .takeIf { it.isNotEmpty() }?.joinToString(" · "),
                 showChevron = true,
-                onClick = { onOpenLog(id) },
-                modifier = Modifier.testTag(VisualQaTags.logCard(id)),
+                onClick = { onOpenLog(item.id) },
+                modifier = Modifier.testTag(VisualQaTags.logCard(item.id)),
             )
         }
     }

@@ -24,8 +24,8 @@ data class LogEvent(
 
 /**
  * One row ([occurredAt], [rowLevel], [raw]) with its group in [event]. Here
- * [LogEvent.occurrences] counts the whole group, all time. [recentIds] are up to 10 newer rows
- * of the same group.
+ * [LogEvent.occurrences] counts the whole group, all time. [recentIds] are up to 10 other rows
+ * of the same group, [earlier] the same rows with their times when the server provides them.
  */
 data class LogEventDetail(
     val event: LogEvent,
@@ -33,7 +33,11 @@ data class LogEventDetail(
     val recentIds: List<Int>,
     val occurredAt: Instant,
     val rowLevel: LfLevel,
+    val earlier: List<EarlierOccurrence> = emptyList(),
 )
+
+/** One of a group's other rows; [at], [level] and [message] are null when the server only sent ids. */
+data class EarlierOccurrence(val id: Int, val at: Instant?, val level: LfLevel?, val message: String?)
 
 data class LogPage(val items: List<LogEvent>, val hasMore: Boolean)
 
@@ -67,4 +71,9 @@ internal fun LogEventDetailDTO.toLogEventDetail() = LogEventDetail(
     recentIds = recentIds,
     occurredAt = parseServerTime(occurredAt),
     rowLevel = LfLevel.parse(rowLevel),
+    earlier = if (recent.isNotEmpty()) {
+        recent.map { EarlierOccurrence(it.id, parseServerTime(it.timestamp), LfLevel.parse(it.level), it.message) }
+    } else {
+        recentIds.map { EarlierOccurrence(it, null, null, null) }
+    },
 )
