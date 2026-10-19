@@ -1,9 +1,9 @@
 appId: com.logflare.android
 ---
-# Sign in -> Home: summary strip, recent errors and projects from the fixture.
+# Sign in -> Home. Data-independent: the dev runner plays this against a real server by default,
+# so it asserts only chrome every Home has (the summary strip), never fixture values.
 - runFlow: _login.yaml
 - assertVisible: "Errors · 24h"
-- assertVisible: "NullPointerException in PaymentService"
 - takeScreenshot:
     path: ${QA_OUTPUT_DIR}/home_${QA_THEME}
     cropOn:

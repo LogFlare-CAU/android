@@ -358,6 +358,7 @@ try {
             Invoke-QaReset
             & adb -s $resolvedSerial shell pm clear com.logflare.android | Out-Null
             Deny-PostNotificationsIfPresent -DeviceSerial $resolvedSerial
+            Set-AppLocaleEnglish -DeviceSerial $resolvedSerial
             Set-UiMode -Serial $resolvedSerial -Theme $theme
             Disable-AnimationScales -Serial $resolvedSerial
             Invoke-MaestroFlow -DeviceSerial $resolvedSerial -FlowName $flow -Theme $theme -OutputDirAbsolute $captureDir

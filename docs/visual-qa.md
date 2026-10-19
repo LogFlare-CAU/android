@@ -33,6 +33,15 @@ rather than silently rewriting the baseline set.
 **These baselines are device-specific.** OEM fonts, punch-hole cutout and rounded corners are all baked in.
 They cannot be verified on an emulator, another phone, or CI. Only the JVM tier is portable.
 
+**The language is part of the reference configuration.** Flows select by English text and the baselines are
+English. Both runners call `Set-AppLocaleEnglish` before every flow, which pins the **app** locale to `en-US`
+(`adb shell cmd locale set-app-locales com.logflare.android --locales en-US`; per-app locales need Android 13 /
+API 33+ -- older devices or a failure only log a warning). The notification permission prompt is a **system**
+dialog, so the optional "Don't allow" tap in `_login.yaml` only matches when the device's **system** language is
+English too: run the reference device (and any emulator) with system language English, or the prompt stays up and
+covers Login. If a device turns out to drop per-app locales on `pm clear` (Maestro's `clearState` runs one after
+the runner's call), the same rule -- system language English -- keeps runs in English.
+
 **The navigation mode is part of the reference configuration.** The status bar is cropped off, but the bottom
 of the frame still holds the app's own bottom bar and, below it, the system gesture pill. Switching the phone
 between gesture and 3-button navigation changes that region and invalidates every baseline. `Assert-DeviceProfile`
@@ -177,8 +186,10 @@ Drives the debug app against a real server and writes captures to `visual-qa/dev
 and never records: a development server's data changes, so its captures are evidence for a human, not a pass/fail.
 
 Only `login-home.yaml` runs by default, because it depends on nothing but a reachable server and valid
-credentials. The other flows assert mock fixture values (member `minsu`, project id `101`, ...) and will fail
-against real data -- pass them with `-Flows` only when the server carries matching content. Captures are tagged
+credentials: it asserts only the Home summary strip ("Errors · 24h"), never fixture data, and
+`MaestroMockContractTest` keeps it that way. The other flows assert mock fixture values (the NullPointerException
+log, member `minsu`, project id `101`, ...) and will fail against real data -- pass them with `-Flows` only when the
+server carries matching content. Captures are tagged
 with the device's current light/dark state; this runner does not force a theme.
 
 ### Release isolation guard
@@ -203,7 +214,8 @@ enabled. There is no release `signingConfig`, so the artifact is `app-release-un
 2. `adb install -r` the debug APK
 3. `adb reverse tcp:18000 tcp:18000`
 4. Start the mock server on `127.0.0.1:18000`, wait for `/__qa/health`
-5. Per flow: `POST /__qa/reset`, `pm clear`, revoke `POST_NOTIFICATIONS`, set UI mode, zero animation scales
+5. Per flow: `POST /__qa/reset`, `pm clear`, revoke `POST_NOTIFICATIONS`, app locale `en-US`, set UI mode,
+   zero animation scales
 6. Run the Maestro flow, collect its screenshots
 7. Compare (`Verify`) or stage then promote (`Record`)
 8. Restore animation scales, UI mode, screen timeout; remove the reverse binding
@@ -358,7 +370,6 @@ is `http://localhost:18000`, typed into the login form by `_login.yaml`. It must
 - **Sheets are separate windows.** `app_root` is not in the hierarchy while the Log out sheet is open, so
   `logout_sheet` is captured uncropped. `app_root` is edge to edge, so the geometry is the same and `crop-top`
   still applies.
-
 - **Ambient environment variables are ignored.** Maestro resolves `${...}` only from `--env`/`-e` pairs. Values
   passed via `$env:` silently become the literal string `undefined` — which surfaces as a confusing downstream
   failure (a field "not found") rather than an obvious substitution error.

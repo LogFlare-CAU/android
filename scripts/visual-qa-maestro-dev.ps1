@@ -169,11 +169,12 @@ try {
 
     foreach ($flow in $Flows) {
         # Same per-flow reset the mock runner uses, minus the fixture reset: clear app state, then
-        # deny notifications so the system dialog cannot cover the login screen, then re-zero the
-        # animation scales in case something restored them.
+        # deny notifications so the system dialog cannot cover the login screen, pin the app locale to
+        # en-US, then re-zero the animation scales in case something restored them.
         Write-Info ("Preparing device for flow={0}" -f $flow)
         & adb -s $resolvedSerial shell pm clear com.logflare.android | Out-Null
         Deny-PostNotificationsIfPresent -DeviceSerial $resolvedSerial
+        Set-AppLocaleEnglish -DeviceSerial $resolvedSerial
         Disable-AnimationScales -Serial $resolvedSerial
         Invoke-DevFlow -DeviceSerial $resolvedSerial -FlowName $flow -Theme $theme
     }

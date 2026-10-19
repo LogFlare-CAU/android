@@ -81,6 +81,8 @@ class MaestroMockContractTest {
             // pm clear re-arms the notification dialog that otherwise covers the login screen.
             "ConvertTo-MaestroRelativePath",
             "Deny-PostNotificationsIfPresent",
+            // Copy, sheet labels and the flows' text selectors are English: runs pin the app locale.
+            "Set-AppLocaleEnglish",
         ).forEach { fn ->
             assertTrue("common missing $fn", commonText.contains("function $fn"))
         }
@@ -182,6 +184,14 @@ class MaestroMockContractTest {
         // The dev runner is diagnostic only. Comparing there would imply a development server serves
         // reproducible pixels, which it does not.
         val devText = dev.readText()
+        // The dev runner plays login-home against real data by default, so it must not assert fixture values.
+        val smoke = File(repoRoot, ".maestro/flows/login-home.yaml").readText()
+        listOf("NullPointerException", "api-server", "minsu", "qa-admin").forEach { fixtureValue ->
+            assertFalse("login-home must stay data-independent ($fixtureValue)", smoke.contains(fixtureValue))
+        }
+        listOf(devText, File(repoRoot, "scripts/visual-qa-maestro-mock.ps1").readText()).forEach { runner ->
+            assertTrue("runners must force the en-US app locale", runner.contains("Set-AppLocaleEnglish"))
+        }
         assertFalse("dev runner must never compare", devText.contains("compare --expected"))
         assertFalse("dev runner must never record baselines", devText.contains("record-device"))
         assertFalse("dev runner must not echo the password", devText.contains("Write-Info (\"Password"))

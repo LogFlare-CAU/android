@@ -197,6 +197,26 @@ function Deny-PostNotificationsIfPresent {
     }
 }
 
+function Set-AppLocaleEnglish {
+    # The flows select by English text and the baselines are English, so runs pin the app's own locale
+    # to en-US regardless of the device language (per-app locales, Android 13 / API 33+). Older devices,
+    # or a failure, only warn: the run then depends on the device's system language being English.
+    # Callers must define Write-Info (this file is dot-sourced into their scope).
+    param([string]$DeviceSerial)
+    $sdkRaw = (& adb -s $DeviceSerial shell getprop ro.build.version.sdk 2>$null | Out-String).Trim()
+    $sdk = 0
+    if (-not [int]::TryParse($sdkRaw, [ref]$sdk) -or $sdk -lt 33) {
+        Write-Warning ("Per-app locales need API 33+ (device reports '{0}'); app locale not forced, device language must be English" -f $sdkRaw)
+        return
+    }
+    $out = & adb -s $DeviceSerial shell cmd locale set-app-locales com.logflare.android --locales en-US 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $out -match '(?i)error|exception|unknown') {
+        Write-Warning ("Could not set the app locale to en-US: {0}" -f $out.Trim())
+        return
+    }
+    Write-Info 'App locale set to en-US'
+}
+
 function ConvertTo-MaestroRelativePath {
     # Maestro rejects absolute paths, so every path handed to it is made relative to the repo root
     # and forward-slashed. Reads $RepoRoot from the calling script's scope (this file is dot-sourced),
